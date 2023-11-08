@@ -1,0 +1,8 @@
+[submodule "external/SDL"]
+	path = external/SDL
+	url = https://github.com/libsdl-org/SDL.git
+	branch = release-2.28.x
+[submodule "external/glm"]
+	path = external/glm
+	url = https://github.com/g-truc/glm.git
+	branch = 0.9.8
