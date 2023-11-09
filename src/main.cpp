@@ -11,6 +11,7 @@
 #include "commandbuffer.h"
 
 #include <glm.hpp>
+#include "Camera.h"
 
 using namespace VK_Renderer;
 
@@ -46,14 +47,46 @@ int main(int argc, char* argv[])
 	instance->CreateSwapchain(width, height);
 	instance->CreateImageViews();
 
-	uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(instance->m_LogicalDevice, 
-																	instance->m_SwapchainExtent, 
-																	instance->m_SwapchainImageFormat);
-
-	instance->CreateFrameBuffers(graphics_pipeline->m_RenderPass);
-
 	uPtr<VK_CommandPool> command_pool = mkU<VK_CommandPool>(instance->m_LogicalDevice, instance->m_QueueFamilyIndices.GraphicsValue());
 	uPtr<VK_CommandBuffer> command_buffer = mkU<VK_CommandBuffer>(instance->m_LogicalDevice, command_pool->m_CommandPool);
+
+	std::vector<Model*> models;
+
+	const float halfWidth = 2.5f;
+	
+	
+	models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
+		{
+			{ { -halfWidth, halfWidth + 2.0f, -5.0f }, { 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f } },
+			{ { halfWidth, halfWidth + 2.0f, -5.0f }, { 0.0f, 1.0f, 0.0f },{ 0.0f, 0.0f } },
+			{ { halfWidth, -halfWidth + 2.0f, -5.0f }, { 0.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },
+			{ { -halfWidth, -halfWidth + 2.0f, -5.0f }, { 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
+		},
+		{ 0, 1, 2, 2, 3, 0 }
+	));
+	
+	
+	const float halfWidth_1 = 6.0f;
+	const float quadHeight = -2.0f;
+	models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
+		{
+			{ { -halfWidth_1, quadHeight, halfWidth_1 - 5.0f}, { 1.0f, 1.0f, 0.0f },{ 1.0f, 0.0f } },
+			{ { halfWidth_1, quadHeight, halfWidth_1 - 5.0f}, { 0.0f, 1.0f, 1.0f },{ 0.0f, 0.0f } },
+			{ { halfWidth_1, quadHeight, -halfWidth_1 - 5.0f}, { 1.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },
+			{ { -halfWidth_1, quadHeight,  -halfWidth_1 - 5.0f}, { 0.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
+		},
+		// { 0, 1, 2, 2, 3, 0 }
+		{ 0, 2, 1, 3, 2, 0 }
+	));
+
+	Camera* camera = new Camera(instance.get(), width / height);
+
+	uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(instance->m_LogicalDevice, 
+																	instance->m_SwapchainExtent, 
+																	instance->m_SwapchainImageFormat,
+																	models, camera);
+
+	instance->CreateFrameBuffers(graphics_pipeline->m_RenderPass);
 	
 	uint32_t image_index;
 	VkClearValue clear_color = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
@@ -137,7 +170,25 @@ int main(int argc, char* argv[])
 				vkCmdSetScissor(command_buffer->m_CommandBuffer, 0, 1, &scissor);
 
 				// Draw call
-				vkCmdDraw(command_buffer->m_CommandBuffer, 3, 1, 0, 0);
+				// vkCmdDraw(command_buffer->m_CommandBuffer, 3, 1, 0, 0);
+				
+				vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_PipelineLayout, 0, 1, &graphics_pipeline->cameraDescriptorSet, 0, nullptr);
+
+				for (uint32_t j = 0; j < models.size(); ++j) {
+					// Bind the vertex and index buffers
+					VkBuffer vertexBuffers[] = { models[j]->getVertexBuffer() };
+					VkDeviceSize offsets[] = { 0 };
+					vkCmdBindVertexBuffers(command_buffer->m_CommandBuffer, 0, 1, vertexBuffers, offsets);
+
+					vkCmdBindIndexBuffer(command_buffer->m_CommandBuffer, models[j]->getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+					// Bind the descriptor set for each model
+					vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_PipelineLayout, 1, 1, &graphics_pipeline->modelDescriptorSets[j], 0, nullptr);
+
+					// Draw
+					std::vector<uint32_t> indices = models[j]->getIndices();
+					vkCmdDrawIndexed(command_buffer->m_CommandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+				}
 
 				vkCmdEndRenderPass(command_buffer->m_CommandBuffer);
 
@@ -188,6 +239,11 @@ int main(int argc, char* argv[])
 	vkDestroyFence(instance->m_LogicalDevice, fence, nullptr);
 	vkDestroySemaphore(instance->m_LogicalDevice, image_available_semaphore, nullptr);
 	vkDestroySemaphore(instance->m_LogicalDevice, render_finished_semaphore, nullptr);
+
+	for (int i = 0; i < models.size(); i++) {
+		delete models[i];
+	}
+	delete camera;
 
 	command_pool.reset();
 	graphics_pipeline.reset();

@@ -1,6 +1,7 @@
 #include "graphicsPipeline.h"
-
+#include <glm.hpp>
 #include <fstream>
+#include "Camera.h"
 
 namespace VK_Renderer
 {
@@ -22,10 +23,191 @@ namespace VK_Renderer
 		return buffer;
 	}
 
-	VK_GraphicsPipeline::VK_GraphicsPipeline(VkDevice device, const VkExtent2D& extent, const VkFormat& swapchain_image_format)
+
+	void VK_GraphicsPipeline::CreateDescriptorPool() {
+		// Describe which descriptor types that the descriptor sets will contain
+		std::vector<VkDescriptorPoolSize> poolSizes = {
+			// Camera
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 1},
+
+			// Models + Blades
+			// { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , static_cast<uint32_t>(m_models.size()) },
+
+			// Models + Blades
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , static_cast<uint32_t>(m_models.size()) },
+		};
+
+		VkDescriptorPoolCreateInfo poolInfo = {};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+		poolInfo.pPoolSizes = poolSizes.data();
+		poolInfo.maxSets = 5;
+
+		if (vkCreateDescriptorPool(m_LogicalDevice, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create descriptor pool");
+		}
+	}
+
+	void VK_GraphicsPipeline::CreateCameraDescriptorSetLayout() {
+		// Describe the binding of the descriptor set layout
+		VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+		uboLayoutBinding.binding = 0;
+		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboLayoutBinding.descriptorCount = 1;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_ALL;
+		uboLayoutBinding.pImmutableSamplers = nullptr;
+
+		std::vector<VkDescriptorSetLayoutBinding> bindings = { uboLayoutBinding };
+
+		// Create the descriptor set layout
+		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+		layoutInfo.pBindings = bindings.data();
+
+		if (vkCreateDescriptorSetLayout(m_LogicalDevice, &layoutInfo, nullptr, &cameraDescriptorSetLayout) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create descriptor set layout");
+		}
+	}
+
+	void VK_GraphicsPipeline::CreateModelDescriptorSetLayout() {
+
+		VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+		uboLayoutBinding.binding = 0;
+		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboLayoutBinding.descriptorCount = 1;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		uboLayoutBinding.pImmutableSamplers = nullptr;
+
+		//VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
+		//samplerLayoutBinding.binding = 1;
+		//samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		//samplerLayoutBinding.descriptorCount = 1;
+		//samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		//samplerLayoutBinding.pImmutableSamplers = nullptr;
+
+		std::vector<VkDescriptorSetLayoutBinding> bindings = { uboLayoutBinding }; //samplerLayoutBinding
+
+		// Create the descriptor set layout
+		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+		layoutInfo.pBindings = bindings.data();
+
+		if (vkCreateDescriptorSetLayout(m_LogicalDevice, &layoutInfo, nullptr, &modelDescriptorSetLayout) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create descriptor set layout");
+		}
+	}
+
+	void VK_GraphicsPipeline::CreateCameraDescriptorSet() {
+		// Describe the desciptor set
+		VkDescriptorSetLayout layouts[] = { cameraDescriptorSetLayout };
+		VkDescriptorSetAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = descriptorPool;
+		allocInfo.descriptorSetCount = 1;
+		allocInfo.pSetLayouts = layouts;
+
+		// Allocate descriptor sets
+		if (vkAllocateDescriptorSets(m_LogicalDevice, &allocInfo, &cameraDescriptorSet) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to allocate descriptor set");
+		}
+
+		// Configure the descriptors to refer to buffers
+		VkDescriptorBufferInfo cameraBufferInfo = {};
+		cameraBufferInfo.buffer = m_camera->GetBuffer();
+		cameraBufferInfo.offset = 0;
+		cameraBufferInfo.range = sizeof(CameraBufferObject);
+
+		std::array<VkWriteDescriptorSet, 1> descriptorWrites = {};
+		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrites[0].dstSet = cameraDescriptorSet;
+		descriptorWrites[0].dstBinding = 0;
+		descriptorWrites[0].dstArrayElement = 0;
+		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrites[0].descriptorCount = 1;
+		descriptorWrites[0].pBufferInfo = &cameraBufferInfo;
+		descriptorWrites[0].pImageInfo = nullptr;
+		descriptorWrites[0].pTexelBufferView = nullptr;
+
+		// Update descriptor sets
+		vkUpdateDescriptorSets(m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+	}
+
+
+	void VK_GraphicsPipeline::CreateModelDescriptorSets() {
+		modelDescriptorSets.resize(m_models.size());
+
+		// Describe the desciptor set
+		// VkDescriptorSetLayout layouts[] = { modelDescriptorSetLayout };
+		std::vector<VkDescriptorSetLayout> layouts = std::vector<VkDescriptorSetLayout>(m_models.size(), modelDescriptorSetLayout);
+		VkDescriptorSetAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = descriptorPool;
+		allocInfo.descriptorSetCount = static_cast<uint32_t>(modelDescriptorSets.size());
+		allocInfo.pSetLayouts = layouts.data();
+
+		// Allocate descriptor sets
+		if (vkAllocateDescriptorSets(m_LogicalDevice, &allocInfo, modelDescriptorSets.data()) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to allocate descriptor set");
+		}
+
+		std::vector<VkWriteDescriptorSet> descriptorWrites(modelDescriptorSets.size()); // 2 * 
+
+		for (uint32_t i = 0; i < m_models.size(); ++i) {
+			VkDescriptorBufferInfo modelBufferInfo = {};
+			modelBufferInfo.buffer = m_models[i]->GetModelBuffer();
+			modelBufferInfo.offset = 0;
+			modelBufferInfo.range = sizeof(glm::mat4);
+
+			// Bind image and sampler resources to the descriptor
+			/*VkDescriptorImageInfo imageInfo = {};
+			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imageInfo.imageView = m_models[i]->GetTextureView();
+			imageInfo.sampler = m_models[i]->GetTextureSampler();
+
+			descriptorWrites[2 * i + 0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[2 * i + 0].dstSet = modelDescriptorSets[i];
+			descriptorWrites[2 * i + 0].dstBinding = 0;
+			descriptorWrites[2 * i + 0].dstArrayElement = 0;
+			descriptorWrites[2 * i + 0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[2 * i + 0].descriptorCount = 1;
+			descriptorWrites[2 * i + 0].pBufferInfo = &modelBufferInfo;
+			descriptorWrites[2 * i + 0].pImageInfo = nullptr;
+			descriptorWrites[2 * i + 0].pTexelBufferView = nullptr;*/
+
+			descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[i].dstSet = modelDescriptorSets[i];
+			descriptorWrites[i].dstBinding = 0;
+			descriptorWrites[i].dstArrayElement = 0;
+			descriptorWrites[i].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrites[i].descriptorCount = 1;
+			descriptorWrites[i].pBufferInfo = &modelBufferInfo;
+			descriptorWrites[i].pImageInfo = nullptr;
+			descriptorWrites[i].pTexelBufferView = nullptr;
+
+			/*
+			descriptorWrites[2 * i + 1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrites[2 * i + 1].dstSet = modelDescriptorSets[i];
+			descriptorWrites[2 * i + 1].dstBinding = 1;
+			descriptorWrites[2 * i + 1].dstArrayElement = 0;
+			descriptorWrites[2 * i + 1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrites[2 * i + 1].descriptorCount = 1;
+			descriptorWrites[2 * i + 1].pImageInfo = &imageInfo;
+			*/
+		}
+
+		// Update descriptor sets
+		vkUpdateDescriptorSets(m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+	}
+
+
+	VK_GraphicsPipeline::VK_GraphicsPipeline(VkDevice device, const VkExtent2D& extent, const VkFormat& swapchain_image_format, std::vector<Model*>& models, Camera* camera)
 		: m_LogicalDevice(device), 
 		  m_SwapchainImageFormat(swapchain_image_format), 
-		  m_Extent(extent)
+		  m_Extent(extent),
+		  m_models(models),
+		  m_camera(camera)
 	{
 		// create the Renderpass before creating pipeline
 		CreateRenderPass();
@@ -67,10 +249,14 @@ namespace VK_Renderer
 		// Vertex Input
 		VkPipelineVertexInputStateCreateInfo vert_input_create_info = {};
 		vert_input_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vert_input_create_info.vertexBindingDescriptionCount = 0;
-		vert_input_create_info.pVertexBindingDescriptions = nullptr;
-		vert_input_create_info.vertexAttributeDescriptionCount = 0;
-		vert_input_create_info.pVertexAttributeDescriptions = nullptr;
+
+		auto bindingDescription = Vertex::getBindingDescription();
+		auto attributeDescriptions = Vertex::getAttributeDescriptions();
+
+		vert_input_create_info.vertexBindingDescriptionCount = 1;
+		vert_input_create_info.pVertexBindingDescriptions = &bindingDescription;
+		vert_input_create_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+		vert_input_create_info.pVertexAttributeDescriptions = attributeDescriptions.data();
 
 		// Input Assembly
 		VkPipelineInputAssemblyStateCreateInfo input_assembly_create_info = {};
@@ -147,11 +333,20 @@ namespace VK_Renderer
 		color_blend_create_info.blendConstants[2] = 0.f;
 		color_blend_create_info.blendConstants[3] = 0.f;
 
+
+		CreateCameraDescriptorSetLayout();
+		CreateModelDescriptorSetLayout();
+		CreateDescriptorPool();
+		CreateCameraDescriptorSet();
+		CreateModelDescriptorSets();		
+
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts = { cameraDescriptorSetLayout, modelDescriptorSetLayout };
+
 		// Pipline Layout
 		VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
 		pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipeline_layout_create_info.setLayoutCount = 0;
-		pipeline_layout_create_info.pSetLayouts = nullptr;
+		pipeline_layout_create_info.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
+		pipeline_layout_create_info.pSetLayouts = descriptorSetLayouts.data();
 		pipeline_layout_create_info.pushConstantRangeCount = 0;
 		pipeline_layout_create_info.pPushConstantRanges = nullptr;
 
@@ -194,6 +389,10 @@ namespace VK_Renderer
 		vkDestroyShaderModule(m_LogicalDevice, m_VertShaderModule, nullptr);
 		vkDestroyShaderModule(m_LogicalDevice, m_FragShaderModule, nullptr);
 		vkDestroyPipelineLayout(m_LogicalDevice, m_PipelineLayout, nullptr);
+		vkDestroyDescriptorSetLayout(m_LogicalDevice, modelDescriptorSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(m_LogicalDevice, cameraDescriptorSetLayout, nullptr);
+
+		vkDestroyDescriptorPool(m_LogicalDevice, descriptorPool, nullptr);
 	}
 
 	void VK_GraphicsPipeline::CreateRenderPass()

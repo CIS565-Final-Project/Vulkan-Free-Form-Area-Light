@@ -512,4 +512,17 @@ namespace VK_Renderer
 			}
 		}
 	}
+
+	uint32_t VK_Instance::GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const {
+		// Iterate over all memory types available for the device used in this example
+		for (uint32_t i = 0; i < m_DeviceMemoryProperties.memoryTypeCount; i++) {
+			if ((typeBits & 1) == 1) {
+				if ((m_DeviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+					return i;
+				}
+			}
+			typeBits >>= 1;
+		}
+		throw std::runtime_error("Could not find a suitable memory type!");
+	}
 }
