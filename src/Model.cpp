@@ -1,6 +1,6 @@
 #include "Model.h"
 #include "BufferUtils.h"
-//#include "Image.h"
+#include "Image.h"
 
 Model::Model(VK_Renderer::VK_Instance* instance, VkCommandPool commandPool, const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices)
   : m_instance(instance), vertices(vertices), indices(indices) {
@@ -41,9 +41,9 @@ Model::~Model() {
 }
 
 void Model::SetTexture(VkImage texture) {
-    /*
+
     this->texture = texture;
-    this->textureView = Image::CreateView(device, texture, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+    this->textureView = Image::CreateView(m_instance, texture, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
 
     // --- Specify all filters and transformations ---
     VkSamplerCreateInfo samplerInfo = {};
@@ -78,10 +78,10 @@ void Model::SetTexture(VkImage texture) {
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 0.0f;
 
-    if (vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+    if (vkCreateSampler(m_instance->m_LogicalDevice, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create texture sampler");
     }
-    */
+    
 }
 
 const std::vector<Vertex>& Model::getVertices() const {

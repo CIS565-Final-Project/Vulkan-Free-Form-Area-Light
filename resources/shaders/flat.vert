@@ -28,13 +28,15 @@ layout(location = 1) in vec3 inColor;
 layout(location = 2) in vec2 inTexCoord;
 
 layout(location = 0) out vec3 vs_Color;
+layout(location = 1) out vec2 fragTexCoord;
 
 void main()
 {
 	// gl_Position = vec4(position[gl_VertexIndex], 0.0, 1.0);
 	// vs_Color = color[gl_VertexIndex];
 	// 
-	gl_Position = camera.proj * camera.view  * model * vec4(inPosition,  1.0);
-	vs_Color = inColor;
 
+	gl_Position = camera.proj * camera.view  * model * vec4(inPosition,  1.0);
+	// vs_Color = inColor;
+	fragTexCoord = inTexCoord;
 }

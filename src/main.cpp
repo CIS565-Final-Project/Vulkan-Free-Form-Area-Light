@@ -5,13 +5,14 @@
 #include <SDL.h>
 #include <SDL_vulkan.h>
 
-#include "instance.h"
+#include "Camera.h"
+#include "Image.h"
 #include "graphicsPipeline.h"
 #include "commandPool.h"
 #include "commandbuffer.h"
 
 #include <glm.hpp>
-#include "Camera.h"
+
 
 using namespace VK_Renderer;
 
@@ -50,11 +51,23 @@ int main(int argc, char* argv[])
 	uPtr<VK_CommandPool> command_pool = mkU<VK_CommandPool>(instance->m_LogicalDevice, instance->m_QueueFamilyIndices.GraphicsValue());
 	uPtr<VK_CommandBuffer> command_buffer = mkU<VK_CommandBuffer>(instance->m_LogicalDevice, command_pool->m_CommandPool);
 
-	std::vector<Model*> models;
 
+	VkImage texImage;
+	VkDeviceMemory texImageMemory;
+	Image::FromFile(instance.get(),
+		command_pool->m_CommandPool,
+		"../src/images/wall.jpg",
+		VK_FORMAT_R8G8B8A8_UNORM,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		texImage,
+		texImageMemory
+	);
+
+	std::vector<Model*> models;
 	const float halfWidth = 2.5f;
-	
-	
 	models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
 		{
 			{ { -halfWidth, halfWidth + 2.0f, -5.0f }, { 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f } },
@@ -64,7 +77,6 @@ int main(int argc, char* argv[])
 		},
 		{ 0, 1, 2, 2, 3, 0 }
 	));
-	
 	
 	const float halfWidth_1 = 6.0f;
 	const float quadHeight = -2.0f;
@@ -80,6 +92,10 @@ int main(int argc, char* argv[])
 	));
 
 	Camera* camera = new Camera(instance.get(), width / height);
+
+	
+	models[0]->SetTexture(texImage);
+	models[1]->SetTexture(texImage);
 
 	uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(instance->m_LogicalDevice, 
 																	instance->m_SwapchainExtent, 
@@ -232,6 +248,9 @@ int main(int argc, char* argv[])
 			vkQueuePresentKHR(instance->m_PresentQueue, &present_info);
 		}
 	}
+
+	vkDestroyImage(instance->m_LogicalDevice, texImage, nullptr);
+	vkFreeMemory(instance->m_LogicalDevice, texImageMemory, nullptr);
 
 	vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
 	vkResetFences(device, 1, &fence);

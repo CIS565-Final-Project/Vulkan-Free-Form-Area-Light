@@ -31,7 +31,7 @@ namespace VK_Renderer
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 1},
 
 			// Models + Blades
-			// { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , static_cast<uint32_t>(m_models.size()) },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , static_cast<uint32_t>(m_models.size()) },
 
 			// Models + Blades
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , static_cast<uint32_t>(m_models.size()) },
@@ -79,14 +79,14 @@ namespace VK_Renderer
 		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		uboLayoutBinding.pImmutableSamplers = nullptr;
 
-		//VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
-		//samplerLayoutBinding.binding = 1;
-		//samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		//samplerLayoutBinding.descriptorCount = 1;
-		//samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		//samplerLayoutBinding.pImmutableSamplers = nullptr;
+		VkDescriptorSetLayoutBinding samplerLayoutBinding = {};
+		samplerLayoutBinding.binding = 1;
+		samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		samplerLayoutBinding.descriptorCount = 1;
+		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		samplerLayoutBinding.pImmutableSamplers = nullptr;
 
-		std::vector<VkDescriptorSetLayoutBinding> bindings = { uboLayoutBinding }; //samplerLayoutBinding
+		std::vector<VkDescriptorSetLayoutBinding> bindings = { uboLayoutBinding, samplerLayoutBinding };
 
 		// Create the descriptor set layout
 		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
@@ -152,7 +152,8 @@ namespace VK_Renderer
 			throw std::runtime_error("Failed to allocate descriptor set");
 		}
 
-		std::vector<VkWriteDescriptorSet> descriptorWrites(modelDescriptorSets.size()); // 2 * 
+		
+		std::vector<VkWriteDescriptorSet> descriptorWrites(2 * modelDescriptorSets.size());
 
 		for (uint32_t i = 0; i < m_models.size(); ++i) {
 			VkDescriptorBufferInfo modelBufferInfo = {};
@@ -161,7 +162,7 @@ namespace VK_Renderer
 			modelBufferInfo.range = sizeof(glm::mat4);
 
 			// Bind image and sampler resources to the descriptor
-			/*VkDescriptorImageInfo imageInfo = {};
+			VkDescriptorImageInfo imageInfo = {};
 			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			imageInfo.imageView = m_models[i]->GetTextureView();
 			imageInfo.sampler = m_models[i]->GetTextureSampler();
@@ -174,19 +175,8 @@ namespace VK_Renderer
 			descriptorWrites[2 * i + 0].descriptorCount = 1;
 			descriptorWrites[2 * i + 0].pBufferInfo = &modelBufferInfo;
 			descriptorWrites[2 * i + 0].pImageInfo = nullptr;
-			descriptorWrites[2 * i + 0].pTexelBufferView = nullptr;*/
+			descriptorWrites[2 * i + 0].pTexelBufferView = nullptr;
 
-			descriptorWrites[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrites[i].dstSet = modelDescriptorSets[i];
-			descriptorWrites[i].dstBinding = 0;
-			descriptorWrites[i].dstArrayElement = 0;
-			descriptorWrites[i].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrites[i].descriptorCount = 1;
-			descriptorWrites[i].pBufferInfo = &modelBufferInfo;
-			descriptorWrites[i].pImageInfo = nullptr;
-			descriptorWrites[i].pTexelBufferView = nullptr;
-
-			/*
 			descriptorWrites[2 * i + 1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[2 * i + 1].dstSet = modelDescriptorSets[i];
 			descriptorWrites[2 * i + 1].dstBinding = 1;
@@ -194,7 +184,6 @@ namespace VK_Renderer
 			descriptorWrites[2 * i + 1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			descriptorWrites[2 * i + 1].descriptorCount = 1;
 			descriptorWrites[2 * i + 1].pImageInfo = &imageInfo;
-			*/
 		}
 
 		// Update descriptor sets
