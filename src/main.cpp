@@ -11,6 +11,7 @@
 #include "commandbuffer.h"
 
 #include <glm.hpp>
+#include "ltc_fit.h"
 
 using namespace VK_Renderer;
 
@@ -196,7 +197,7 @@ int main(int argc, char* argv[])
 	SDL_DestroyWindowSurface(window);
 	SDL_DestroyWindow(window);
 	
-	//system("pause");
-
+	LTCFit::GenerateTexture();
+	system("pause");
 	return 0;
 }
