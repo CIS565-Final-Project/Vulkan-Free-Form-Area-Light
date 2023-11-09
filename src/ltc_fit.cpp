@@ -1,7 +1,10 @@
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define DEBUG 0
 #include "ltc_fit.h"
 #include "nelder_mead.h"//如果直接放到ltc_fit.h 那么这个cpp会编译一次nelder_mead.h include ltc_fit.h的main也会编译一次
 #include <iostream>
-#define DEBUG 0
+#include <stb_image_write.h>
+#include <dds.h>
 // size of precomputed table (theta, alpha)
 const int N = 64;
 // number of samples used to compute the error during fitting
@@ -126,7 +129,58 @@ namespace LTCFit {
 
 		return normalize(averageDir);
 	}
-	void GenerateTexture()
+	void WriteToTextures(const std::string& _filename, const glm::mat3* tab, const glm::vec2* tab_amp, const int N)
+	{
+		auto tab_data = new float[4 * N * N];
+		auto hdr_data2 = new float[4 * N * N];
+		for (int i = 0, n = 0; i < N * N; ++i, n += 4)
+		{
+			const glm::mat3& M = tab[i];
+
+			float a = M[0][0];
+			float b = M[0][2];
+			float c = M[1][1];
+			float d = M[2][0];
+
+			// Rescaled inverse of m:
+			// a 0 b   inverse   1      0      -b
+			// 0 c 0     ==>     0 (a - b*d)/c  0
+			// d 0 1            -d      0       a
+
+			// Store the variable terms
+			tab_data[n + 0] = a;
+			tab_data[n + 1] = -b;
+			tab_data[n + 2] = (a - b * d) / c;
+			tab_data[n + 3] = -d;
+
+			hdr_data2[n + 0] = tab_amp[i].x;
+			hdr_data2[n + 1] = tab_amp[i].y;
+			hdr_data2[n + 2] = -d;
+			hdr_data2[n + 3] = 1;
+
+		}
+		
+		std::string filename = _filename + ".hdr";
+		std::cout << "write M to texture: " << filename << "..." << std::endl;
+		stbi_write_hdr(filename.c_str(), N, N, 4, tab_data);
+		
+		filename = _filename + "_amp.hdr";	
+		std::cout << "write amplitude to texture: " << filename << "..." << std::endl;
+		stbi_write_hdr(filename.c_str(), N, N, 4, hdr_data2);
+
+		filename = _filename + ".dds";
+		std::cout << "write M to texture: " << filename << "..." << std::endl;
+		SaveDDS(filename.c_str(), DDS_FORMAT_R32G32B32A32_FLOAT, sizeof(float) * 4, N, N, tab_data);
+
+		filename = _filename + "_amp.dds";
+		std::cout << "write amplitude to texture: " << filename << "..." << std::endl;
+		SaveDDS(filename.c_str(), DDS_FORMAT_R32G32_FLOAT, sizeof(float) * 2, N, N, tab_amp);
+
+		delete[] tab_data;
+		delete[] hdr_data2;
+		
+	}
+	void GenerateTexture(const std::string& baseFilename)
 	{
 		BRDF brdf;
 		glm::mat3* tab = new glm::mat3[N * N];
@@ -216,7 +270,9 @@ namespace LTCFit {
 			std::cout << "ltc progress: " << (N - a) << "/" << N << std::endl;
 		}
 		std::cout << "end" << std::endl;
+		WriteToTextures(baseFilename, tab, tab_amp, N);
 		delete[] tab;
 		delete[] tab_amp;
+		std::cout << "texture generated" << std::endl;
 	}
 }

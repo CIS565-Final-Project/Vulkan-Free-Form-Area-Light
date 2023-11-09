@@ -271,7 +271,7 @@ int main(int argc, char* argv[])
 	SDL_DestroyWindowSurface(window);
 	SDL_DestroyWindow(window);
 	
-	LTCFit::GenerateTexture();
+	LTCFit::GenerateTexture("images/ltc");
 	system("pause");
 	return 0;
 }

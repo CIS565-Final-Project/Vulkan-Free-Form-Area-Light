@@ -17,5 +17,6 @@ namespace LTCFit {
 		void Update(const float* params);
 		float operator()(const float* params);
 	};
-	void GenerateTexture();
+	void WriteToTextures(const std::string& filename, const glm::mat3* tab, const glm::vec2* tab_amp, const int N);
+	void GenerateTexture(const std::string& baseFilename);
 }
