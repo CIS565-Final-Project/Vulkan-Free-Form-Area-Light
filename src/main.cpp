@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 	VkDeviceMemory texImageMemory;
 	Image::FromFile(instance.get(),
 		command_pool->m_CommandPool,
-		"../src/images/wall.jpg",
+		"images/wall.jpg",
 		VK_FORMAT_R8G8B8A8_UNORM,
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -248,12 +248,11 @@ int main(int argc, char* argv[])
 			vkQueuePresentKHR(instance->m_PresentQueue, &present_info);
 		}
 	}
+	vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
+	vkResetFences(device, 1, &fence);
 
 	vkDestroyImage(instance->m_LogicalDevice, texImage, nullptr);
 	vkFreeMemory(instance->m_LogicalDevice, texImageMemory, nullptr);
-
-	vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
-	vkResetFences(device, 1, &fence);
 
 	vkDestroyFence(instance->m_LogicalDevice, fence, nullptr);
 	vkDestroySemaphore(instance->m_LogicalDevice, image_available_semaphore, nullptr);
