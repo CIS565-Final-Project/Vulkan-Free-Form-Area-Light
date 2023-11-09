@@ -158,6 +158,8 @@ namespace VK_Renderer
 		}
 
 		VkPhysicalDeviceFeatures device_features = {};
+		device_features.fillModeNonSolid = VK_TRUE;
+		device_features.samplerAnisotropy = VK_TRUE;
 
 		VkDeviceCreateInfo create_info = {};
 		create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -511,5 +513,18 @@ namespace VK_Renderer
 				printf("%s\n", extension.extensionName);
 			}
 		}
+	}
+
+	uint32_t VK_Instance::GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const {
+		// Iterate over all memory types available for the device used in this example
+		for (uint32_t i = 0; i < m_DeviceMemoryProperties.memoryTypeCount; i++) {
+			if ((typeBits & 1) == 1) {
+				if ((m_DeviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+					return i;
+				}
+			}
+			typeBits >>= 1;
+		}
+		throw std::runtime_error("Could not find a suitable memory type!");
 	}
 }

@@ -1,10 +1,26 @@
 file(GLOB_RECURSE Shader_Sources
 	"shaders/*.vert"
 	"shaders/*.frag"
+	"shaders/*.comp"
+)
+
+file(GLOB IMAGES
+    "images/*.jpg"
+	"images/*.png"
+	"images/*.bmp"
+	"images/*.hdr"
 )
 
 #message("Shaders: ${Shaders_Sources}")
+#message("Images: ${IMAGES}")
 
+#copy images
+foreach(IMAGE ${IMAGES})
+    get_filename_component(fname ${IMAGE} NAME)
+    configure_file(${IMAGE} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/images/${fname} COPYONLY)
+endforeach()
+
+#compile shaders
 source_group("Shaders" FILES ${Shader_Sources})
 
 foreach(shader ${Shader_Sources})

@@ -35,6 +35,7 @@ namespace VK_Renderer
 		void CreateSwapchain(const int& w, const int& h);
 		void CreateImageViews();
 		void CreateFrameBuffers(VkRenderPass renderPass);
+		uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const;
 
 	protected:
 		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
