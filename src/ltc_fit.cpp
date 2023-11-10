@@ -147,7 +147,7 @@ namespace LTCFit {
 			// 0 c 0     ==>     0 (a - b*d)/c  0
 			// d 0 1            -d      0       a
 
-			// Store the variable terms
+			// Store the variable terms, inverse M
 			tab_data[n + 0] = a;
 			tab_data[n + 1] = -b;
 			tab_data[n + 2] = (a - b * d) / c;
@@ -226,7 +226,7 @@ namespace LTCFit {
 					glm::vec3 L = glm::normalize(avg_dir);
 					glm::vec3 T1(L.z, 0, -L.x);
 					glm::vec3 T2(0, 1, 0);
-					//???
+					//fit faster???
 					ltc.X = T1;
 					ltc.Y = T2;
 					ltc.Z = L;
