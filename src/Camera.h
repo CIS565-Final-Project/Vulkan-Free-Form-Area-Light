@@ -9,6 +9,7 @@
 struct CameraBufferObject {
   glm::mat4 viewMatrix;
   glm::mat4 projectionMatrix;
+  glm::vec3 origin;
 };
 
 class Camera {
@@ -32,4 +33,6 @@ public:
     VkBuffer GetBuffer() const;
     
     void UpdateOrbit(float deltaX, float deltaY, float deltaZ);
+
+    glm::vec3 origin;
 };
