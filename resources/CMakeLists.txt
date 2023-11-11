@@ -3,6 +3,7 @@ file(GLOB_RECURSE Shader_Sources
 	"shaders/*.frag"
 	"shaders/*.comp"
 	"shaders/*.mesh"
+	"shaders/*.task"
 )
 
 file(GLOB IMAGES

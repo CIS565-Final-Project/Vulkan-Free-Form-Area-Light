@@ -55,9 +55,14 @@ void CreateGraphicsPipeline(vk::Device vk_device, VK_GraphicsPipeline* pipeline)
 void CreateMeshPipeline(vk::Device vk_device, VK_GraphicsPipeline* pipeline)
 {
 	// Create required shader stages
+	auto task_shader = ReadFile("shaders/mesh_flat.task.spv");
 	auto mesh_shader = ReadFile("shaders/mesh_flat.mesh.spv");
 	auto frag_shader = ReadFile("shaders/mesh_flat.frag.spv");
 
+	vk::ShaderModule task_module = vk_device.createShaderModule(vk::ShaderModuleCreateInfo{
+		.codeSize = task_shader.size(),
+		.pCode = reinterpret_cast<const uint32_t*>(task_shader.data())
+		});
 	vk::ShaderModule mesh_module = vk_device.createShaderModule(vk::ShaderModuleCreateInfo{
 		.codeSize = mesh_shader.size(),
 		.pCode = reinterpret_cast<const uint32_t*>(mesh_shader.data())
@@ -69,6 +74,11 @@ void CreateMeshPipeline(vk::Device vk_device, VK_GraphicsPipeline* pipeline)
 
 	std::vector<vk::PipelineShaderStageCreateInfo> shader_stages
 	{
+		vk::PipelineShaderStageCreateInfo{
+			.stage = vk::ShaderStageFlagBits::eTaskEXT,
+			.module = task_module,
+			.pName = "main"
+		},
 		vk::PipelineShaderStageCreateInfo{
 			.stage = vk::ShaderStageFlagBits::eMeshEXT,
 			.module = mesh_module,
@@ -83,6 +93,7 @@ void CreateMeshPipeline(vk::Device vk_device, VK_GraphicsPipeline* pipeline)
 
 	pipeline->CreatePipeline(shader_stages);
 
+	vk_device.destroyShaderModule(task_module);
 	vk_device.destroyShaderModule(mesh_module);
 	vk_device.destroyShaderModule(frag_module);
 }
@@ -271,7 +282,7 @@ int main(int argc, char* argv[])
 
 				// Draw call
 				vk::CommandBuffer commandBuffer = command_buffer->m_CommandBuffer;
-				uint32_t num_workgroups_x = 1;
+				uint32_t num_workgroups_x = 2;
 				uint32_t num_workgroups_y = 1;
 				uint32_t num_workgroups_z = 1;
 

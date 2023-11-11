@@ -5,6 +5,14 @@
 layout(local_size_x = 1) in;
 layout(triangles, max_vertices = 3, max_primitives = 1) out;
 
+struct Task
+{
+	int task_id;
+	vec3 color;
+};
+
+taskPayloadSharedEXT Task IN;
+
 // Vertex Ouput
 layout(location = 0) out PerVertexData
 {
@@ -14,10 +22,17 @@ layout(location = 0) out PerVertexData
 float scale = 0.5f;
 
 // hard code triangle data
-const vec2 position[3] = vec2[](
-	vec2(0.0, -0.5),
-	vec2(0.5,  0.5),
-	vec2(-0.5, 0.5)
+const vec2 position[2][3] = vec2[][](
+	vec2[](
+		vec2(0.5, -0.5),
+		vec2(0.5,  0.5),
+		vec2(-0.5, -0.5)
+	), 
+	vec2[](
+		vec2(-0.5, -0.5),
+		vec2(0.5,  0.5),
+		vec2(-0.5, 0.5)
+	)
 );
 
 const vec3 color[3] = vec3[](
@@ -34,8 +49,8 @@ void main()
 
 	for(int i = 0; i < 3; ++i)
 	{
-		gl_MeshVerticesEXT[i].gl_Position = vec4(position[i], 0, 1);
-		v_out[i].color = color[i];
+		gl_MeshVerticesEXT[i].gl_Position = vec4(position[IN.task_id][i], 0, 1);
+		v_out[i].color = IN.color;//color[i];
 	}
 	gl_PrimitiveTriangleIndicesEXT[0] =  uvec3(0, 1, 2);
 }
