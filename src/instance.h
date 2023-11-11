@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 #include <SDL_vulkan.h>
 
 #include "common.h"
@@ -38,7 +38,7 @@ namespace VK_Renderer
 		uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const;
 
 	protected:
-		void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+		vk::DebugUtilsMessengerCreateInfoEXT CreateDebugMessengerCreateInfo();
 		bool CheckValidationLayerSupport();
 		VkResult SetupDebugMessenger();
 		bool IsPhysicalDeviceSuitable(VkPhysicalDevice device);
@@ -50,10 +50,12 @@ namespace VK_Renderer
 		VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 	public:
+		vk::Instance vk_Instance;
 		VkInstance m_Instance;
 		VkSurfaceKHR m_Surface;
 
 		VkPhysicalDevice m_PhysicalDevice;
+		vk::Device vk_LogicalDevice;
 		VkDevice m_LogicalDevice;
 		VkSwapchainKHR m_Swapchain;
 		VkFormat m_SwapchainImageFormat;

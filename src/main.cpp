@@ -8,6 +8,7 @@
 #include "Camera.h"
 #include "Image.h"
 #include "graphicsPipeline.h"
+#include "meshGraphicsPipeline.h"
 #include "commandPool.h"
 #include "commandbuffer.h"
 
@@ -15,6 +16,76 @@
 
 
 using namespace VK_Renderer;
+
+void CreateGraphicsPipeline(vk::Device vk_device, VK_GraphicsPipeline* pipeline)
+{
+	// Create required shader stages
+	auto vert_shader = ReadFile("shaders/flat.vert.spv");
+	auto frag_shader = ReadFile("shaders/flat.frag.spv");
+
+	vk::ShaderModule vert_module = vk_device.createShaderModule(vk::ShaderModuleCreateInfo{
+		.codeSize = vert_shader.size(),
+		.pCode = reinterpret_cast<const uint32_t*>(vert_shader.data())
+		});
+	vk::ShaderModule frag_module = vk_device.createShaderModule(vk::ShaderModuleCreateInfo{
+		.codeSize = frag_shader.size(),
+		.pCode = reinterpret_cast<const uint32_t*>(frag_shader.data())
+		});
+
+	std::vector<vk::PipelineShaderStageCreateInfo> shader_stages
+	{
+		vk::PipelineShaderStageCreateInfo{
+			.stage = vk::ShaderStageFlagBits::eVertex,
+			.module = vert_module,
+			.pName = "main"
+		},
+		vk::PipelineShaderStageCreateInfo{
+			.stage = vk::ShaderStageFlagBits::eFragment,
+			.module = frag_module,
+			.pName = "main"
+		},
+	};
+	
+	pipeline->CreatePipeline(shader_stages);
+
+	vk_device.destroyShaderModule(vert_module);
+	vk_device.destroyShaderModule(frag_module);
+}
+
+void CreateMeshPipeline(vk::Device vk_device, VK_GraphicsPipeline* pipeline)
+{
+	// Create required shader stages
+	auto mesh_shader = ReadFile("shaders/mesh_flat.mesh.spv");
+	auto frag_shader = ReadFile("shaders/mesh_flat.frag.spv");
+
+	vk::ShaderModule mesh_module = vk_device.createShaderModule(vk::ShaderModuleCreateInfo{
+		.codeSize = mesh_shader.size(),
+		.pCode = reinterpret_cast<const uint32_t*>(mesh_shader.data())
+		});
+	vk::ShaderModule frag_module = vk_device.createShaderModule(vk::ShaderModuleCreateInfo{
+		.codeSize = frag_shader.size(),
+		.pCode = reinterpret_cast<const uint32_t*>(frag_shader.data())
+		});
+
+	std::vector<vk::PipelineShaderStageCreateInfo> shader_stages
+	{
+		vk::PipelineShaderStageCreateInfo{
+			.stage = vk::ShaderStageFlagBits::eMeshEXT,
+			.module = mesh_module,
+			.pName = "main"
+		},
+		vk::PipelineShaderStageCreateInfo{
+			.stage = vk::ShaderStageFlagBits::eFragment,
+			.module = frag_module,
+			.pName = "main"
+		},
+	};
+
+	pipeline->CreatePipeline(shader_stages);
+
+	vk_device.destroyShaderModule(mesh_module);
+	vk_device.destroyShaderModule(frag_module);
+}
 
 int main(int argc, char* argv[])
 {
@@ -97,10 +168,23 @@ int main(int argc, char* argv[])
 	models[0]->SetTexture(texImage);
 	models[1]->SetTexture(texImage);
 
+	vk::Device vk_device = instance->m_LogicalDevice;
+
 	uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(instance->m_LogicalDevice, 
-																	instance->m_SwapchainExtent, 
-																	instance->m_SwapchainImageFormat,
-																	models, camera);
+																			instance->m_SwapchainExtent, 
+																			instance->m_SwapchainImageFormat,
+																			models, camera);
+	CreateGraphicsPipeline(vk_device, graphics_pipeline.get());
+	
+
+	// mesh pipeline
+	
+	uPtr<VK_MeshGraphicsPipeline> mesh_pipeline = mkU<VK_MeshGraphicsPipeline>(instance->m_LogicalDevice,
+																				instance->m_SwapchainExtent,
+																				instance->m_SwapchainImageFormat,
+																				models, camera);
+
+	CreateMeshPipeline(vk_device, mesh_pipeline.get());
 
 	instance->CreateFrameBuffers(graphics_pipeline->m_RenderPass);
 	
@@ -155,7 +239,7 @@ int main(int argc, char* argv[])
 
 				VkRenderPassBeginInfo render_pass_begin_info = {};
 				render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-				render_pass_begin_info.renderPass = graphics_pipeline->m_RenderPass;
+				render_pass_begin_info.renderPass = mesh_pipeline->m_RenderPass;
 				render_pass_begin_info.framebuffer = instance->m_SwapchainFramebuffers[image_index];
 				render_pass_begin_info.clearValueCount = 1;
 				render_pass_begin_info.pClearValues = &clear_color;
@@ -164,7 +248,7 @@ int main(int argc, char* argv[])
 
 				vkCmdBeginRenderPass(command_buffer->m_CommandBuffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-				vkCmdBindPipeline(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_Pipeline);
+				vkCmdBindPipeline(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mesh_pipeline->m_Pipeline);
 
 				// Viewport and scissors
 				VkViewport viewport = {};
@@ -186,25 +270,38 @@ int main(int argc, char* argv[])
 				vkCmdSetScissor(command_buffer->m_CommandBuffer, 0, 1, &scissor);
 
 				// Draw call
-				// vkCmdDraw(command_buffer->m_CommandBuffer, 3, 1, 0, 0);
-				
-				vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_PipelineLayout, 0, 1, &graphics_pipeline->cameraDescriptorSet, 0, nullptr);
+				vk::CommandBuffer commandBuffer = command_buffer->m_CommandBuffer;
+				uint32_t num_workgroups_x = 1;
+				uint32_t num_workgroups_y = 1;
+				uint32_t num_workgroups_z = 1;
 
-				for (uint32_t j = 0; j < models.size(); ++j) {
-					// Bind the vertex and index buffers
-					VkBuffer vertexBuffers[] = { models[j]->getVertexBuffer() };
-					VkDeviceSize offsets[] = { 0 };
-					vkCmdBindVertexBuffers(command_buffer->m_CommandBuffer, 0, 1, vertexBuffers, offsets);
-
-					vkCmdBindIndexBuffer(command_buffer->m_CommandBuffer, models[j]->getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
-
-					// Bind the descriptor set for each model
-					vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_PipelineLayout, 1, 1, &graphics_pipeline->modelDescriptorSets[j], 0, nullptr);
-
-					// Draw
-					std::vector<uint32_t> indices = models[j]->getIndices();
-					vkCmdDrawIndexed(command_buffer->m_CommandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+				auto func = (PFN_vkCmdDrawMeshTasksEXT)vk_device.getProcAddr("vkCmdDrawMeshTasksEXT");
+				if (func != nullptr)
+				{
+					func(command_buffer->m_CommandBuffer, num_workgroups_x, num_workgroups_y, num_workgroups_z);
 				}
+
+				//vkCmdDraw(command_buffer->m_CommandBuffer, 3, 1, 0, 0);
+				
+				//vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_PipelineLayout, 0, 1, &graphics_pipeline->cameraDescriptorSet, 0, nullptr);
+
+				//for (uint32_t j = 0; j < models.size(); ++j) {
+				//	// Bind the vertex and index buffers
+				//	VkBuffer vertexBuffers[] = { models[j]->getVertexBuffer() };
+				//	VkDeviceSize offsets[] = { 0 };
+				//	vkCmdBindVertexBuffers(command_buffer->m_CommandBuffer, 0, 1, vertexBuffers, offsets);
+				//
+				//	vkCmdBindIndexBuffer(command_buffer->m_CommandBuffer, models[j]->getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+				//
+				//	// Bind the descriptor set for each model
+				//	vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_PipelineLayout, 1, 1, &graphics_pipeline->modelDescriptorSets[j], 0, nullptr);
+				//
+				//	// Draw
+				//	std::vector<uint32_t> indices = models[j]->getIndices();
+				//	vk::CommandBuffer commandBuffer = command_buffer->m_CommandBuffer;
+				//	commandBuffer.drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+				//	//vkCmdDrawIndexed(command_buffer->m_CommandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+				//}
 
 				vkCmdEndRenderPass(command_buffer->m_CommandBuffer);
 
@@ -248,8 +345,12 @@ int main(int argc, char* argv[])
 			vkQueuePresentKHR(instance->m_PresentQueue, &present_info);
 		}
 	}
+
 	vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
 	vkResetFences(device, 1, &fence);
+
+	//vk_device.destroyShaderModule(vert_module);
+	//vk_device.destroyShaderModule(frag_module);
 
 	vkDestroyImage(instance->m_LogicalDevice, texImage, nullptr);
 	vkFreeMemory(instance->m_LogicalDevice, texImageMemory, nullptr);
@@ -265,6 +366,7 @@ int main(int argc, char* argv[])
 
 	command_pool.reset();
 	graphics_pipeline.reset();
+	mesh_pipeline.reset();
 	instance.reset();
 
 	SDL_DestroyWindowSurface(window);

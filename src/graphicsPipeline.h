@@ -4,7 +4,7 @@
 #include "common.h"
 #include "Model.h"
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 namespace VK_Renderer
 {
@@ -13,6 +13,8 @@ namespace VK_Renderer
 	public:
 		VK_GraphicsPipeline(VkDevice device, const VkExtent2D& extent, const VkFormat& swapchain_image_format, std::vector<Model*>& models, Camera* camera);
 		~VK_GraphicsPipeline();
+
+		virtual void CreatePipeline(const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo);
 
 	protected:
 		void CreateRenderPass();
@@ -24,9 +26,8 @@ namespace VK_Renderer
 		void CreateDescriptorPool();
 
 	public:
-		VkShaderModule m_VertShaderModule;
-		VkShaderModule m_FragShaderModule;
 		VkRenderPass m_RenderPass;
+		vk::RenderPass vk_RenderPass;
 		VkPipelineLayout m_PipelineLayout;
 		VkPipeline m_Pipeline;
 
@@ -43,5 +44,9 @@ namespace VK_Renderer
 		VkDevice m_LogicalDevice;
 		VkFormat m_SwapchainImageFormat;
 		VkExtent2D m_Extent;
+
+		vk::Device vk_LogicalDevice;
+		vk::Format vk_SwapchainImageFormat;
+		vk::Extent2D vk_Extent;
 	};
 }

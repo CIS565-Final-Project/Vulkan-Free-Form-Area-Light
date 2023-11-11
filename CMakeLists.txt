@@ -4,7 +4,7 @@ set(CMAKE_MOUDULE_PATH ${CMAKE_MOUDULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 project(vulkan_free_form_area_light)
 
 OPTION(USE_D2D_WSI "Use Direct to Display Swapchain" OFF)
-
+add_definitions(-DVULKAN_HPP_NO_CONSTRUCTORS)
 find_package(Vulkan REQUIRED)
 
 set(CMAKE_CXX_STANDARD 20)

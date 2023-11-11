@@ -2,6 +2,7 @@ file(GLOB_RECURSE Shader_Sources
 	"shaders/*.vert"
 	"shaders/*.frag"
 	"shaders/*.comp"
+	"shaders/*.mesh"
 )
 
 file(GLOB IMAGES
@@ -29,7 +30,7 @@ foreach(shader ${Shader_Sources})
 	get_filename_component(fname ${shader} NAME)
 	add_custom_target(${fname}.spv 
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${Shader_Dir} &&
-		$ENV{VK_SDK_PATH}/Bin/glslangValidator.exe -V ${shader} -o ${Shader_Dir}/${fname}.spv -g
+		$ENV{VK_SDK_PATH}/Bin/glslangValidator.exe --target-env spirv1.4 -V ${shader} -o ${Shader_Dir}/${fname}.spv -g
         SOURCES ${shader}
 	)
 	ExternalTarget("Shaders" ${fname}.spv)

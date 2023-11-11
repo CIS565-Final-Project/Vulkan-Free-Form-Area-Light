@@ -16,7 +16,8 @@ namespace VK_Renderer
 	};
 	
 	const std::vector<const char*> DeviceExtensions = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		VK_EXT_MESH_SHADER_EXTENSION_NAME
 	};
 	
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallBack(
@@ -40,18 +41,17 @@ namespace VK_Renderer
 	{
 		assert(!s_Instance);
 		s_Instance = this;
+		
+		vk::ApplicationInfo app_info{
+			.pApplicationName = app_name.c_str(),
+			.pEngineName = "No Engine",
+			.engineVersion = vk::makeVersion(1, 0, 0),
+			.apiVersion = vk::ApiVersion13
+		};
 
-		VkApplicationInfo app_info = {};
-		app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		app_info.pEngineName = "Vulkan Renderer Engine";
-		app_info.apiVersion = VK_API_VERSION_1_3;
-		app_info.pApplicationName = app_name.c_str();
-		app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-		app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-
-		VkInstanceCreateInfo create_info = {};
-		create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-		create_info.pApplicationInfo = &app_info;
+		vk::InstanceCreateInfo create_info = {
+			.pApplicationInfo = &app_info
+		};
 
 		unsigned int sdl_ext_count = 0;
 		SDL_Vulkan_GetInstanceExtensions(window, &sdl_ext_count, NULL);
@@ -61,8 +61,7 @@ namespace VK_Renderer
 
 		// create a separate debug utils messenger specifically for 
 		// vkCreateInstance and vkDestroyInstance
-		VkDebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info;
-		PopulateDebugMessengerCreateInfo(debug_utils_messenger_create_info);
+		vk::DebugUtilsMessengerCreateInfoEXT debug_utils_messenger_create_info = CreateDebugMessengerCreateInfo();
 
 		if (ENABLE_VALIDATION)
 		{
@@ -72,16 +71,15 @@ namespace VK_Renderer
 			create_info.ppEnabledLayerNames = ValidationLayers.data();
 			create_info.pNext = &debug_utils_messenger_create_info;
 			m_Extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			m_Extensions.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 		} 
 
 		create_info.enabledExtensionCount = m_Extensions.size();
 		create_info.ppEnabledExtensionNames = m_Extensions.data();
-
-		if (vkCreateInstance(&create_info, nullptr, &m_Instance) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to create instance");
-		}
-
+		
+		vk_Instance = vk::createInstance(create_info);
+		m_Instance = static_cast<VkInstance>(vk_Instance);
+		
 		if (ENABLE_VALIDATION && SetupDebugMessenger() != VK_SUCCESS) 
 			throw std::runtime_error("Failed to create DebugUtilsMessenger!");
 	}
@@ -141,39 +139,50 @@ namespace VK_Renderer
 
 	void VK_Instance::CreateLogicDevice()
 	{
-		std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
+		vk::PhysicalDevice physical_device = m_PhysicalDevice;
+		vk::PhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures;
+
+		vk::PhysicalDeviceFeatures2 physicalDeviceFeatures2;
+		physicalDeviceFeatures2.pNext = &meshShaderFeatures;
+		
+		physical_device.getFeatures2(&physicalDeviceFeatures2);
+
+		std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
 		std::set<uint32_t> unique_queues = { m_QueueFamilyIndices.GraphicsValue(), m_QueueFamilyIndices.PresentValue() };
 
 		float queue_priority = 1.f;
 
 		for (uint32_t queue_family : unique_queues)
 		{
-			VkDeviceQueueCreateInfo queue_create_info = {};
-			queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			queue_create_info.queueFamilyIndex = m_QueueFamilyIndices.GraphicsValue();
-			queue_create_info.queueCount = 1;
-			queue_create_info.pQueuePriorities = &queue_priority;
+			queue_create_infos.push_back(vk::DeviceQueueCreateInfo{
+				.queueFamilyIndex = m_QueueFamilyIndices.GraphicsValue(),
+				.queueCount = 1,
+				.pQueuePriorities = &queue_priority
+			});
+		}
+		vk::PhysicalDeviceFeatures physical_device_feature{
+			.fillModeNonSolid = vk::True,
+			.samplerAnisotropy = vk::True
+		};
 
-			queue_create_infos.push_back(queue_create_info);
+		vk::DeviceCreateInfo create_info{
+			.pNext = &meshShaderFeatures,
+			.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size()),
+			.pQueueCreateInfos = queue_create_infos.data(),
+			.enabledExtensionCount = static_cast<uint32_t>(DeviceExtensions.size()),
+			.ppEnabledExtensionNames = DeviceExtensions.data(),
+			.pEnabledFeatures = &physical_device_feature
+		};
+
+		std::vector<vk::ExtensionProperties> availableExtensions = physical_device.enumerateDeviceExtensionProperties();
+
+		printf("%d available Devices extensions:\n", availableExtensions.size());
+		for (const auto& extension : availableExtensions) {
+			std::cout << extension.extensionName << std::endl;
 		}
 
-		VkPhysicalDeviceFeatures device_features = {};
-		device_features.fillModeNonSolid = VK_TRUE;
-		device_features.samplerAnisotropy = VK_TRUE;
-
-		VkDeviceCreateInfo create_info = {};
-		create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		create_info.pQueueCreateInfos = queue_create_infos.data();
-		create_info.queueCreateInfoCount = static_cast<uint32_t>(queue_create_infos.size());
-		create_info.pEnabledFeatures = &device_features;
-
-		create_info.enabledExtensionCount = static_cast<uint32_t>(DeviceExtensions.size());
-		create_info.ppEnabledExtensionNames = DeviceExtensions.data();
-
-		if (vkCreateDevice(m_PhysicalDevice, &create_info, nullptr, &m_LogicalDevice) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to Create Logical Device!");
-		}
+		vk_LogicalDevice = physical_device.createDevice(create_info);
+		m_LogicalDevice = vk_LogicalDevice;
 
 		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilyIndices.GraphicsValue(), 0, &m_GraphicsQueue);
 		vkGetDeviceQueue(m_LogicalDevice, m_QueueFamilyIndices.PresentValue(), 0, &m_PresentQueue);
@@ -413,20 +422,17 @@ namespace VK_Renderer
 		return capabilities.currentExtent;
 	}
 
-	void VK_Instance::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo)
+	vk::DebugUtilsMessengerCreateInfoEXT VK_Instance::CreateDebugMessengerCreateInfo()
 	{
-		createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-		createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-									VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-									VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-
-		createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-									VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-									VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-
-		createInfo.pfnUserCallback = DebugCallBack;
-		createInfo.pUserData = nullptr;
+		return {
+			.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+								vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+								vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+			.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | 
+							vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | 
+							vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
+			.pfnUserCallback = DebugCallBack,
+		};
 	}
 
 	bool VK_Instance::CheckValidationLayerSupport()
@@ -458,13 +464,12 @@ namespace VK_Renderer
 
 	VkResult VK_Instance::SetupDebugMessenger()
 	{
-		VkDebugUtilsMessengerCreateInfoEXT create_info = {};
-		PopulateDebugMessengerCreateInfo(create_info);
+		vk::DebugUtilsMessengerCreateInfoEXT create_info = CreateDebugMessengerCreateInfo();
 
-		auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkCreateDebugUtilsMessengerEXT");
+		auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vk_Instance.getProcAddr("vkCreateDebugUtilsMessengerEXT");
 		if (func != nullptr)
 		{
-			return func(m_Instance, &create_info, nullptr, &m_DebugUtilsMessenger);
+			return func(m_Instance, reinterpret_cast<const VkDebugUtilsMessengerCreateInfoEXT*>(&create_info), nullptr, &m_DebugUtilsMessenger);
 		}
 		else
 		{

@@ -1,29 +1,10 @@
 #include "graphicsPipeline.h"
 #include <glm.hpp>
-#include <fstream>
+
 #include "Camera.h"
 
 namespace VK_Renderer
 {
-	std::vector<char> ReadFile(const std::string& file)
-	{
-		std::ifstream in(file, std::ios::ate | std::ios::binary);
-		std::vector<char> buffer;
-		if (!in.is_open())
-		{
-			printf("Failed to Open %s", file.c_str());
-			return buffer;
-		}
-
-		size_t file_size = in.tellg();
-		in.seekg(0);
-		buffer.resize(file_size);
-		in.read(buffer.data(), file_size);
-
-		return buffer;
-	}
-
-
 	void VK_GraphicsPipeline::CreateDescriptorPool() {
 		// Describe which descriptor types that the descriptor sets will contain
 		std::vector<VkDescriptorPoolSize> poolSizes = {
@@ -134,7 +115,6 @@ namespace VK_Renderer
 		vkUpdateDescriptorSets(m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 
-
 	void VK_GraphicsPipeline::CreateModelDescriptorSets() {
 		modelDescriptorSets.resize(m_models.size());
 
@@ -190,49 +170,37 @@ namespace VK_Renderer
 		vkUpdateDescriptorSets(m_LogicalDevice, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 
-
 	VK_GraphicsPipeline::VK_GraphicsPipeline(VkDevice device, const VkExtent2D& extent, const VkFormat& swapchain_image_format, std::vector<Model*>& models, Camera* camera)
 		: m_LogicalDevice(device), 
 		  m_SwapchainImageFormat(swapchain_image_format), 
 		  m_Extent(extent),
 		  m_models(models),
-		  m_camera(camera)
+		  m_camera(camera),
+		  modelDescriptorSetLayout(VK_NULL_HANDLE),
+		  cameraDescriptorSetLayout(VK_NULL_HANDLE),
+		  descriptorPool(VK_NULL_HANDLE)
 	{
+		vk_LogicalDevice = device;
+		vk_Extent = extent;
+		vk_SwapchainImageFormat = static_cast<vk::Format>(swapchain_image_format);
+
 		// create the Renderpass before creating pipeline
 		CreateRenderPass();
+	}
 
-		auto vert_shader = ReadFile("shaders/flat.vert.spv");
-		auto frag_shader = ReadFile("shaders/flat.frag.spv");
+	VK_GraphicsPipeline::~VK_GraphicsPipeline()
+	{
+		vkDestroyPipeline(m_LogicalDevice, m_Pipeline, nullptr);
+		vkDestroyRenderPass(m_LogicalDevice, m_RenderPass, nullptr);
+		vkDestroyPipelineLayout(m_LogicalDevice, m_PipelineLayout, nullptr);
+		vkDestroyDescriptorSetLayout(m_LogicalDevice, modelDescriptorSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(m_LogicalDevice, cameraDescriptorSetLayout, nullptr);
 
-		m_VertShaderModule = CreateShaderModule(vert_shader);
-		m_FragShaderModule = CreateShaderModule(frag_shader);
+		vkDestroyDescriptorPool(m_LogicalDevice, descriptorPool, nullptr);
+	}
 
-		// Vertex shader stage
-		VkPipelineShaderStageCreateInfo vert_pipeline_stage_create_info = {};
-		vert_pipeline_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		vert_pipeline_stage_create_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-
-		vert_pipeline_stage_create_info.module = m_VertShaderModule;
-		vert_pipeline_stage_create_info.pName  = "main";
-
-		vert_pipeline_stage_create_info.pSpecializationInfo = nullptr;
-
-		// Fragment shader stage
-		VkPipelineShaderStageCreateInfo frag_pipeline_stage_create_info = {};
-		frag_pipeline_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		frag_pipeline_stage_create_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		frag_pipeline_stage_create_info.module = m_FragShaderModule;
-		frag_pipeline_stage_create_info.pName = "main";
-
-		frag_pipeline_stage_create_info.pSpecializationInfo = nullptr;
-
-		std::vector<VkPipelineShaderStageCreateInfo> shader_stages 
-		{
-			vert_pipeline_stage_create_info, 
-			frag_pipeline_stage_create_info
-		};
-
+	void VK_GraphicsPipeline::CreatePipeline(const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo)
+	{
 		// Fixed-function stages
 
 		// Vertex Input
@@ -296,10 +264,10 @@ namespace VK_Renderer
 
 		// Color
 		VkPipelineColorBlendAttachmentState color_blend_attachment = {};
-		color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | 
-												VK_COLOR_COMPONENT_G_BIT | 
-												VK_COLOR_COMPONENT_B_BIT | 
-												VK_COLOR_COMPONENT_A_BIT;
+		color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+			VK_COLOR_COMPONENT_G_BIT |
+			VK_COLOR_COMPONENT_B_BIT |
+			VK_COLOR_COMPONENT_A_BIT;
 
 		color_blend_attachment.blendEnable = VK_FALSE;
 
@@ -327,7 +295,7 @@ namespace VK_Renderer
 		CreateModelDescriptorSetLayout();
 		CreateDescriptorPool();
 		CreateCameraDescriptorSet();
-		CreateModelDescriptorSets();		
+		CreateModelDescriptorSets();
 
 		std::vector<VkDescriptorSetLayout> descriptorSetLayouts = { cameraDescriptorSetLayout, modelDescriptorSetLayout };
 
@@ -339,7 +307,7 @@ namespace VK_Renderer
 		pipeline_layout_create_info.pushConstantRangeCount = 0;
 		pipeline_layout_create_info.pPushConstantRanges = nullptr;
 
-		if(vkCreatePipelineLayout(m_LogicalDevice, &pipeline_layout_create_info, nullptr, &m_PipelineLayout) != VK_SUCCESS)
+		if (vkCreatePipelineLayout(m_LogicalDevice, &pipeline_layout_create_info, nullptr, &m_PipelineLayout) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create Pipeline Layout!");
 		}
@@ -347,8 +315,8 @@ namespace VK_Renderer
 		// Create Pipeline
 		VkGraphicsPipelineCreateInfo pipeline_create_info = {};
 		pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipeline_create_info.stageCount = static_cast<uint32_t>(shader_stages.size());
-		pipeline_create_info.pStages = shader_stages.data();
+		pipeline_create_info.stageCount = static_cast<uint32_t>(pipelineShaderStagesCreateInfo.size());
+		pipeline_create_info.pStages = reinterpret_cast<const VkPipelineShaderStageCreateInfo*>(pipelineShaderStagesCreateInfo.data());
 		pipeline_create_info.pVertexInputState = &vert_input_create_info;
 		pipeline_create_info.pInputAssemblyState = &input_assembly_create_info;
 		pipeline_create_info.pViewportState = &viewport_state_create_info;
@@ -371,68 +339,52 @@ namespace VK_Renderer
 		}
 	}
 
-	VK_GraphicsPipeline::~VK_GraphicsPipeline()
-	{
-		vkDestroyPipeline(m_LogicalDevice, m_Pipeline, nullptr);
-		vkDestroyRenderPass(m_LogicalDevice, m_RenderPass, nullptr);
-		vkDestroyShaderModule(m_LogicalDevice, m_VertShaderModule, nullptr);
-		vkDestroyShaderModule(m_LogicalDevice, m_FragShaderModule, nullptr);
-		vkDestroyPipelineLayout(m_LogicalDevice, m_PipelineLayout, nullptr);
-		vkDestroyDescriptorSetLayout(m_LogicalDevice, modelDescriptorSetLayout, nullptr);
-		vkDestroyDescriptorSetLayout(m_LogicalDevice, cameraDescriptorSetLayout, nullptr);
-
-		vkDestroyDescriptorPool(m_LogicalDevice, descriptorPool, nullptr);
-	}
-
 	void VK_GraphicsPipeline::CreateRenderPass()
 	{
-		// Setup Framebuffer
-		
 		// color attachment 
-		VkAttachmentDescription attachment_description = {};
-		attachment_description.format = m_SwapchainImageFormat;
-		attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-		attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		attachment_description.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		vk::AttachmentDescription attachment_description{
+			.format = vk_SwapchainImageFormat,
+			.samples = vk::SampleCountFlagBits::e1,
+			.loadOp = vk::AttachmentLoadOp::eClear,
+			.storeOp = vk::AttachmentStoreOp::eStore,
+			.stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
+			.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
+			.initialLayout = vk::ImageLayout::eUndefined,
+			.finalLayout = vk::ImageLayout::ePresentSrcKHR,
+		};
 
 		// attachment reference
-		VkAttachmentReference attachment_reference = {};
-		attachment_reference.attachment = 0;
-		attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		vk::AttachmentReference attachment_ref{
+			.attachment = 0,
+			.layout = vk::ImageLayout::eColorAttachmentOptimal
+		};
 
 		// Subpass
-		VkSubpassDescription subpass_description = {};
-		subpass_description.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass_description.colorAttachmentCount = 1;
-		subpass_description.pColorAttachments = &attachment_reference;
+		vk::SubpassDescription subpass_description{
+			.pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
+			.colorAttachmentCount = 1,
+			.pColorAttachments = &attachment_ref
+		};
+
+		vk::SubpassDependency dependency{
+			.srcSubpass = vk::SubpassExternal,
+			.dstSubpass = 0,
+			.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
+			.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
+			.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite,
+		};
 
 		// Create RenderPass
-		VkRenderPassCreateInfo create_info = {};
-		create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		create_info.attachmentCount = 1;
-		create_info.pAttachments = &attachment_description;
-		create_info.subpassCount = 1;
-		create_info.pSubpasses = &subpass_description;
-
-		VkSubpassDependency dependency = {};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass = 0;
-		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.srcAccessMask = 0;
-		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-		create_info.dependencyCount = 1;
-		create_info.pDependencies = &dependency;
-
-		if (vkCreateRenderPass(m_LogicalDevice, &create_info, nullptr, &m_RenderPass) != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to Create RenderPass!");
-		}
+		vk::RenderPassCreateInfo create_info{
+			.attachmentCount = 1,
+			.pAttachments = &attachment_description,
+			.subpassCount = 1,
+			.pSubpasses = &subpass_description,
+			.dependencyCount = 1,
+			.pDependencies = &dependency
+		};
+		vk_RenderPass = vk_LogicalDevice.createRenderPass(create_info);
+		m_RenderPass = vk_RenderPass;
 	}
 
 	VkShaderModule VK_GraphicsPipeline::CreateShaderModule(const std::vector<char>& source)
