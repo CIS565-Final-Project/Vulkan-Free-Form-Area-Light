@@ -77,8 +77,9 @@ void ClipVertex(in vec3 lightVertex[MAX_LIGHT_VERTEX],int arrSize,
 
 float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MAX_LIGHT_VERTEX], int arrSize){
 	//to tangent space
-	vec3 tangent = normalize(V - N * dot(V,N));
-	//vec3 bitangent = cross(tangent,N);
+	vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+	vec3 tangent = normalize(cross(up,N));
+	//vec3 tangent = normalize(V - N * dot(V,N));
 	vec3 bitangent = cross(N,tangent);
 	LTCMat = LTCMat * mat3(tangent,bitangent,N);
 	for(int i = 0;i<arrSize;++i){
@@ -122,14 +123,13 @@ void main()
 {
 	//vec3 color = 1.f - vs_Color;
 	//outColor = vec4(color, 1.f);
-	vec3 cameraPos = vec3(0,1,-10);
+	vec3 cameraPos = vec3(0,0,-10);
 	vec3 fs_norm = vec3(0,1,0);
 	vec3 V = normalize(cameraPos - fs_Pos);
 	vec3 N = normalize(fs_norm);
 	//float roughness = fs_roughness;
 	//mat3 LTCMat = LTCMat(V,N,roughness);
-	//outColor = vec3(IntegrateD(mat3(1.0),V,N,fs_Pos,lights.vertex,lights.size));
-	//outColor = vec3(IntegrateD(mat3(1.f),V,N,fs_Pos,lights,4));
+	//outColor = vec3(IntegrateD(LTCMat,V,N,fs_Pos,lights.vertex,lights.size));
 	//outColor = texture(texSampler, fragTexCoord);
 	outColor = vec4(vec3(IntegrateD(mat3(1.f),V,N,fs_Pos,lights,4)),1);
 }
