@@ -69,15 +69,15 @@ int main(int argc, char* argv[])
 
 	std::vector<Model*> models;
 	const float halfWidth = 2.5f;
-	models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
-		{
-			{ { -halfWidth, halfWidth + 2.0f, -5.0f }, { 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f } },
-			{ { halfWidth, halfWidth + 2.0f, -5.0f }, { 0.0f, 1.0f, 0.0f },{ 0.0f, 0.0f } },
-			{ { halfWidth, -halfWidth + 2.0f, -5.0f }, { 0.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },
-			{ { -halfWidth, -halfWidth + 2.0f, -5.0f }, { 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
-		},
-		{ 0, 1, 2, 2, 3, 0 }
-	));
+	//models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
+	//	{
+	//		{ { -halfWidth, halfWidth + 2.0f, -5.0f }, { 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f } },
+	//		{ { halfWidth, halfWidth + 2.0f, -5.0f }, { 0.0f, 1.0f, 0.0f },{ 0.0f, 0.0f } },
+	//		{ { halfWidth, -halfWidth + 2.0f, -5.0f }, { 0.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },
+	//		{ { -halfWidth, -halfWidth + 2.0f, -5.0f }, { 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
+	//	},
+	//	{ 0, 1, 2, 2, 3, 0 }
+	//));
 	
 	const float halfWidth_1 = 6.0f;
 	const float quadHeight = -2.0f;
@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
 
 	
 	models[0]->SetTexture(texImage);
-	models[1]->SetTexture(texImage);
+	//models[1]->SetTexture(texImage);
 
 	uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(instance->m_LogicalDevice, 
 																	instance->m_SwapchainExtent, 
@@ -271,7 +271,7 @@ int main(int argc, char* argv[])
 	SDL_DestroyWindowSurface(window);
 	SDL_DestroyWindow(window);
 	
-	LTCFit::GenerateTexture("images/ltc");
+	//LTCFit::GenerateTexture("images/ltc");
 	system("pause");
 	return 0;
 }
