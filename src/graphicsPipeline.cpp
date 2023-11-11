@@ -31,10 +31,10 @@ namespace VK_Renderer
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 1},
 
 			// Models + Blades
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , static_cast<uint32_t>(m_models.size()) },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , static_cast<uint32_t>(m_shadingModels.size() + m_lightModels.size()) },
 
 			// Models + Blades
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , static_cast<uint32_t>(m_models.size()) },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , static_cast<uint32_t>(m_shadingModels.size() + m_lightModels.size()) },
 		};
 
 		VkDescriptorPoolCreateInfo poolInfo = {};
@@ -135,12 +135,12 @@ namespace VK_Renderer
 	}
 
 
-	void VK_GraphicsPipeline::CreateModelDescriptorSets() {
-		modelDescriptorSets.resize(m_models.size());
+	void VK_GraphicsPipeline::CreateModelDescriptorSets(std::vector<VkDescriptorSet>& modelDescriptorSets, std::vector<Model*>& models) {
+		modelDescriptorSets.resize(models.size());
 
 		// Describe the desciptor set
 		// VkDescriptorSetLayout layouts[] = { modelDescriptorSetLayout };
-		std::vector<VkDescriptorSetLayout> layouts = std::vector<VkDescriptorSetLayout>(m_models.size(), modelDescriptorSetLayout);
+		std::vector<VkDescriptorSetLayout> layouts = std::vector<VkDescriptorSetLayout>(models.size(), modelDescriptorSetLayout);
 		VkDescriptorSetAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool = descriptorPool;
@@ -155,17 +155,17 @@ namespace VK_Renderer
 		
 		std::vector<VkWriteDescriptorSet> descriptorWrites(2 * modelDescriptorSets.size());
 
-		for (uint32_t i = 0; i < m_models.size(); ++i) {
+		for (uint32_t i = 0; i < models.size(); ++i) {
 			VkDescriptorBufferInfo modelBufferInfo = {};
-			modelBufferInfo.buffer = m_models[i]->GetModelBuffer();
+			modelBufferInfo.buffer = models[i]->GetModelBuffer();
 			modelBufferInfo.offset = 0;
 			modelBufferInfo.range = sizeof(glm::mat4);
 
 			// Bind image and sampler resources to the descriptor
 			VkDescriptorImageInfo imageInfo = {};
 			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imageInfo.imageView = m_models[i]->GetTextureView();
-			imageInfo.sampler = m_models[i]->GetTextureSampler();
+			imageInfo.imageView = models[i]->GetTextureView();
+			imageInfo.sampler = models[i]->GetTextureSampler();
 
 			descriptorWrites[2 * i + 0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 			descriptorWrites[2 * i + 0].dstSet = modelDescriptorSets[i];
@@ -191,29 +191,71 @@ namespace VK_Renderer
 	}
 
 
-	VK_GraphicsPipeline::VK_GraphicsPipeline(VkDevice device, const VkExtent2D& extent, const VkFormat& swapchain_image_format, std::vector<Model*>& models, Camera* camera)
+	VK_GraphicsPipeline::VK_GraphicsPipeline(VkDevice device, const VkExtent2D& extent, const VkFormat& swapchain_image_format,
+		std::vector<Model*>& shadingModels, std::vector<Model*>& lightModels, Camera* camera)
 		: m_LogicalDevice(device), 
 		  m_SwapchainImageFormat(swapchain_image_format), 
 		  m_Extent(extent),
-		  m_models(models),
+		  m_shadingModels(shadingModels),
+		  m_lightModels(lightModels),
 		  m_camera(camera)
 	{
 		// create the Renderpass before creating pipeline
 		CreateRenderPass();
 
-		auto vert_shader = ReadFile("shaders/flat.vert.spv");
-		auto frag_shader = ReadFile("shaders/flat.frag.spv");
+		CreateCameraDescriptorSetLayout();
+		CreateModelDescriptorSetLayout();
+		CreateDescriptorPool();
+		CreateCameraDescriptorSet();
+		CreateModelDescriptorSets(shadingModelDescriptorSets, m_shadingModels);
+		CreateModelDescriptorSets(lightModelDescriptorSets, m_lightModels);
 
-		m_VertShaderModule = CreateShaderModule(vert_shader);
-		m_FragShaderModule = CreateShaderModule(frag_shader);
+		m_shadingPipelineInfo.vertShaderPath = "shaders/flat.vert.spv";
+		m_shadingPipelineInfo.fragShaderPath = "shaders/flat.frag.spv";
+		m_shadingPipelineInfo.descriptorSetLayouts = { cameraDescriptorSetLayout, modelDescriptorSetLayout };
+		CreateStandardPipeline(m_shadingPipelineInfo);
+
+		m_lightPipelineInfo.vertShaderPath = "shaders/light.vert.spv";
+		m_lightPipelineInfo.fragShaderPath = "shaders/light.frag.spv";
+		m_lightPipelineInfo.descriptorSetLayouts = { cameraDescriptorSetLayout, modelDescriptorSetLayout };
+		CreateStandardPipeline(m_lightPipelineInfo);
+	}
+
+	VK_GraphicsPipeline::~VK_GraphicsPipeline()
+	{
+		DestroyStandardPipeline(m_shadingPipelineInfo);
+		DestroyStandardPipeline(m_lightPipelineInfo);
+
+		vkDestroyRenderPass(m_LogicalDevice, m_RenderPass, nullptr);
+		vkDestroyDescriptorSetLayout(m_LogicalDevice, modelDescriptorSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(m_LogicalDevice, cameraDescriptorSetLayout, nullptr);
+
+		vkDestroyDescriptorPool(m_LogicalDevice, descriptorPool, nullptr);
+	}
+
+	void VK_GraphicsPipeline::DestroyStandardPipeline(PipelineInfo& pipelineInfo)
+	{
+		vkDestroyPipeline(m_LogicalDevice, pipelineInfo.pipeline, nullptr);
+		vkDestroyShaderModule(m_LogicalDevice, pipelineInfo.vertShaderModule, nullptr);
+		vkDestroyShaderModule(m_LogicalDevice, pipelineInfo.fragShaderModule, nullptr);
+		vkDestroyPipelineLayout(m_LogicalDevice, pipelineInfo.pipelineLayout, nullptr);
+	}
+
+	void VK_GraphicsPipeline::CreateStandardPipeline(PipelineInfo& pipelineInfo)
+	{
+		auto vert_shader = ReadFile(pipelineInfo.vertShaderPath);
+		auto frag_shader = ReadFile(pipelineInfo.fragShaderPath);
+
+		pipelineInfo.vertShaderModule = CreateShaderModule(vert_shader);
+		pipelineInfo.fragShaderModule = CreateShaderModule(frag_shader);
 
 		// Vertex shader stage
 		VkPipelineShaderStageCreateInfo vert_pipeline_stage_create_info = {};
 		vert_pipeline_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		vert_pipeline_stage_create_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
 
-		vert_pipeline_stage_create_info.module = m_VertShaderModule;
-		vert_pipeline_stage_create_info.pName  = "main";
+		vert_pipeline_stage_create_info.module = pipelineInfo.vertShaderModule;
+		vert_pipeline_stage_create_info.pName = "main";
 
 		vert_pipeline_stage_create_info.pSpecializationInfo = nullptr;
 
@@ -222,14 +264,14 @@ namespace VK_Renderer
 		frag_pipeline_stage_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		frag_pipeline_stage_create_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		frag_pipeline_stage_create_info.module = m_FragShaderModule;
+		frag_pipeline_stage_create_info.module = pipelineInfo.fragShaderModule;
 		frag_pipeline_stage_create_info.pName = "main";
 
 		frag_pipeline_stage_create_info.pSpecializationInfo = nullptr;
 
-		std::vector<VkPipelineShaderStageCreateInfo> shader_stages 
+		std::vector<VkPipelineShaderStageCreateInfo> shader_stages
 		{
-			vert_pipeline_stage_create_info, 
+			vert_pipeline_stage_create_info,
 			frag_pipeline_stage_create_info
 		};
 
@@ -296,10 +338,10 @@ namespace VK_Renderer
 
 		// Color
 		VkPipelineColorBlendAttachmentState color_blend_attachment = {};
-		color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | 
-												VK_COLOR_COMPONENT_G_BIT | 
-												VK_COLOR_COMPONENT_B_BIT | 
-												VK_COLOR_COMPONENT_A_BIT;
+		color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+			VK_COLOR_COMPONENT_G_BIT |
+			VK_COLOR_COMPONENT_B_BIT |
+			VK_COLOR_COMPONENT_A_BIT;
 
 		color_blend_attachment.blendEnable = VK_FALSE;
 
@@ -322,24 +364,15 @@ namespace VK_Renderer
 		color_blend_create_info.blendConstants[2] = 0.f;
 		color_blend_create_info.blendConstants[3] = 0.f;
 
-
-		CreateCameraDescriptorSetLayout();
-		CreateModelDescriptorSetLayout();
-		CreateDescriptorPool();
-		CreateCameraDescriptorSet();
-		CreateModelDescriptorSets();		
-
-		std::vector<VkDescriptorSetLayout> descriptorSetLayouts = { cameraDescriptorSetLayout, modelDescriptorSetLayout };
-
 		// Pipline Layout
 		VkPipelineLayoutCreateInfo pipeline_layout_create_info = {};
 		pipeline_layout_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipeline_layout_create_info.setLayoutCount = static_cast<uint32_t>(descriptorSetLayouts.size());
-		pipeline_layout_create_info.pSetLayouts = descriptorSetLayouts.data();
+		pipeline_layout_create_info.setLayoutCount = static_cast<uint32_t>(pipelineInfo.descriptorSetLayouts.size());
+		pipeline_layout_create_info.pSetLayouts = pipelineInfo.descriptorSetLayouts.data();
 		pipeline_layout_create_info.pushConstantRangeCount = 0;
 		pipeline_layout_create_info.pPushConstantRanges = nullptr;
 
-		if(vkCreatePipelineLayout(m_LogicalDevice, &pipeline_layout_create_info, nullptr, &m_PipelineLayout) != VK_SUCCESS)
+		if (vkCreatePipelineLayout(m_LogicalDevice, &pipeline_layout_create_info, nullptr, &pipelineInfo.pipelineLayout) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to create Pipeline Layout!");
 		}
@@ -358,30 +391,17 @@ namespace VK_Renderer
 		pipeline_create_info.pColorBlendState = &color_blend_create_info;
 		pipeline_create_info.pDynamicState = &dynamic_state_create_info;
 
-		pipeline_create_info.layout = m_PipelineLayout;
+		pipeline_create_info.layout = pipelineInfo.pipelineLayout;
 		pipeline_create_info.renderPass = m_RenderPass;
 		pipeline_create_info.subpass = 0;
 
 		pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
 		pipeline_create_info.basePipelineIndex = -1;
 
-		if (vkCreateGraphicsPipelines(m_LogicalDevice, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &m_Pipeline) != VK_SUCCESS)
+		if (vkCreateGraphicsPipelines(m_LogicalDevice, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &pipelineInfo.pipeline) != VK_SUCCESS)
 		{
 			throw std::runtime_error("Failed to Create Grpahics Pipeline!");
 		}
-	}
-
-	VK_GraphicsPipeline::~VK_GraphicsPipeline()
-	{
-		vkDestroyPipeline(m_LogicalDevice, m_Pipeline, nullptr);
-		vkDestroyRenderPass(m_LogicalDevice, m_RenderPass, nullptr);
-		vkDestroyShaderModule(m_LogicalDevice, m_VertShaderModule, nullptr);
-		vkDestroyShaderModule(m_LogicalDevice, m_FragShaderModule, nullptr);
-		vkDestroyPipelineLayout(m_LogicalDevice, m_PipelineLayout, nullptr);
-		vkDestroyDescriptorSetLayout(m_LogicalDevice, modelDescriptorSetLayout, nullptr);
-		vkDestroyDescriptorSetLayout(m_LogicalDevice, cameraDescriptorSetLayout, nullptr);
-
-		vkDestroyDescriptorPool(m_LogicalDevice, descriptorPool, nullptr);
 	}
 
 	void VK_GraphicsPipeline::CreateRenderPass()

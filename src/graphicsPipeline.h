@@ -8,35 +8,51 @@
 
 namespace VK_Renderer
 {
+	struct PipelineInfo
+	{
+		const char* vertShaderPath;
+		const char* fragShaderPath;
+		VkShaderModule vertShaderModule;
+		VkShaderModule fragShaderModule;
+		std::vector<VkDescriptorSetLayout> descriptorSetLayouts;
+		VkPipelineLayout pipelineLayout;
+		VkPipeline pipeline;
+	};
+	
 	class VK_GraphicsPipeline
 	{
 	public:
-		VK_GraphicsPipeline(VkDevice device, const VkExtent2D& extent, const VkFormat& swapchain_image_format, std::vector<Model*>& models, Camera* camera);
+		VK_GraphicsPipeline(VkDevice device, const VkExtent2D& extent, const VkFormat& swapchain_image_format,
+			std::vector<Model*>& shadingModels, std::vector<Model*>& lightModels, Camera* camera);
 		~VK_GraphicsPipeline();
 
 	protected:
 		void CreateRenderPass();
+		void CreateStandardPipeline(PipelineInfo& pipelineInfo);
+		void DestroyStandardPipeline(PipelineInfo& pipelineInfo);
 		VkShaderModule CreateShaderModule(const std::vector<char>& source);
-		void CreateModelDescriptorSets();
+		void CreateModelDescriptorSets(std::vector<VkDescriptorSet>& modelDescriptorSets, std::vector<Model*>& models);
 		void CreateModelDescriptorSetLayout();
 		void CreateCameraDescriptorSet();
 		void CreateCameraDescriptorSetLayout();
 		void CreateDescriptorPool();
 
 	public:
-		VkShaderModule m_VertShaderModule;
-		VkShaderModule m_FragShaderModule;
+		PipelineInfo m_shadingPipelineInfo;
+		PipelineInfo m_lightPipelineInfo;
+
 		VkRenderPass m_RenderPass;
-		VkPipelineLayout m_PipelineLayout;
-		VkPipeline m_Pipeline;
 
 		VkDescriptorPool descriptorPool;
 
-		std::vector<VkDescriptorSet> modelDescriptorSets;
 		VkDescriptorSet cameraDescriptorSet;
 		VkDescriptorSetLayout modelDescriptorSetLayout;
 		VkDescriptorSetLayout cameraDescriptorSetLayout;
-		std::vector<Model*>& m_models;
+		std::vector<VkDescriptorSet> shadingModelDescriptorSets;
+		std::vector<VkDescriptorSet> lightModelDescriptorSets;
+
+		std::vector<Model*>& m_shadingModels;
+		std::vector<Model*>& m_lightModels;
 		Camera* m_camera;
 
 	protected:
