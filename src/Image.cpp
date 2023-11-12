@@ -44,6 +44,29 @@ void Image::Create(VK_Renderer::VK_Instance* instance, uint32_t width, uint32_t 
     vkBindImageMemory(instance->m_LogicalDevice, image, imageMemory, 0);
 }
 
+void Image::Create(VK_Renderer::VK_Instance* instance, const VkImageCreateInfo& imageInfo, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory)
+{
+    if (vkCreateImage(instance->m_LogicalDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to create image");
+    }
+
+    // Allocate memory for the image
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(instance->m_LogicalDevice, image, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = instance->GetMemoryTypeIndex(memRequirements.memoryTypeBits, properties);
+
+    if (vkAllocateMemory(instance->m_LogicalDevice, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to allocate image memory");
+    }
+
+    // Bind the image
+    vkBindImageMemory(instance->m_LogicalDevice, image, imageMemory, 0);
+}
+
 void Image::TransitionLayout(VK_Renderer::VK_Instance* instance, VkCommandPool commandPool, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
     auto hasStencilComponent = [](VkFormat format) {
         return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
@@ -150,6 +173,15 @@ VkImageView Image::CreateView(VK_Renderer::VK_Instance* instance, VkImage image,
     return imageView;
 }
 
+VkImageView Image::CreateView(VK_Renderer::VK_Instance* instance, const VkImageViewCreateInfo& viewInfo)
+{
+    VkImageView imageView;
+    if (vkCreateImageView(instance->m_LogicalDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+        throw std::runtime_error("Failed to texture image view");
+    }
+    return imageView;
+}
+
 void Image::CopyFromBuffer(VK_Renderer::VK_Instance* instance, VkCommandPool commandPool, VkBuffer buffer, VkImage& image, uint32_t width, uint32_t height) {
     // Specify which part of the buffer is going to be copied to which part of the image
     VkBufferImageCopy region = {};
@@ -209,7 +241,8 @@ void Image::FromFile(VK_Renderer::VK_Instance* instance, VkCommandPool commandPo
         texHeight = dds_image.height;
         texChannels = 4;
         stbi_uc* pixels = dds_image.data.data();
-        VkDeviceSize imageSize = texWidth * texHeight * 4;
+        VkDeviceSize imageSize = dds_image.data.size();//data format
+        //format = dds::getVulkanFormat(dds_image.format, dds_image.supportsAlpha);
         // Create staging buffer
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
@@ -226,7 +259,13 @@ void Image::FromFile(VK_Renderer::VK_Instance* instance, VkCommandPool commandPo
 
 
         // Create Vulkan image
-        Image::Create(instance, texWidth, texHeight, format, tiling, VK_IMAGE_USAGE_TRANSFER_DST_BIT | usage, properties, image, imageMemory);
+        //Image::Create(instance, texWidth, texHeight, format, tiling, VK_IMAGE_USAGE_TRANSFER_DST_BIT | usage, properties, image, imageMemory);
+        auto info = dds::getVulkanImageCreateInfo(&dds_image);
+        info.samples = VK_SAMPLE_COUNT_1_BIT;
+        info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+        info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | usage;
+        auto viewInfo = dds::getVulkanImageViewCreateInfo(&dds_image);
+        Image::Create(instance, info, properties, image, imageMemory);
 
         // Copy the staging buffer to the texture image
         // --> First need to transition the texture image to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
