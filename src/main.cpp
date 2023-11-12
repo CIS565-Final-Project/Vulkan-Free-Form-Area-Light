@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
 	VkDeviceMemory texImageMemory;
 	Image::FromFile(instance.get(),
 		command_pool->m_CommandPool,
-		//"images/wall.jpg",
+		// "images/wall.jpg",
 		"images/ltc.dds",
 		VK_FORMAT_R8G8B8A8_UNORM,
 		VK_IMAGE_TILING_OPTIMAL,
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
 	//	{ 0, 1, 2, 2, 3, 0 }
 	//));
 	
-	const float halfWidth_1 = 6.0f;
+	const float halfWidth_1 = 12.0f;
 	const float quadHeight = -2.0f;
 	models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
 		{

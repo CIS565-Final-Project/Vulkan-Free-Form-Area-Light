@@ -9,6 +9,7 @@ file(GLOB IMAGES
 	"images/*.png"
 	"images/*.bmp"
 	"images/*.hdr"
+	"images/*.dds"
 )
 
 #message("Shaders: ${Shaders_Sources}")
