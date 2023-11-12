@@ -80,9 +80,11 @@ namespace LTCFit {
 			}
 		return (float)error / (float)(Nsample * Nsample);
 	}
-	float ComputeNorm(const BRDF& brdf, const glm::vec3& V, const float alpha)
+	void ComputeAverageValues(const BRDF& brdf, const glm::vec3& V, const float alpha, glm::vec3& avg_dir, float& avg_n, float avg_fresnel)
 	{
-		float norm = 0.0;
+		avg_dir = glm::vec3(0.f);
+		avg_n = 0.f;
+		avg_fresnel = 0.f;
 
 		for (int j = 0; j < Nsample; ++j)
 			for (int i = 0; i < Nsample; ++i)
@@ -98,36 +100,20 @@ namespace LTCFit {
 				float eval = brdf.Eval(V, L, alpha, pdf);
 
 				// accumulate
-				norm += (pdf > 0) ? eval / pdf : 0.0f;
-			}
-
-		return norm / (float)(Nsample * Nsample);
-	}
-	glm::vec3 ComputeAverageDir(const BRDF& brdf, const glm::vec3& V, const float alpha)
-	{
-		glm::vec3 averageDir(0);
-
-		for (int j = 0; j < Nsample; ++j)
-			for (int i = 0; i < Nsample; ++i)
-			{
-				const float U1 = (i + 0.5f) / (float)Nsample;
-				const float U2 = (j + 0.5f) / (float)Nsample;
-
-				// sample
-				const glm::vec3 L = brdf.Sample(V, alpha, U1, U2);
-
-				// eval
-				float pdf;
-				float eval = brdf.Eval(V, L, alpha, pdf);
-
-				// accumulate
-				averageDir += (pdf > 0) ? eval / pdf * L : glm::vec3(0);
+				if (pdf > 0) {
+					float weight = eval / pdf;
+					const glm::vec3 H = glm::normalize(V + L);
+					avg_n += weight;
+					avg_dir += weight * L;
+					avg_fresnel += weight * pow(1.f - glm::max(glm::dot(V, H), 0.f), 5.f);
+				}
 			}
 
 		// clear y component, which should be zero with isotropic BRDFs
-		averageDir.y = 0.0f;
-
-		return normalize(averageDir);
+		avg_n = avg_n / (float)(Nsample * Nsample);
+		avg_fresnel = avg_fresnel / (float)(Nsample * Nsample);
+		avg_dir.y = 0.0f;
+		avg_dir = glm::normalize(avg_dir);
 	}
 	void WriteToTextures(const std::string& _filename, const glm::mat3* tab, const glm::vec2* tab_amp, const int N)
 	{
@@ -199,8 +185,9 @@ namespace LTCFit {
 				std::cout << "alpha = " << alpha << "\t theta = " << theta << std::endl;
 				std::cout << std::endl;
 #endif
-				ltc.m_amplitude = ComputeNorm(brdf, V, alpha);
-				const glm::vec3 avg_dir = ComputeAverageDir(brdf, V, alpha);
+				//ltc.m_amplitude = ComputeNorm(brdf, V, alpha);
+				glm::vec3 avg_dir;
+				ComputeAverageValues(brdf, V, alpha, avg_dir, ltc.m_amplitude, ltc.m_fresnel);
 				bool isotropic;
 
 				if (t == 0) {
@@ -253,7 +240,7 @@ namespace LTCFit {
 				int cur_idx = a + t * N;
 				tab[cur_idx] = ltc.M;
 				tab_amp[cur_idx][0] = ltc.m_amplitude;
-				tab_amp[cur_idx][1] = 0;
+				tab_amp[cur_idx][1] = ltc.m_fresnel;
 
 				tab[cur_idx][0][1] = 0;
 				tab[cur_idx][1][0] = 0;

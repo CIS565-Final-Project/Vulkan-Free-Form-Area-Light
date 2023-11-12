@@ -28,16 +28,11 @@ mat3 LTCMatrix(vec3 V, vec3 N, float roughness){
 	//reproject uv to 64x64 texture eg. for roughness = 1, u should be 63.5/64;
 	uv = uv * (LUT_SIZE - 1)/LUT_SIZE  + 0.5 / LUT_SIZE;
 	// vec4 ltcVal = texture(ltcSampler, uv);
-	
-	// mat3 res = mat3(
-	// 	vec3(1,0,ltcVal.w),
-	// 	vec3(0,ltcVal.z,0),
-	// 	vec3(ltcVal.y,0,ltcVal.x)
-	// );
-	mat3 res= mat3(
-		vec3(1,0,0),
-		vec3(0,1,0),
-		vec3(0,0,1)
+	vec4 ltcVal = vec4(1.f);	
+	mat3 res = mat3(
+		vec3(1,0,ltcVal.w),
+		vec3(0,ltcVal.z,0),
+		vec3(ltcVal.y,0,ltcVal.x)
 	);
 	//ltc fit中的invM是转置的版本
 	return transpose(res);
@@ -53,6 +48,8 @@ void ClipVertex(in vec3 lightVertex[MAX_LIGHT_VERTEX],int arrSize,
 			//or current node is below plane and previous node is above plane
 			vec3 prevPos = lightVertex[readIdx - 1];
 			vec3 curPos = lightVertex[readIdx];
+			//the actual result: 
+			// note that we can also just use prevPos.z * curPos - curPos.z * prevPos because the clipedPos will be nomalized anyway
 			float u = prevPos.z / (prevPos.z - curPos.z);
 			clipedPos[clipedSize] = mix(prevPos,curPos,u);
 			++clipedSize;
@@ -81,7 +78,7 @@ float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MA
 	vec3 tangent = normalize(cross(up,N));
 	//vec3 tangent = normalize(V - N * dot(V,N));
 	vec3 bitangent = cross(N,tangent);
-	LTCMat = LTCMat * mat3(tangent,bitangent,N);
+	LTCMat = LTCMat * transpose(mat3(tangent,bitangent,N)); //inverse rotation matrix
 	for(int i = 0;i<arrSize;++i){
 		lightVertex[i] = LTCMat * (lightVertex[i] - shadePos);
 	}
@@ -110,7 +107,7 @@ float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MA
 	}
 	return res * 0.5 * INV_PI;
 }
-float halfWidth = 2.5f;
+float halfWidth = 1.5f;
 vec3 lights[5] = vec3[](
 	vec3(-halfWidth, halfWidth + 2.0f, -5.0f),
 	vec3(halfWidth, halfWidth + 2.0f, -5.0f ),
