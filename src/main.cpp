@@ -57,8 +57,8 @@ int main(int argc, char* argv[])
 	VkDeviceMemory texImageMemory;
 	Image::FromFile(instance.get(),
 		command_pool->m_CommandPool,
-		"images/wall.jpg",
-		//"images/ltc.dds",
+		//"images/wall.jpg",
+		"images/ltc.dds",
 		VK_FORMAT_R8G8B8A8_UNORM,
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_SAMPLED_BIT,

@@ -240,8 +240,8 @@ void Image::FromFile(VK_Renderer::VK_Instance* instance, VkCommandPool commandPo
         texWidth = dds_image.width;
         texHeight = dds_image.height;
         texChannels = 4;
-        stbi_uc* pixels = dds_image.data.data();
-        VkDeviceSize imageSize = dds_image.data.size();//data format
+        stbi_uc* pixels = dds_image.data.data() + 148;
+        VkDeviceSize imageSize = dds_image.data.size() - 148;//data format
         //format = dds::getVulkanFormat(dds_image.format, dds_image.supportsAlpha);
         // Create staging buffer
         VkBuffer stagingBuffer;
