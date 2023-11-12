@@ -76,7 +76,7 @@ void ClipVertex(in vec3 lightVertex[MAX_LIGHT_VERTEX],int arrSize,
 float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MAX_LIGHT_VERTEX], int arrSize){
 	//to tangent space
 	vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-	// vec3 tangent = normalize(cross(up,N));
+	//vec3 tangent = normalize(cross(up,N));
 	vec3 tangent = normalize(V - N * dot(V,N));
 	vec3 bitangent = cross(N,tangent);
 	LTCMat = LTCMat * transpose(mat3(tangent,bitangent,N)); //inverse rotation matrix
@@ -108,7 +108,7 @@ float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MA
 	}
 	return res * 0.5 * INV_PI;
 }
-float halfWidth = 3.5f;
+float halfWidth = 1.5f;
 vec3 lights[5] = vec3[](
 	vec3(-halfWidth, halfWidth + 2.0f, -5.0f),
 	vec3(halfWidth, halfWidth + 2.0f, -5.0f ),
@@ -126,7 +126,7 @@ void main()
 	vec3 V = normalize(cameraPos - fs_Pos);
 	vec3 N = normalize(fs_norm);
 	//float roughness = fs_roughness;
-	mat3 LTCMat = LTCMatrix(V, N, 0);
+	mat3 LTCMat = LTCMatrix(V,N,.1);
 	//outColor = vec3(IntegrateD(LTCMat,V,N,fs_Pos,lights.vertex,lights.size));
 	//outColor = texture(texSampler, fragTexCoord);
 	outColor = vec4(vec3(IntegrateD(LTCMat,V,N,fs_Pos,lights,4)),1);
