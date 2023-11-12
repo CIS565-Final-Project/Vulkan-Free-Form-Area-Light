@@ -201,8 +201,8 @@ namespace VK_Renderer
 		// create the Renderpass before creating pipeline
 		CreateRenderPass();
 
-		auto vert_shader = ReadFile("shaders/ltc.vert.spv");
-		auto frag_shader = ReadFile("shaders/ltc.frag.spv");
+		auto vert_shader = ReadFile("shaders/flat.vert.spv");
+		auto frag_shader = ReadFile("shaders/flat.frag.spv");
 
 		m_VertShaderModule = CreateShaderModule(vert_shader);
 		m_FragShaderModule = CreateShaderModule(frag_shader);

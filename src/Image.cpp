@@ -3,6 +3,8 @@
 
 #include "Image.h"
 #include "BufferUtils.h"
+#include <dds.hpp>
+#include <string>
 
 void Image::Create(VK_Renderer::VK_Instance* instance, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
     // Create Vulkan image
@@ -194,42 +196,92 @@ void Image::CopyFromBuffer(VK_Renderer::VK_Instance* instance, VkCommandPool com
 
 void Image::FromFile(VK_Renderer::VK_Instance* instance, VkCommandPool commandPool, const char* path, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkImageLayout layout, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
     int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load(path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-    VkDeviceSize imageSize = texWidth * texHeight * 4;
+    std::string file_name = path;
+    size_t postfix_start = file_name.find_last_of(".");
+    std::string file_postfix = file_name.substr(postfix_start + 1, file_name.size() - postfix_start);
+    std::cout << "load a " << file_postfix << " image" << std::endl;
+    //stbi_uc* pixels = stbi_load(path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+    if (file_postfix == "dds") {
+        dds::Image dds_image;
+        dds::readFile(file_name, &dds_image);
+        //format = dds::getVulkanFormat(dds_image.format, dds_image.supportsAlpha);
+        texWidth = dds_image.width;
+        texHeight = dds_image.height;
+        texChannels = 4;
+        stbi_uc* pixels = dds_image.data.data();
+        VkDeviceSize imageSize = texWidth * texHeight * 4;
+        // Create staging buffer
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
 
-    if (!pixels) {
-        throw std::runtime_error("Failed to load texture image");
+        VkBufferUsageFlags stagingUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        VkMemoryPropertyFlags stagingProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        BufferUtils::CreateBuffer(instance, imageSize, stagingUsage, stagingProperties, stagingBuffer, stagingBufferMemory);
+
+        // Copy pixel values to the buffer
+        void* data;
+        vkMapMemory(instance->m_LogicalDevice, stagingBufferMemory, 0, imageSize, 0, &data);
+        memcpy(data, pixels, static_cast<size_t>(imageSize));
+        vkUnmapMemory(instance->m_LogicalDevice, stagingBufferMemory);
+
+
+        // Create Vulkan image
+        Image::Create(instance, texWidth, texHeight, format, tiling, VK_IMAGE_USAGE_TRANSFER_DST_BIT | usage, properties, image, imageMemory);
+
+        // Copy the staging buffer to the texture image
+        // --> First need to transition the texture image to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+        Image::TransitionLayout(instance, commandPool, image, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        Image::CopyFromBuffer(instance, commandPool, stagingBuffer, image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+
+        // Transition texture image for shader access
+        Image::TransitionLayout(instance, commandPool, image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layout);
+
+        // No need for staging buffer anymore
+        vkDestroyBuffer(instance->m_LogicalDevice, stagingBuffer, nullptr);
+        vkFreeMemory(instance->m_LogicalDevice, stagingBufferMemory, nullptr);
     }
+    else {
+        stbi_uc* pixels = stbi_load(path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        VkDeviceSize imageSize = texWidth * texHeight * 4;
 
-    // Create staging buffer
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
+        if (!pixels) {
+            throw std::runtime_error("Failed to load texture image");
+        }
 
-    VkBufferUsageFlags stagingUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    VkMemoryPropertyFlags stagingProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    BufferUtils::CreateBuffer(instance, imageSize, stagingUsage, stagingProperties, stagingBuffer, stagingBufferMemory);
+        // Create staging buffer
+        VkBuffer stagingBuffer;
+        VkDeviceMemory stagingBufferMemory;
 
-    // Copy pixel values to the buffer
-    void* data;
-    vkMapMemory(instance->m_LogicalDevice, stagingBufferMemory, 0, imageSize, 0, &data);
-    memcpy(data, pixels, static_cast<size_t>(imageSize));
-    vkUnmapMemory(instance->m_LogicalDevice, stagingBufferMemory);
+        VkBufferUsageFlags stagingUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        VkMemoryPropertyFlags stagingProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        BufferUtils::CreateBuffer(instance, imageSize, stagingUsage, stagingProperties, stagingBuffer, stagingBufferMemory);
 
-    // Free pixel array
-    stbi_image_free(pixels);
+        // Copy pixel values to the buffer
+        void* data;
+        vkMapMemory(instance->m_LogicalDevice, stagingBufferMemory, 0, imageSize, 0, &data);
+        memcpy(data, pixels, static_cast<size_t>(imageSize));
+        vkUnmapMemory(instance->m_LogicalDevice, stagingBufferMemory);
 
-    // Create Vulkan image
-    Image::Create(instance, texWidth, texHeight, format, tiling, VK_IMAGE_USAGE_TRANSFER_DST_BIT | usage, properties, image, imageMemory);
+        // Free pixel array
+        stbi_image_free(pixels);
 
-    // Copy the staging buffer to the texture image
-    // --> First need to transition the texture image to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-    Image::TransitionLayout(instance, commandPool, image, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    Image::CopyFromBuffer(instance, commandPool, stagingBuffer, image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+        // Create Vulkan image
+        Image::Create(instance, texWidth, texHeight, format, tiling, VK_IMAGE_USAGE_TRANSFER_DST_BIT | usage, properties, image, imageMemory);
 
-    // Transition texture image for shader access
-    Image::TransitionLayout(instance, commandPool, image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layout);
+        // Copy the staging buffer to the texture image
+        // --> First need to transition the texture image to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+        Image::TransitionLayout(instance, commandPool, image, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        Image::CopyFromBuffer(instance, commandPool, stagingBuffer, image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
 
-    // No need for staging buffer anymore
-    vkDestroyBuffer(instance->m_LogicalDevice, stagingBuffer, nullptr);
-    vkFreeMemory(instance->m_LogicalDevice, stagingBufferMemory, nullptr);
+        // Transition texture image for shader access
+        Image::TransitionLayout(instance, commandPool, image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layout);
+
+        // No need for staging buffer anymore
+        vkDestroyBuffer(instance->m_LogicalDevice, stagingBuffer, nullptr);
+        vkFreeMemory(instance->m_LogicalDevice, stagingBufferMemory, nullptr);
+    }
+    
+
+
+
 }
