@@ -32,7 +32,6 @@ layout(location = 3) in vec3 inNormal;
 layout(location = 0) out vec3 vs_Color;
 layout(location = 1) out vec2 vs_TexCoord;
 layout(location = 2) out vec3 vs_Normal;
-layout(location = 3) out vec3 vs_WorldPos;
 
 void main()
 {
@@ -40,8 +39,7 @@ void main()
 	// vs_Color = color[gl_VertexIndex];
 	// 
 
-	vs_WorldPos = (camera.view  * model * vec4(inPosition,  1.0)).xyz;
-	gl_Position = camera.proj * vec4(vs_WorldPos,  1.0);
+	gl_Position = camera.proj * camera.view  * model * vec4(inPosition,  1.0);
 	// vs_Color = inColor;
 	vs_TexCoord = inTexCoord;
 	vs_Normal = inNormal;

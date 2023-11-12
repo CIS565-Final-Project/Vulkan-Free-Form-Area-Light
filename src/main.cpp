@@ -68,26 +68,27 @@ int main(int argc, char* argv[])
 		texImageMemory
 	);
 
-	std::vector<Model*> models;
+	std::vector<Model*> lightModels;
 	const float halfWidth = 2.5f;
-	//models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
-	//	{
-	//		{ { -halfWidth, halfWidth + 2.0f, -5.0f }, { 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f } },
-	//		{ { halfWidth, halfWidth + 2.0f, -5.0f }, { 0.0f, 1.0f, 0.0f },{ 0.0f, 0.0f } },
-	//		{ { halfWidth, -halfWidth + 2.0f, -5.0f }, { 0.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },
-	//		{ { -halfWidth, -halfWidth + 2.0f, -5.0f }, { 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
-	//	},
-	//	{ 0, 1, 2, 2, 3, 0 }
-	//));
-	
-	const float halfWidth_1 = 12.0f;
-	const float quadHeight = -2.0f;
-	models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
+	lightModels.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
 		{
-			{ { -halfWidth_1, quadHeight, halfWidth_1 - 5.0f}, { 1.0f, 1.0f, 0.0f },{ 1.0f, 0.0f } },
-			{ { halfWidth_1, quadHeight, halfWidth_1 - 5.0f}, { 0.0f, 1.0f, 1.0f },{ 0.0f, 0.0f } },
-			{ { halfWidth_1, quadHeight, -halfWidth_1 - 5.0f}, { 1.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },
-			{ { -halfWidth_1, quadHeight,  -halfWidth_1 - 5.0f}, { 0.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
+			{ { -halfWidth, halfWidth + 2.0f, -5.0f }, { 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+			{ { halfWidth, halfWidth + 2.0f, -5.0f }, { 0.0f, 1.0f, 0.0f },{ 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
+			{ { halfWidth, -halfWidth + 2.0f, -5.0f }, { 0.0f, 0.0f, 1.0f },{ 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
+			{ { -halfWidth, -halfWidth + 2.0f, -5.0f }, { 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } }
+		},
+		{ 0, 1, 2, 2, 3, 0 }
+	));
+	
+	std::vector<Model*> shadingModels;
+	const float halfWidth_1 = 6.0f;
+	const float quadHeight = -2.0f;
+	shadingModels.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
+		{
+			{ { -halfWidth_1, quadHeight, halfWidth_1 - 5.0f}, { 1.0f, 1.0f, 0.0f },{ 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+			{ { halfWidth_1, quadHeight, halfWidth_1 - 5.0f}, { 0.0f, 1.0f, 1.0f },{ 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+			{ { halfWidth_1, quadHeight, -halfWidth_1 - 5.0f}, { 1.0f, 0.0f, 1.0f },{ 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
+			{ { -halfWidth_1, quadHeight,  -halfWidth_1 - 5.0f}, { 0.0f, 1.0f, 1.0f },{ 1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } }
 		},
 		// { 0, 1, 2, 2, 3, 0 }
 		{ 0, 2, 1, 3, 2, 0 }
@@ -96,13 +97,13 @@ int main(int argc, char* argv[])
 	Camera* camera = new Camera(instance.get(), width / height);
 
 	
-	models[0]->SetTexture(texImage);
-	//models[1]->SetTexture(texImage);
+	lightModels[0]->SetTexture(texImage);
+	shadingModels[0]->SetTexture(texImage);
 
 	uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(instance->m_LogicalDevice, 
 																	instance->m_SwapchainExtent, 
 																	instance->m_SwapchainImageFormat,
-																	models, camera);
+																	shadingModels, lightModels, camera);
 
 	instance->CreateFrameBuffers(graphics_pipeline->m_RenderPass);
 	
@@ -166,8 +167,6 @@ int main(int argc, char* argv[])
 
 				vkCmdBeginRenderPass(command_buffer->m_CommandBuffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-				vkCmdBindPipeline(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_Pipeline);
-
 				// Viewport and scissors
 				VkViewport viewport = {};
 				viewport.x = 0.0f;
@@ -180,7 +179,6 @@ int main(int argc, char* argv[])
 
 				vkCmdSetViewport(command_buffer->m_CommandBuffer, 0, 1, &viewport);
 
-
 				VkRect2D scissor{};
 				scissor.offset = { 0, 0 };
 				scissor.extent = instance->m_SwapchainExtent;
@@ -189,22 +187,44 @@ int main(int argc, char* argv[])
 
 				// Draw call
 				// vkCmdDraw(command_buffer->m_CommandBuffer, 3, 1, 0, 0);
-				
-				vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_PipelineLayout, 0, 1, &graphics_pipeline->cameraDescriptorSet, 0, nullptr);
 
-				for (uint32_t j = 0; j < models.size(); ++j) {
+				vkCmdBindPipeline(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_shadingPipelineInfo.pipeline);
+				
+				vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_shadingPipelineInfo.pipelineLayout, 0, 1, &graphics_pipeline->cameraDescriptorSet, 0, nullptr);
+
+				for (uint32_t j = 0; j < shadingModels.size(); ++j) {
 					// Bind the vertex and index buffers
-					VkBuffer vertexBuffers[] = { models[j]->getVertexBuffer() };
+					VkBuffer vertexBuffers[] = { shadingModels[j]->getVertexBuffer() };
 					VkDeviceSize offsets[] = { 0 };
 					vkCmdBindVertexBuffers(command_buffer->m_CommandBuffer, 0, 1, vertexBuffers, offsets);
 
-					vkCmdBindIndexBuffer(command_buffer->m_CommandBuffer, models[j]->getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+					vkCmdBindIndexBuffer(command_buffer->m_CommandBuffer, shadingModels[j]->getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
 					// Bind the descriptor set for each model
-					vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_PipelineLayout, 1, 1, &graphics_pipeline->modelDescriptorSets[j], 0, nullptr);
+					vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_shadingPipelineInfo.pipelineLayout, 1, 1, &graphics_pipeline->shadingModelDescriptorSets[j], 0, nullptr);
 
 					// Draw
-					std::vector<uint32_t> indices = models[j]->getIndices();
+					std::vector<uint32_t> indices = shadingModels[j]->getIndices();
+					vkCmdDrawIndexed(command_buffer->m_CommandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+				}
+
+				vkCmdBindPipeline(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_lightPipelineInfo.pipeline);
+
+				vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_lightPipelineInfo.pipelineLayout, 0, 1, &graphics_pipeline->cameraDescriptorSet, 0, nullptr);
+
+				for (uint32_t j = 0; j < lightModels.size(); ++j) {
+					// Bind the vertex and index buffers
+					VkBuffer vertexBuffers[] = { lightModels[j]->getVertexBuffer() };
+					VkDeviceSize offsets[] = { 0 };
+					vkCmdBindVertexBuffers(command_buffer->m_CommandBuffer, 0, 1, vertexBuffers, offsets);
+
+					vkCmdBindIndexBuffer(command_buffer->m_CommandBuffer, lightModels[j]->getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
+
+					// Bind the descriptor set for each model
+					vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_lightPipelineInfo.pipelineLayout, 1, 1, &graphics_pipeline->lightModelDescriptorSets[j], 0, nullptr);
+
+					// Draw
+					std::vector<uint32_t> indices = lightModels[j]->getIndices();
 					vkCmdDrawIndexed(command_buffer->m_CommandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 				}
 
@@ -260,8 +280,11 @@ int main(int argc, char* argv[])
 	vkDestroySemaphore(instance->m_LogicalDevice, image_available_semaphore, nullptr);
 	vkDestroySemaphore(instance->m_LogicalDevice, render_finished_semaphore, nullptr);
 
-	for (int i = 0; i < models.size(); i++) {
-		delete models[i];
+	for (int i = 0; i < shadingModels.size(); i++) {
+		delete shadingModels[i];
+	}
+	for (int i = 0; i < lightModels.size(); i++) {
+		delete lightModels[i];
 	}
 	delete camera;
 
