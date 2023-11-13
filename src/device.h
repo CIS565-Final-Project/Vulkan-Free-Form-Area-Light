@@ -1,6 +1,5 @@
 #pragma once
 
-#include "common.h"
 #include "vulkanUtils.h"
 
 #include <vulkan/vulkan.hpp>

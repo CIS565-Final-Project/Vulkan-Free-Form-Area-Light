@@ -21,6 +21,13 @@ constexpr unsigned int Max_Physical_Device_Count = 2;
 #define mkU std::make_unique
 #define mkS std::make_shared
 
+#ifdef GLOBAL_USE_DOUBLE 
+	#define Float double
+	#define TINYOBJLOADER_USE_DOUBLE
+#else
+	#define Float float
+#endif
+
 namespace VK_Renderer
 {
 	inline std::vector<char> ReadFile(const std::string& file)

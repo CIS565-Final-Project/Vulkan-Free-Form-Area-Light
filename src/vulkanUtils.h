@@ -1,7 +1,5 @@
 #pragma once
 
-#include "common.h"
-
 #include <vulkan/vulkan.hpp>
 
 namespace VK_Renderer

@@ -1,9 +1,5 @@
 #pragma once
 
-#include "camera.h"
-#include "common.h"
-#include "Model.h"
-
 #include <vulkan/vulkan.hpp>
 
 namespace VK_Renderer

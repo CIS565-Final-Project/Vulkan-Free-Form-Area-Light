@@ -3,7 +3,6 @@
 #include <vulkan/vulkan.hpp>
 #include <SDL_vulkan.h>
 
-#include "common.h"
 #include "vulkanUtils.h"
 
 namespace VK_Renderer

@@ -14,6 +14,9 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #include "device.h"
 #include "swapchain.h"
 
+#include "Model.h"
+#include "Camera.h"
+
 #include <glm.hpp>
 
 using namespace VK_Renderer;
