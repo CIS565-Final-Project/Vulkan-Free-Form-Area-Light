@@ -3,8 +3,8 @@
 
 #include "Image.h"
 #include "BufferUtils.h"
-#include <dds.hpp>
 #include <string>
+#include "dds.h"
 
 void Image::Create(VK_Renderer::VK_Instance* instance, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
     // Create Vulkan image
@@ -234,15 +234,17 @@ void Image::FromFile(VK_Renderer::VK_Instance* instance, VkCommandPool commandPo
     std::cout << "load a " << file_postfix << " image" << std::endl;
     //stbi_uc* pixels = stbi_load(path, &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
     if (file_postfix == "dds") {
-        dds::Image dds_image;
-        dds::readFile(file_name, &dds_image);
+        //dds::Image dds_image;
+        //dds::readFile(file_name, &dds_image);
         //format = dds::getVulkanFormat(dds_image.format, dds_image.supportsAlpha);
+        DDSImage dds_image = LoadDDS(path);
         texWidth = dds_image.width;
         texHeight = dds_image.height;
         texChannels = 4;
-        stbi_uc* pixels = dds_image.data.data() + 148;
-        VkDeviceSize imageSize = dds_image.data.size() - 148;//data format
-        //format = dds::getVulkanFormat(dds_image.format, dds_image.supportsAlpha);
+        stbi_uc* pixels = dds_image.data.data();
+        VkDeviceSize imageSize = dds_image.data.size();//data format
+        format = dds_image.format;
+        
         // Create staging buffer
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
@@ -259,12 +261,7 @@ void Image::FromFile(VK_Renderer::VK_Instance* instance, VkCommandPool commandPo
 
 
         // Create Vulkan image
-        //Image::Create(instance, texWidth, texHeight, format, tiling, VK_IMAGE_USAGE_TRANSFER_DST_BIT | usage, properties, image, imageMemory);
-        auto info = dds::getVulkanImageCreateInfo(&dds_image);
-        info.samples = VK_SAMPLE_COUNT_1_BIT;
-        info.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-        info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | usage;
-        auto viewInfo = dds::getVulkanImageViewCreateInfo(&dds_image);
+        auto info = dds_image.getVulkanImageCreateInfo();
         Image::Create(instance, info, properties, image, imageMemory);
 
         // Copy the staging buffer to the texture image

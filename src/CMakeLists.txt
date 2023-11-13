@@ -5,7 +5,6 @@ set(EXT_ROOT_DIR "${CMAKE_SOURCE_DIR}/external")
 set(SDL_INCLUDE_DIR "${EXT_ROOT_DIR}/SDL/include")
 set(GLM_INCLUDE_DIR "${EXT_ROOT_DIR}/glm/glm")
 set(STB_INCLUDE_DIR "${EXT_ROOT_DIR}/stb")
-set(DDS_INCLUDE_DIR "${EXT_ROOT_DIR}/dds")
 set(DDS_IMAGE_INCLUDE_DIR "${EXT_ROOT_DIR}/dds_image/include")
 
 file(GLOB_RECURSE exe_Sources
@@ -31,7 +30,6 @@ PUBLIC
 	${SDL_INCLUDE_DIR}
 	${GLM_INCLUDE_DIR}
 	${STB_INCLUDE_DIR}
-	${DDS_INCLUDE_DIR}
 	${DDS_IMAGE_INCLUDE_DIR}
 )
 
@@ -39,6 +37,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 	Vulkan::Vulkan
 	SDL2::SDL2
 	SDL2::SDL2main
-	DDSHelp
 )
 

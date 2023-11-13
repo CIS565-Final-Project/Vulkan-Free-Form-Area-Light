@@ -88,3 +88,86 @@ bool SaveDDS( char const* path, unsigned format, unsigned texelSizeInBytes, unsi
     fclose( f );
     return true;
 }
+
+DDSImage LoadDDS(char const* path)
+{
+    DDSImage res;
+    dds::Image dds_image;
+    dds::readFile(path, &dds_image);
+    res.numMips = dds_image.numMips;
+    res.arraySize = dds_image.arraySize;
+    res.width = dds_image.width;
+    res.height = dds_image.height;
+    res.depth = dds_image.depth;
+    res.dimension = dds_image.dimension;
+    res.supportsAlpha = dds_image.supportsAlpha;
+
+    auto start = dds_image.data.begin() + 148;
+    auto end = dds_image.data.end();
+    int size = dds_image.data.size() - 148;
+    res.data = std::vector<uint8_t>(size);
+    std::copy(start, end, res.data.begin());
+
+    res.mipmaps = dds_image.mipmaps;
+    auto DXformat = dds_image.format;
+    switch (DXformat) {
+        case DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT:
+        {
+            res.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+            break;
+        }
+        case DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT:
+        {
+            res.format = VK_FORMAT_R32G32_SFLOAT;
+            break;
+        }
+        default:
+        {
+            res.format = dds::getVulkanFormat(dds_image.format, dds_image.supportsAlpha);
+        }
+    }
+
+    return res;
+}
+
+VkImageCreateInfo DDSImage::getVulkanImageCreateInfo(VkImageUsageFlags _usage)
+{
+    VkImageCreateInfo imageInfo = {};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    switch (dimension) {
+    case dds::Texture1D:
+        imageInfo.imageType = VK_IMAGE_TYPE_1D;
+        break;
+    case dds::Texture2D:
+        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        break;
+    case dds::Texture3D:
+        imageInfo.imageType = VK_IMAGE_TYPE_3D;
+        break;
+    default:
+        break;
+    }
+    imageInfo.format = format;
+    imageInfo.extent.width = width;
+    imageInfo.extent.height = height;
+    imageInfo.extent.depth = depth;
+    imageInfo.mipLevels = numMips;
+    imageInfo.arrayLayers = arraySize;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.usage = _usage;
+    return imageInfo;
+}
+
+VkImageViewCreateInfo DDSImage::getVulkanImageViewCreateInfo()
+{
+    VkImageViewCreateInfo imageViewInfo = {};
+    imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    imageViewInfo.format = format;
+    imageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    imageViewInfo.subresourceRange.baseMipLevel = 0;
+    imageViewInfo.subresourceRange.levelCount = numMips;
+    imageViewInfo.subresourceRange.baseArrayLayer = 0;
+    imageViewInfo.subresourceRange.layerCount = arraySize;
+    return imageViewInfo;
+}
