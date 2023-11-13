@@ -8,14 +8,14 @@
 
 namespace VK_Renderer
 {
+	class VK_Device;
+
 	class VK_GraphicsPipeline
 	{
 	public:
-		VK_GraphicsPipeline(VkDevice device, 
-							const VkExtent2D& extent, 
-							const VkFormat& swapchain_image_format, 
-							std::vector<Model*>& models, 
-							Camera* camera);
+		VK_GraphicsPipeline(const VK_Device& device,
+							const vk::Extent2D& extent, 
+							const vk::Format& imageFormat);
 
 		~VK_GraphicsPipeline();
 
@@ -23,35 +23,16 @@ namespace VK_Renderer
 
 	protected:
 		void CreateRenderPass();
-		VkShaderModule CreateShaderModule(const std::vector<char>& source);
-		void CreateModelDescriptorSets();
-		void CreateModelDescriptorSetLayout();
-		void CreateCameraDescriptorSet();
-		void CreateCameraDescriptorSetLayout();
-		void CreateDescriptorPool();
 
 	public:
-		VkRenderPass m_RenderPass;
 		vk::RenderPass vk_RenderPass;
-		VkPipelineLayout m_PipelineLayout;
-		VkPipeline m_Pipeline;
-
-		VkDescriptorPool descriptorPool;
-
-		std::vector<VkDescriptorSet> modelDescriptorSets;
-		VkDescriptorSet cameraDescriptorSet;
-		VkDescriptorSetLayout modelDescriptorSetLayout;
-		VkDescriptorSetLayout cameraDescriptorSetLayout;
-		std::vector<Model*>& m_models;
-		Camera* m_camera;
+		vk::PipelineLayout vk_PipelineLayout;
+		vk::Pipeline vk_Pipeline;
 
 	protected:
-		VkDevice m_LogicalDevice;
-		VkFormat m_SwapchainImageFormat;
-		VkExtent2D m_Extent;
+		const VK_Device& m_Device;
 
-		vk::Device vk_LogicalDevice;
-		vk::Format vk_SwapchainImageFormat;
-		vk::Extent2D vk_Extent;
+		const vk::Format& vk_SwapchainImageFormat;
+		const vk::Extent2D& vk_Extent;
 	};
 }

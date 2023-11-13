@@ -27,14 +27,8 @@ namespace VK_Renderer
 		return VK_FALSE;
 	}
 
-	VK_Instance* VK_Instance::s_Instance = nullptr;
-
 	VK_Instance::VK_Instance(SDL_Window* window, const std::string& app_name)
-		: m_PhysicalDevice(VK_NULL_HANDLE)
-	{
-		assert(!s_Instance);
-		s_Instance = this;
-		
+	{		
 		vk::ApplicationInfo app_info{
 			.pApplicationName = app_name.c_str(),
 			.pEngineName = "No Engine",
@@ -71,26 +65,29 @@ namespace VK_Renderer
 		create_info.ppEnabledExtensionNames = m_Extensions.data();
 		
 		vk_Instance = vk::createInstance(create_info);
-		m_Instance = static_cast<VkInstance>(vk_Instance);
-		
-		if (ENABLE_VALIDATION && SetupDebugMessenger() != VK_SUCCESS) 
+
+		// Load Instance extension functions after creatation
+		VULKAN_HPP_DEFAULT_DISPATCHER.init(vk_Instance);
+
+		if (ENABLE_VALIDATION && SetupDebugMessenger() != vk::Result::eSuccess) 
 			throw std::runtime_error("Failed to create DebugUtilsMessenger!");
 	}
 	
 	VK_Instance::~VK_Instance()
 	{
-		if (ENABLE_VALIDATION)
-		{
-			auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkDestroyDebugUtilsMessengerEXT");
-			if (func != nullptr)
-			{
-				func(m_Instance, m_DebugUtilsMessenger, nullptr);
-			}
-		}
 
-		vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
-		vkDestroyInstance(m_Instance, nullptr);
-		s_Instance = nullptr;
+
+		//if (ENABLE_VALIDATION)
+		//{
+		//	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkDestroyDebugUtilsMessengerEXT");
+		//	if (func != nullptr)
+		//	{
+		//		func(m_Instance, m_DebugUtilsMessenger, nullptr);
+		//	}
+		//}
+
+		//vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
+		//vkDestroyInstance(m_Instance, nullptr);
 	}
 
 	void VK_Instance::PickPhysicalDeivce()
@@ -107,14 +104,14 @@ namespace VK_Renderer
 		{
 			if (IsPhysicalDeviceSuitable(phy_device))
 			{
-				m_PhysicalDevice = phy_device;
+				vk_PhysicalDevice = phy_device;
 				break;
 			}
 		}
-		if (m_PhysicalDevice == VK_NULL_HANDLE)
+		if (vk_PhysicalDevice == nullptr)
 			throw std::runtime_error("Not suitable physical device found!");
 
-		vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &m_DeviceMemoryProperties);
+		vk_DeviceMemoryProperties = vk_PhysicalDevice.getMemoryProperties();
 	}
 
 	bool VK_Instance::CheckDeviceExtensionSupport(VkPhysicalDevice device)
@@ -176,19 +173,12 @@ namespace VK_Renderer
 		return false;
 	}
 
-	VkResult VK_Instance::SetupDebugMessenger()
+	vk::Result VK_Instance::SetupDebugMessenger()
 	{
 		vk::DebugUtilsMessengerCreateInfoEXT create_info = CreateDebugMessengerCreateInfo();
-
-		auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vk_Instance.getProcAddr("vkCreateDebugUtilsMessengerEXT");
-		if (func != nullptr)
-		{
-			return func(m_Instance, reinterpret_cast<const VkDebugUtilsMessengerCreateInfoEXT*>(&create_info), nullptr, &m_DebugUtilsMessenger);
-		}
-		else
-		{
-			return VK_ERROR_EXTENSION_NOT_PRESENT;
-		}
+		
+		// Since using VULKAN_HPP_DISPATCH_LOADER_DYNAMIC, don't need to manually load extension functions
+		return vk_Instance.createDebugUtilsMessengerEXT(&create_info, nullptr, &vk_DebugUtilsMessenger);
 	}
 
 	bool VK_Instance::IsPhysicalDeviceSuitable(vk::PhysicalDevice device)
@@ -246,8 +236,8 @@ namespace VK_Renderer
 			const vk::QueueFamilyProperties& queue_family_property = properties[i];
 
 			vk::Bool32 present_support = false;
-			vk::SurfaceKHR surface = m_Surface;
-			present_support = physicalDevice.getSurfaceSupportKHR(i, surface);
+
+			present_support = physicalDevice.getSurfaceSupportKHR(i, vk_Surface);
 
 			if (present_support)
 			{
@@ -282,11 +272,11 @@ namespace VK_Renderer
 		return indices;
 	}
 
-	uint32_t VK_Instance::GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const {
+	uint32_t VK_Instance::GetMemoryTypeIndex(uint32_t typeBits, vk::MemoryPropertyFlagBits properties) const {
 		// Iterate over all memory types available for the device used in this example
-		for (uint32_t i = 0; i < m_DeviceMemoryProperties.memoryTypeCount; i++) {
+		for (uint32_t i = 0; i < vk_DeviceMemoryProperties.memoryTypeCount; i++) {
 			if ((typeBits & 1) == 1) {
-				if ((m_DeviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+				if ((vk_DeviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
 					return i;
 				}
 			}

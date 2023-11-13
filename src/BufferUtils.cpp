@@ -22,7 +22,7 @@ void BufferUtils::CreateBuffer(VK_Renderer::VK_Instance* instance, VkDeviceSize 
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = instance->GetMemoryTypeIndex(memRequirements.memoryTypeBits, properties);
+    //allocInfo.memoryTypeIndex = instance->GetMemoryTypeIndex(memRequirements.memoryTypeBits, properties);
 
     //if (vkAllocateMemory(instance->m_LogicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
     //  throw std::runtime_error("Failed to allocate vertex buffer");

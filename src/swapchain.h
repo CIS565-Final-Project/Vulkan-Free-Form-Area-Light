@@ -6,17 +6,13 @@
 
 namespace VK_Renderer
 {
-	struct SwapchainSupportDetails
-	{
-		vk::SurfaceCapabilitiesKHR cpabilities;
-		std::vector<vk::SurfaceFormatKHR> surfaceFormats;
-		std::vector<vk::PresentModeKHR> presentModes;
-	};
+	class VK_Device;
 
 	class VK_Swapchain
 	{
 	public:
-		VK_Swapchain(vk::PhysicalDevice physicalDevice, 
+		VK_Swapchain(const VK_Device& device, 
+					 const SwapchainSupportDetails& details,
 					 vk::SurfaceKHR surface,
 					 const QueueFamilyIndices& queueFamilyIdx,
 					 const uint32_t& width, const uint32_t& height);
@@ -30,15 +26,13 @@ namespace VK_Renderer
 		vk::PresentModeKHR ChoosePresentMode(const std::vector<vk::PresentModeKHR>& availableModes) const;
 
 	protected:
-		vk::PhysicalDevice vk_PhysicalDevice;
+		const VK_Device& m_Device;
 		vk::SurfaceKHR vk_Surface;
 
 	public:
 		vk::SwapchainKHR vk_Swapchain;
 		vk::Format vk_ImageFormat;
 		vk::Extent2D vk_ImageExtent;
-
-		SwapchainSupportDetails m_SwapchainSupportDetails;
 
 		std::vector<vk::Image> vk_SwapchainImages;
 		std::vector<vk::ImageView> vk_SwapchainImageViews;

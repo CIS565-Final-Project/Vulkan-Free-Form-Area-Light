@@ -15,34 +15,30 @@ namespace VK_Renderer
 		~VK_Instance();
 
 		void PickPhysicalDeivce();
-		uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const;
+		uint32_t GetMemoryTypeIndex(uint32_t typeBits, vk::MemoryPropertyFlagBits properties) const;
 
 	protected:
 		vk::DebugUtilsMessengerCreateInfoEXT CreateDebugMessengerCreateInfo();
 		bool CheckValidationLayerSupport();
-		VkResult SetupDebugMessenger();
+		vk::Result SetupDebugMessenger();
 		bool IsPhysicalDeviceSuitable(vk::PhysicalDevice device);
 		QueueFamilyIndices FindQueueFamilies(vk::PhysicalDevice physicalDevice);
 
 		bool CheckDeviceExtensionSupport(VkPhysicalDevice device);
 	public:
 		vk::Instance vk_Instance;
-		VkInstance m_Instance;
-		VkSurfaceKHR m_Surface;
+		vk::SurfaceKHR vk_Surface;
 
-		VkPhysicalDevice m_PhysicalDevice;
+		vk::PhysicalDevice vk_PhysicalDevice;
 
-		VkDebugUtilsMessengerEXT m_DebugUtilsMessenger;
-		VkPhysicalDeviceMemoryProperties m_DeviceMemoryProperties;
+		vk::DebugUtilsMessengerEXT vk_DebugUtilsMessenger;
+		vk::PhysicalDeviceMemoryProperties vk_DeviceMemoryProperties;
 
 		QueueFamilyIndices m_QueueFamilyIndices;
 
 		std::vector<const char*> m_Extensions;
-	private:
-		static VK_Instance* s_Instance;
+
 	public:
 		static void CheckAvailableExtensions();
-
-		static VK_Instance* Global_Get_VK_Instance() { return s_Instance; }
 	};
 }

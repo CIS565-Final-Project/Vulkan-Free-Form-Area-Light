@@ -4,24 +4,19 @@
 
 namespace VK_Renderer
 {
-	VK_Swapchain::VK_Swapchain(vk::PhysicalDevice physicalDevice, 
+	VK_Swapchain::VK_Swapchain(const VK_Device& device,
+								const SwapchainSupportDetails& details,
 								vk::SurfaceKHR surface, 
 								const QueueFamilyIndices& queueFamilyIdx,
 								const uint32_t& width, const uint32_t& height)
-		: vk_PhysicalDevice(physicalDevice),
+		: m_Device(device),
 		  vk_Surface(surface),
 		  m_QueueFamilyIndices(queueFamilyIdx)
 	{
-		m_SwapchainSupportDetails = {
-				.cpabilities = vk_PhysicalDevice.getSurfaceCapabilitiesKHR(vk_Surface),
-				.surfaceFormats = vk_PhysicalDevice.getSurfaceFormatsKHR(vk_Surface),
-				.presentModes = vk_PhysicalDevice.getSurfacePresentModesKHR(vk_Surface)
-		};
-
-		vk::SurfaceFormatKHR surface_format = ChooseSurfaceFormat(m_SwapchainSupportDetails.surfaceFormats);
+		vk::SurfaceFormatKHR surface_format = ChooseSurfaceFormat(details.surfaceFormats);
 		vk_ImageFormat = surface_format.format;
-		vk::PresentModeKHR present_mode = ChoosePresentMode(m_SwapchainSupportDetails.presentModes);
-		vk_ImageExtent = m_SwapchainSupportDetails.cpabilities.currentExtent;
+		vk::PresentModeKHR present_mode = ChoosePresentMode(details.presentModes);
+		vk_ImageExtent = details.cpabilities.currentExtent;
 
 		if (vk_ImageExtent.height == std::numeric_limits<uint32_t>::max())
 		{
@@ -29,12 +24,12 @@ namespace VK_Renderer
 			vk_ImageExtent.height = static_cast<uint32_t>(height);
 		}
 
-		uint32_t img_count = m_SwapchainSupportDetails.cpabilities.minImageCount + 1;
+		uint32_t img_count = details.cpabilities.minImageCount + 1;
 
-		if (m_SwapchainSupportDetails.cpabilities.maxImageCount > 0 &&
-			m_SwapchainSupportDetails.cpabilities.maxImageCount < img_count)
+		if (details.cpabilities.maxImageCount > 0 &&
+			details.cpabilities.maxImageCount < img_count)
 		{
-			img_count = m_SwapchainSupportDetails.cpabilities.maxImageCount;
+			img_count = details.cpabilities.maxImageCount;
 		}
 		vk::SwapchainCreateInfoKHR create_info{
 			.surface = vk_Surface,
@@ -44,7 +39,7 @@ namespace VK_Renderer
 			.imageExtent = vk_ImageExtent,
 			.imageArrayLayers = 1,
 			.imageUsage = vk::ImageUsageFlagBits::eColorAttachment,
-			.preTransform = m_SwapchainSupportDetails.cpabilities.currentTransform,
+			.preTransform = details.cpabilities.currentTransform,
 			.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
 			.presentMode = present_mode,
 			.clipped = vk::True
@@ -65,27 +60,28 @@ namespace VK_Renderer
 			create_info.pQueueFamilyIndices = nullptr;
 		}
 
-		if (VK_Device::GetVkDevice().createSwapchainKHR(&create_info, nullptr, &vk_Swapchain) != vk::Result::eSuccess)
+		if (m_Device.NativeDevice().createSwapchainKHR(&create_info, nullptr, &vk_Swapchain) != vk::Result::eSuccess)
 		{
 			throw std::runtime_error("failed to create swap chain!");
 		}
 
-		vk_SwapchainImages = VK_Device::GetVkDevice().getSwapchainImagesKHR(vk_Swapchain);
+		vk_SwapchainImages = m_Device.NativeDevice().getSwapchainImagesKHR(vk_Swapchain);
 
 		CreateImageViews();
 	}
 
 	VK_Swapchain::~VK_Swapchain()
 	{
-		VK_Device::GetVkDevice().destroySwapchainKHR(vk_Swapchain);
 		for (const auto& fb : vk_Framebuffers)
 		{
-			VK_Device::GetVkDevice().destroyFramebuffer(fb);
+			m_Device.NativeDevice().destroyFramebuffer(fb);
 		}
 		for (const auto& view : vk_SwapchainImageViews)
 		{
-			VK_Device::GetVkDevice().destroyImageView(view);
+			m_Device.NativeDevice().destroyImageView(view);
 		}
+
+		m_Device.NativeDevice().destroySwapchainKHR(vk_Swapchain);
 	}
 
 	void VK_Swapchain::CreateImageViews()
@@ -94,7 +90,7 @@ namespace VK_Renderer
 		VkImageViewCreateInfo create_info;
 		for (size_t i = 0; i < vk_SwapchainImageViews.size(); ++i)
 		{
-			vk_SwapchainImageViews[i] = VK_Device::GetVkDevice().createImageView(vk::ImageViewCreateInfo{
+			vk_SwapchainImageViews[i] = m_Device.NativeDevice().createImageView(vk::ImageViewCreateInfo{
 				.image = vk_SwapchainImages[i],
 				.viewType = vk::ImageViewType::e2D,
 				.format = vk_ImageFormat,
@@ -116,7 +112,7 @@ namespace VK_Renderer
 
 		for (size_t i = 0; i < vk_Framebuffers.size(); ++i)
 		{
-			vk_Framebuffers[i] = VK_Device::GetVkDevice().createFramebuffer(vk::FramebufferCreateInfo{
+			vk_Framebuffers[i] = m_Device.NativeDevice().createFramebuffer(vk::FramebufferCreateInfo{
 				.renderPass = renderPass,
 				.attachmentCount = 1,
 				.pAttachments = &vk_SwapchainImageViews[i],

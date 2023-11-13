@@ -18,11 +18,11 @@ namespace VK_Renderer
 					const uint32_t queue_count = 1);
 		~VK_Device();
 
-	public:
-		static vk::Device GetVkDevice() { return s_Instance->vk_Device; }
-
-	private:
-		static VK_Device* s_Instance;
+		inline vk::Device NativeDevice()		const { return vk_Device; }
+		inline vk::Queue NativeGraphicsQueue()	const { return vk_GraphicsQueue; }
+		inline vk::Queue NativePresentQueue()	const { return vk_PresentQueue; }
+		inline vk::Queue NativeComputeQueue()	const { return vk_ComputeQueue; }
+		inline vk::Queue NativeTransferQueue()	const { return vk_TransferQueue; }
 
 	public:
 		vk::Device vk_Device;

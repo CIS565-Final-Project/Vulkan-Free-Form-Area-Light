@@ -1,6 +1,6 @@
-#include <iostream>
+#include <vulkan/vulkan.hpp>
 
-#include <string>
+VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -8,7 +8,6 @@
 #include "Camera.h"
 #include "Image.h"
 #include "graphicsPipeline.h"
-#include "meshGraphicsPipeline.h"
 #include "commandPool.h"
 #include "commandbuffer.h"
 
@@ -16,7 +15,6 @@
 #include "swapchain.h"
 
 #include <glm.hpp>
-
 
 using namespace VK_Renderer;
 
@@ -114,10 +112,9 @@ uPtr<VK_Device> CreateLogicalDevice(const VK_Instance* instance)
 		VK_EXT_MESH_SHADER_EXTENSION_NAME
 	};
 
-	vk::PhysicalDevice physical_device = instance->m_PhysicalDevice;
-	physical_device.getFeatures2(&physicalDeviceFeatures2);
+	instance->vk_PhysicalDevice.getFeatures2(&physicalDeviceFeatures2);
 
-	return mkU<VK_Device>(physical_device,
+	return mkU<VK_Device>(instance->vk_PhysicalDevice,
 							extensions,
 							physicalDeviceFeatures2, 
 							instance->m_QueueFamilyIndices);
@@ -125,6 +122,9 @@ uPtr<VK_Device> CreateLogicalDevice(const VK_Instance* instance)
 
 int main(int argc, char* argv[])
 {
+	// Load necessary functions before any function call
+	VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
+	
 	SDL_Init(SDL_INIT_VIDEO);
 
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
@@ -139,33 +139,39 @@ int main(int argc, char* argv[])
 	VK_Instance::CheckAvailableExtensions();
 #endif
 
+	// Create Vulkan Instance
 	uPtr<VK_Instance> instance = mkU<VK_Instance>(window, "Vulkan Hello Triangle");
 
-	if (SDL_Vulkan_CreateSurface(window, instance->m_Instance, &instance->m_Surface) != SDL_TRUE)
+	// Create Vulkan Surface
+	VkSurfaceKHR surface;
+	if (SDL_Vulkan_CreateSurface(window, instance->vk_Instance, &surface) != SDL_TRUE)
 	{
 		throw std::runtime_error("SDL_Vulkan_CreateSurface Failed!");
 	}
-	
+	instance->vk_Surface = surface;
+
+	// Select a suitable Physical Device from avaiable physical devices (graphics cards)
 	instance->PickPhysicalDeivce();
 
-	// Extentsions
+	// Create Vulkan Logical devices with desired extensions
 	uPtr<VK_Device> device = CreateLogicalDevice(instance.get());
 
+	// Create Vulkan Swapchain
 	int width, height;
 	SDL_GetWindowSize(window, &width, &height);
 
-	vk::PhysicalDevice p_device = instance->m_PhysicalDevice;
+	uPtr<VK_Swapchain> swapchain = mkU<VK_Swapchain>(*device,
+													SwapchainSupportDetails{
+														.cpabilities = instance->vk_PhysicalDevice.getSurfaceCapabilitiesKHR(instance->vk_Surface),
+														.surfaceFormats = instance->vk_PhysicalDevice.getSurfaceFormatsKHR(instance->vk_Surface),
+														.presentModes = instance->vk_PhysicalDevice.getSurfacePresentModesKHR(instance->vk_Surface)
+													},
+													instance->vk_Surface, 
+													instance->m_QueueFamilyIndices, 
+													width, height);
 
-	uPtr<VK_Swapchain> swapchain = mkU<VK_Swapchain>(p_device, 
-												instance->m_Surface, 
-												instance->m_QueueFamilyIndices, 
-												width, height);
-
-	VkDevice logicalDevice = device->vk_Device;
-
-	uPtr<VK_CommandPool> command_pool = mkU<VK_CommandPool>(logicalDevice, instance->m_QueueFamilyIndices.GraphicsIdx());
-	uPtr<VK_CommandBuffer> command_buffer = mkU<VK_CommandBuffer>(logicalDevice, command_pool->m_CommandPool);
-
+	uPtr<VK_CommandPool> command_pool = mkU<VK_CommandPool>(*device, instance->m_QueueFamilyIndices.GraphicsIdx());
+	VK_CommandBuffer command_buffers(*device, command_pool->vk_CommandPool);
 
 	//VkImage texImage;
 	//VkDeviceMemory texImageMemory;
@@ -214,10 +220,6 @@ int main(int argc, char* argv[])
 
 	vk::Device vk_device = device->vk_Device;
 
-	swapchain->vk_ImageFormat;
-	VkExtent2D extent = swapchain->vk_ImageExtent;
-	VkFormat format = static_cast<VkFormat>(swapchain->vk_ImageFormat);
-
 	std::vector<Model*> m;
 
 	//uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(logicalDevice, 
@@ -229,39 +231,29 @@ int main(int argc, char* argv[])
 
 	// mesh pipeline
 	
-	uPtr<VK_MeshGraphicsPipeline> mesh_pipeline = mkU<VK_MeshGraphicsPipeline>(logicalDevice,
-																				extent,
-																				static_cast<VkFormat>(swapchain->vk_ImageFormat),
-																				m, nullptr);
+	uPtr<VK_GraphicsPipeline> mesh_pipeline = mkU<VK_GraphicsPipeline>(*device,
+																	  swapchain->vk_ImageExtent,
+																	  swapchain->vk_ImageFormat);
 
 	CreateMeshPipeline(vk_device, mesh_pipeline.get());
 
-	swapchain->CreateFramebuffers(mesh_pipeline->m_RenderPass);
+	swapchain->CreateFramebuffers(mesh_pipeline->vk_RenderPass);
 	
 	uint32_t image_index;
-	VkClearValue clear_color = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
+	vk::ClearValue clear_color{};
+	clear_color.setColor({ {{0.0f, 0.0f, 0.0f, 1.0f}} });
 
 	// Create synchronization objects
-	VkSemaphore image_available_semaphore;
-	VkSemaphore render_finished_semaphore;
-	VkFence fence;
-
 	VkSemaphoreCreateInfo semaphore_create_info = {};
 	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-	if (vkCreateSemaphore(logicalDevice, &semaphore_create_info, nullptr, &image_available_semaphore) != VK_SUCCESS ||
-		vkCreateSemaphore(logicalDevice, &semaphore_create_info, nullptr, &render_finished_semaphore) != VK_SUCCESS)
-	{
-		throw std::runtime_error("Failed to Create Semaphore!");
-	}
 
-	VkFenceCreateInfo fence_create_info = {};
-	fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-	if (vkCreateFence(logicalDevice, &fence_create_info, nullptr, &fence) != VK_SUCCESS)
-	{
-		throw std::runtime_error("Failed to Create Fence!");
-	}
-	
+	vk::Semaphore image_available_semaphore = device->NativeDevice().createSemaphore(vk::SemaphoreCreateInfo{});
+	vk::Semaphore render_finished_semaphore = device->NativeDevice().createSemaphore(vk::SemaphoreCreateInfo{});
+
+	vk::Fence fence = device->NativeDevice().createFence(vk::FenceCreateInfo{
+		.flags = vk::FenceCreateFlagBits::eSignaled
+	});
+
 	// Main Loop
 	SDL_Event e;
 	bool bQuit = false;
@@ -275,59 +267,55 @@ int main(int argc, char* argv[])
 
 			// DrawFrame
 			// Wait for previous frame
-			vkWaitForFences(logicalDevice, 1, &fence, VK_TRUE, UINT64_MAX);
-			vkResetFences(logicalDevice, 1, &fence);
+			device->NativeDevice().waitForFences(fence, vk::True, UINT64_MAX);
+			device->NativeDevice().resetFences(fence);
 
-			vkAcquireNextImageKHR(logicalDevice, swapchain->vk_Swapchain, UINT64_MAX, image_available_semaphore, VK_NULL_HANDLE, &image_index);
-			vkResetCommandBuffer(command_buffer->m_CommandBuffer, 0);
-
+			vk::ResultValue result = device->NativeDevice().acquireNextImageKHR(swapchain->vk_Swapchain, UINT64_MAX, image_available_semaphore, nullptr);
+			if (result.result != vk::Result::eSuccess)
+			{
+				throw std::runtime_error("Fail to acquire next image KHR");
+			}
+			image_index = result.value;
+			command_buffers.Reset();
+			
 			// Record Command Buffer
 			{
-				command_buffer->BeginRecordBuffer();
+				command_buffers.Begin();
 
-				VkRenderPassBeginInfo render_pass_begin_info = {};
-				render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-				render_pass_begin_info.renderPass = mesh_pipeline->m_RenderPass;
-				render_pass_begin_info.framebuffer = swapchain->vk_Framebuffers[image_index];
-				render_pass_begin_info.clearValueCount = 1;
-				render_pass_begin_info.pClearValues = &clear_color;
-				render_pass_begin_info.renderArea.offset = { 0, 0 };
-				render_pass_begin_info.renderArea.extent = swapchain->vk_ImageExtent;
+				command_buffers[0].beginRenderPass(vk::RenderPassBeginInfo{
+					.renderPass = mesh_pipeline->vk_RenderPass,
+					.framebuffer = swapchain->vk_Framebuffers[image_index],
+					.renderArea = vk::Rect2D{
+						.offset = {0, 0},
+						.extent = swapchain->vk_ImageExtent
+					},
+					.clearValueCount = 1,
+					.pClearValues = &clear_color,
+				}, vk::SubpassContents::eInline);
 
-				vkCmdBeginRenderPass(command_buffer->m_CommandBuffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-
-				vkCmdBindPipeline(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mesh_pipeline->m_Pipeline);
+				command_buffers[0].bindPipeline(vk::PipelineBindPoint::eGraphics, mesh_pipeline->vk_Pipeline);
 
 				// Viewport and scissors
-				VkViewport viewport = {};
-				viewport.x = 0.0f;
-				viewport.y = 0.0f;
+				command_buffers[0].setViewport(0, vk::Viewport{
+					.x = 0.f,
+					.y = 0.f,
+					.width = static_cast<float>(swapchain->vk_ImageExtent.width),
+					.height = static_cast<float>(swapchain->vk_ImageExtent.height),
+					.minDepth = 0.f,
+					.maxDepth = 1.f
+				});
 
-				viewport.width = static_cast<float>(swapchain->vk_ImageExtent.width);
-				viewport.height = static_cast<float>(swapchain->vk_ImageExtent.height);
-				viewport.minDepth = 0.f;
-				viewport.maxDepth = 1.f;
-
-				vkCmdSetViewport(command_buffer->m_CommandBuffer, 0, 1, &viewport);
-
-
-				VkRect2D scissor{};
-				scissor.offset = { 0, 0 };
-				scissor.extent = swapchain->vk_ImageExtent;
-
-				vkCmdSetScissor(command_buffer->m_CommandBuffer, 0, 1, &scissor);
+				command_buffers[0].setScissor(0, vk::Rect2D{
+					.offset = { 0, 0 },
+					.extent = swapchain->vk_ImageExtent
+				});
 
 				// Draw call
-				vk::CommandBuffer commandBuffer = command_buffer->m_CommandBuffer;
 				uint32_t num_workgroups_x = 2;
 				uint32_t num_workgroups_y = 1;
 				uint32_t num_workgroups_z = 1;
 
-				auto func = (PFN_vkCmdDrawMeshTasksEXT)vk_device.getProcAddr("vkCmdDrawMeshTasksEXT");
-				if (func != nullptr)
-				{
-					func(command_buffer->m_CommandBuffer, num_workgroups_x, num_workgroups_y, num_workgroups_z);
-				}
+				command_buffers[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
 
 				//vkCmdDraw(command_buffer->m_CommandBuffer, 3, 1, 0, 0);
 				
@@ -351,61 +339,48 @@ int main(int argc, char* argv[])
 				//	//vkCmdDrawIndexed(command_buffer->m_CommandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 				//}
 
-				vkCmdEndRenderPass(command_buffer->m_CommandBuffer);
-
-				command_buffer->EndRecordBuffer();
+				command_buffers[0].endRenderPass();
+				command_buffers.End();
 			}
 
 			// Submit Command Buffer
-			VkSubmitInfo submit_info = {};
-			submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			std::array<vk::Semaphore, 1> wait_semaphore{ image_available_semaphore };
+			std::array<vk::Semaphore, 1> signal_semaphores{ render_finished_semaphore };
 
-			std::array<VkSemaphore, 1> wait_semaphore{ image_available_semaphore };
-			std::array<VkSemaphore, 1> signal_semaphores{ render_finished_semaphore };
+			std::array<vk::PipelineStageFlags, 1> wait_stages{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
 
-			std::array<VkPipelineStageFlags, 1> wait_stages{ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-			submit_info.waitSemaphoreCount = static_cast<uint32_t>(wait_semaphore.size());
-			submit_info.pWaitSemaphores = wait_semaphore.data();
-			submit_info.pWaitDstStageMask = wait_stages.data();
+			device->NativeGraphicsQueue().submit(vk::SubmitInfo{
+				.waitSemaphoreCount = static_cast<uint32_t>(wait_semaphore.size()),
+				.pWaitSemaphores = wait_semaphore.data(),
+				.pWaitDstStageMask = wait_stages.data(),
+				.commandBufferCount = 1,
+				.pCommandBuffers = &command_buffers[0],
+				.signalSemaphoreCount = static_cast<uint32_t>(signal_semaphores.size()),
+				.pSignalSemaphores = signal_semaphores.data()
+			}, fence);
 
-			submit_info.commandBufferCount = 1;
-			submit_info.pCommandBuffers = &(command_buffer->m_CommandBuffer);
-
-			submit_info.signalSemaphoreCount = static_cast<uint32_t>(signal_semaphores.size());
-			submit_info.pSignalSemaphores = signal_semaphores.data();
-
-			if (vkQueueSubmit(device->vk_GraphicsQueue, 1, &submit_info, fence) != VK_SUCCESS)
-			{
-				throw std::runtime_error("Failed to submit command!");
-			}
-
-			VkPresentInfoKHR present_info = {};
-			present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-			present_info.waitSemaphoreCount = 1;
-			present_info.pWaitSemaphores = signal_semaphores.data();
-
-			std::array<VkSwapchainKHR, 1> swapchains{swapchain->vk_Swapchain};
-			present_info.swapchainCount = static_cast<uint32_t>(swapchains.size());
-			present_info.pSwapchains = swapchains.data();
-			present_info.pImageIndices = &image_index;
-
-			vkQueuePresentKHR(device->vk_PresentQueue, &present_info);
+			std::array<vk::SwapchainKHR, 1> swapchains{swapchain->vk_Swapchain};
+			device->NativePresentQueue().presentKHR(vk::PresentInfoKHR{
+				.waitSemaphoreCount = 1,
+				.pWaitSemaphores = signal_semaphores.data(),
+				.swapchainCount = static_cast<uint32_t>(swapchains.size()),
+				.pSwapchains = swapchains.data(),
+				.pImageIndices = &image_index
+			});
 		}
 	}
 
-	vkWaitForFences(logicalDevice, 1, &fence, VK_TRUE, UINT64_MAX);
-	vkResetFences(logicalDevice, 1, &fence);
+	device->NativeDevice().waitForFences(fence, vk::True, UINT64_MAX);
+	device->NativeDevice().resetFences(fence);
 
 	//vk_device.destroyShaderModule(vert_module);
 	//vk_device.destroyShaderModule(frag_module);
 
 	//vkDestroyImage(logicalDevice, texImage, nullptr);
 	//vkFreeMemory(logicalDevice, texImageMemory, nullptr);
-
-	vkDestroyFence(logicalDevice, fence, nullptr);
-	vkDestroySemaphore(logicalDevice, image_available_semaphore, nullptr);
-	vkDestroySemaphore(logicalDevice, render_finished_semaphore, nullptr);
+	device->NativeDevice().destroyFence(fence);
+	device->NativeDevice().destroySemaphore(image_available_semaphore);
+	device->NativeDevice().destroySemaphore(render_finished_semaphore);
 
 	//for (int i = 0; i < models.size(); i++) {
 	//	delete models[i];

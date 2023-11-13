@@ -2,8 +2,6 @@
 
 namespace VK_Renderer
 {
-	VK_Device* VK_Device::s_Instance = nullptr;
-
 	VK_Device::VK_Device(vk::PhysicalDevice physicalDevice,
 							const std::vector<const char*>& deviceExtensions,
 							vk::PhysicalDeviceFeatures2 physicalDeviceFeatures2,
@@ -41,20 +39,19 @@ namespace VK_Renderer
 		// Create Logical Device
 		vk_Device = physicalDevice.createDevice(create_info);
 
+		// Load Instance extension functions after creatation
+		VULKAN_HPP_DEFAULT_DISPATCHER.init(vk_Device);
+
 		// Get queue handler
 		vk_Device.getQueue(queueFamilyIdx.GraphicsIdx(), 0, &vk_GraphicsQueue);
 		vk_Device.getQueue(queueFamilyIdx.PresentIdx(), 0, &vk_PresentQueue);
 		vk_Device.getQueue(queueFamilyIdx.ComputeIdx(), 0, &vk_ComputeQueue);
 		vk_Device.getQueue(queueFamilyIdx.MemTransferIdx(), 0, &vk_TransferQueue);
 
-		assert(s_Instance == nullptr);
-
-		s_Instance = this;
 	}
 
 	VK_Device::~VK_Device()
 	{
-		s_Instance = nullptr;
 		vk_Device.destroy();
 	}
 }

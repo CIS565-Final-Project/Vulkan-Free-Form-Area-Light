@@ -24,25 +24,25 @@ void Image::Create(VK_Renderer::VK_Instance* instance, uint32_t width, uint32_t 
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(VK_Device::GetVkDevice(), &imageInfo, nullptr, &image) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create image");
-    }
+    //if (vkCreateImage(VK_Device::GetVkDevice(), &imageInfo, nullptr, &image) != VK_SUCCESS) {
+    //    throw std::runtime_error("Failed to create image");
+    //}
 
     // Allocate memory for the image
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(VK_Device::GetVkDevice(), image, &memRequirements);
+    //VkMemoryRequirements memRequirements;
+    //vkGetImageMemoryRequirements(VK_Device::GetVkDevice(), image, &memRequirements);
 
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = instance->GetMemoryTypeIndex(memRequirements.memoryTypeBits, properties);
-
-    if (vkAllocateMemory(VK_Device::GetVkDevice(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to allocate image memory");
-    }
-
-    // Bind the image
-    vkBindImageMemory(VK_Device::GetVkDevice(), image, imageMemory, 0);
+    //VkMemoryAllocateInfo allocInfo = {};
+    //allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    //allocInfo.allocationSize = memRequirements.size;
+    ////allocInfo.memoryTypeIndex = instance->GetMemoryTypeIndex(memRequirements.memoryTypeBits, properties);
+    //
+    //if (vkAllocateMemory(VK_Device::GetVkDevice(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
+    //    throw std::runtime_error("Failed to allocate image memory");
+    //}
+    //
+    //// Bind the image
+    //vkBindImageMemory(VK_Device::GetVkDevice(), image, imageMemory, 0);
 }
 
 void Image::TransitionLayout(VK_Renderer::VK_Instance* instance, VkCommandPool commandPool, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
@@ -107,7 +107,7 @@ void Image::TransitionLayout(VK_Renderer::VK_Instance* instance, VkCommandPool c
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(VK_Device::GetVkDevice(), &allocInfo, &commandBuffer);
+    //vkAllocateCommandBuffers(VK_Device::GetVkDevice(), &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -144,9 +144,9 @@ VkImageView Image::CreateView(VK_Renderer::VK_Instance* instance, VkImage image,
     viewInfo.subresourceRange.layerCount = 1;
 
     VkImageView imageView;
-    if (vkCreateImageView(VK_Device::GetVkDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to texture image view");
-    }
+    //if (vkCreateImageView(VK_Device::GetVkDevice(), &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+    //  throw std::runtime_error("Failed to texture image view");
+    //}
 
     return imageView;
 }
@@ -173,7 +173,7 @@ void Image::CopyFromBuffer(VK_Renderer::VK_Instance* instance, VkCommandPool com
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(VK_Device::GetVkDevice(), &allocInfo, &commandBuffer);
+    //vkAllocateCommandBuffers(VK_Device::GetVkDevice(), &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -214,9 +214,9 @@ void Image::FromFile(VK_Renderer::VK_Instance* instance, VkCommandPool commandPo
 
     // Copy pixel values to the buffer
     void* data;
-    vkMapMemory(VK_Device::GetVkDevice(), stagingBufferMemory, 0, imageSize, 0, &data);
-    memcpy(data, pixels, static_cast<size_t>(imageSize));
-    vkUnmapMemory(VK_Device::GetVkDevice(), stagingBufferMemory);
+    //vkMapMemory(VK_Device::GetVkDevice(), stagingBufferMemory, 0, imageSize, 0, &data);
+    //memcpy(data, pixels, static_cast<size_t>(imageSize));
+    //vkUnmapMemory(VK_Device::GetVkDevice(), stagingBufferMemory);
 
     // Free pixel array
     stbi_image_free(pixels);
@@ -233,6 +233,6 @@ void Image::FromFile(VK_Renderer::VK_Instance* instance, VkCommandPool commandPo
     Image::TransitionLayout(instance, commandPool, image, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, layout);
 
     // No need for staging buffer anymore
-    vkDestroyBuffer(VK_Device::GetVkDevice(), stagingBuffer, nullptr);
-    vkFreeMemory(VK_Device::GetVkDevice(), stagingBufferMemory, nullptr);
-}
+    //vkDestroyBuffer(VK_Device::GetVkDevice(), stagingBuffer, nullptr);
+    //vkFreeMemory(VK_Device::GetVkDevice(), stagingBufferMemory, nullptr);
+}   

@@ -21,26 +21,26 @@ Model::Model(VK_Renderer::VK_Instance* instance, VkCommandPool commandPool, cons
 }
 
 Model::~Model() {
-    if (indices.size() > 0) {
-        vkDestroyBuffer(VK_Device::GetVkDevice(), indexBuffer, nullptr);
-        vkFreeMemory(VK_Device::GetVkDevice(), indexBufferMemory, nullptr);
-    }
-
-    if (vertices.size() > 0) {
-        vkDestroyBuffer(VK_Device::GetVkDevice(), vertexBuffer, nullptr);
-        vkFreeMemory(VK_Device::GetVkDevice(), vertexBufferMemory, nullptr);
-    }
-
-    vkDestroyBuffer(VK_Device::GetVkDevice(), modelBuffer, nullptr);
-    vkFreeMemory(VK_Device::GetVkDevice(), modelBufferMemory, nullptr);
-
-    if (textureView != VK_NULL_HANDLE) {
-        vkDestroyImageView(VK_Device::GetVkDevice(), textureView, nullptr);
-    }
-
-    if (textureSampler != VK_NULL_HANDLE) {
-        vkDestroySampler(VK_Device::GetVkDevice(), textureSampler, nullptr);
-    }
+    //if (indices.size() > 0) {
+    //    vkDestroyBuffer(VK_Device::GetVkDevice(), indexBuffer, nullptr);
+    //    vkFreeMemory(VK_Device::GetVkDevice(), indexBufferMemory, nullptr);
+    //}
+    //
+    //if (vertices.size() > 0) {
+    //    vkDestroyBuffer(VK_Device::GetVkDevice(), vertexBuffer, nullptr);
+    //    vkFreeMemory(VK_Device::GetVkDevice(), vertexBufferMemory, nullptr);
+    //}
+    //
+    //vkDestroyBuffer(VK_Device::GetVkDevice(), modelBuffer, nullptr);
+    //vkFreeMemory(VK_Device::GetVkDevice(), modelBufferMemory, nullptr);
+    //
+    //if (textureView != VK_NULL_HANDLE) {
+    //    vkDestroyImageView(VK_Device::GetVkDevice(), textureView, nullptr);
+    //}
+    //
+    //if (textureSampler != VK_NULL_HANDLE) {
+    //    vkDestroySampler(VK_Device::GetVkDevice(), textureSampler, nullptr);
+    //}
 }
 
 void Model::SetTexture(VkImage texture) {
@@ -81,9 +81,9 @@ void Model::SetTexture(VkImage texture) {
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 0.0f;
 
-    if (vkCreateSampler(VK_Device::GetVkDevice(), &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create texture sampler");
-    }
+    //if (vkCreateSampler(VK_Device::GetVkDevice(), &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+    //    throw std::runtime_error("Failed to create texture sampler");
+    //}
     
 }
 

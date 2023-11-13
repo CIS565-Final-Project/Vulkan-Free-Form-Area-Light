@@ -20,7 +20,7 @@ Camera::Camera(VK_Renderer::VK_Instance* instance, float aspectRatio) : m_instan
     cameraBufferObject.projectionMatrix[1][1] *= -1; // y-coordinate is flipped
 
     BufferUtils::CreateBuffer(m_instance, sizeof(CameraBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, buffer, bufferMemory);
-    vkMapMemory(VK_Device::GetVkDevice(), bufferMemory, 0, sizeof(CameraBufferObject), 0, &mappedData);
+    //vkMapMemory(VK_Device::GetVkDevice(), bufferMemory, 0, sizeof(CameraBufferObject), 0, &mappedData);
     memcpy(mappedData, &cameraBufferObject, sizeof(CameraBufferObject));
 }
 
@@ -45,7 +45,7 @@ void Camera::UpdateOrbit(float deltaX, float deltaY, float deltaZ) {
 }
 
 Camera::~Camera() {
-  vkUnmapMemory(VK_Device::GetVkDevice(), bufferMemory);
-  vkDestroyBuffer(VK_Device::GetVkDevice(), buffer, nullptr);
-  vkFreeMemory(VK_Device::GetVkDevice(), bufferMemory, nullptr);
+  //vkUnmapMemory(VK_Device::GetVkDevice(), bufferMemory);
+  //vkDestroyBuffer(VK_Device::GetVkDevice(), buffer, nullptr);
+  //vkFreeMemory(VK_Device::GetVkDevice(), bufferMemory, nullptr);
 }

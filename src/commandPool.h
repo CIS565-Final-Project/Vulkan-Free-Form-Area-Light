@@ -1,20 +1,23 @@
 #pragma once
 
 #include "common.h"
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 namespace VK_Renderer
 {
+	class VK_Device;
+
 	class VK_CommandPool
 	{
 	public:
-		VK_CommandPool(VkDevice device, uint32_t graphicsQueueFamilyIndex);
+		VK_CommandPool(VK_Device& device, uint32_t queueFamilyIdx);
 		~VK_CommandPool();
 
 	public:
-		VkCommandPool m_CommandPool;
+		vk::CommandPool vk_CommandPool;
+
 	protected:
-		VkDevice m_LogicalDevice;
-		uint32_t m_GraphicsQueueFamilyIndex;
+		VK_Device& m_Device;
+		uint32_t m_QueueFamilyIdx;
 	};
 }

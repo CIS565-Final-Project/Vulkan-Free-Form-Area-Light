@@ -1,25 +1,24 @@
 #pragma once
 
 #include "common.h"
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 namespace VK_Renderer
 {
+	class VK_Device;
+
 	class VK_CommandBuffer
 	{
 	public:
-		VK_CommandBuffer(VkDevice device, VkCommandPool commandPool);
-		~VK_CommandBuffer();
+		VK_CommandBuffer(const VK_Device& device, vk::CommandPool commandPool, uint32_t count = 1);
 
-		void BeginRecordBuffer();
-		void EndRecordBuffer();
+		inline void Reset(const uint32_t& idx = 0) const { vk_CommandBuffers[idx].reset(); }
+		inline void Begin(const uint32_t& idx = 0) const { vk_CommandBuffers[idx].begin(vk::CommandBufferBeginInfo{}); }
+		inline void End(const uint32_t& idx = 0) const { vk_CommandBuffers[idx].end(); }
 
+		const vk::CommandBuffer& operator[](const uint32_t& idx) const { return vk_CommandBuffers[idx]; }
 
 	public:
-		VkCommandBuffer m_CommandBuffer;
-
-	protected:
-		VkDevice m_LogicalDevice;
-		VkCommandPool m_CommandPool;
+		std::vector<vk::CommandBuffer> vk_CommandBuffers;
 	};
 }

@@ -2,6 +2,8 @@
 
 #include "common.h"
 
+#include <vulkan/vulkan.hpp>
+
 namespace VK_Renderer
 {
 	struct QueueFamilyIndices
@@ -22,5 +24,12 @@ namespace VK_Renderer
 		uint32_t PresentIdx() const { return presentFamily.value(); }
 		uint32_t ComputeIdx() const { return computeFamily.value(); }
 		uint32_t MemTransferIdx() const { return memTransferFamily.value(); }
+	};
+
+	struct SwapchainSupportDetails
+	{
+		vk::SurfaceCapabilitiesKHR cpabilities;
+		std::vector<vk::SurfaceFormatKHR> surfaceFormats;
+		std::vector<vk::PresentModeKHR> presentModes;
 	};
 }
