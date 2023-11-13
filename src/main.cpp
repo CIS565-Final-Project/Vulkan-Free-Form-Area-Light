@@ -12,6 +12,9 @@
 #include "commandPool.h"
 #include "commandbuffer.h"
 
+#include "device.h"
+#include "swapchain.h"
+
 #include <glm.hpp>
 
 
@@ -98,6 +101,28 @@ void CreateMeshPipeline(vk::Device vk_device, VK_GraphicsPipeline* pipeline)
 	vk_device.destroyShaderModule(frag_module);
 }
 
+uPtr<VK_Device> CreateLogicalDevice(const VK_Instance* instance)
+{
+	vk::PhysicalDeviceFeatures2 physicalDeviceFeatures2;
+	
+	vk::PhysicalDeviceMeshShaderFeaturesEXT meshShaderFeature;
+
+	physicalDeviceFeatures2.pNext = &meshShaderFeature;
+
+	std::vector<const char*> extensions{
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		VK_EXT_MESH_SHADER_EXTENSION_NAME
+	};
+
+	vk::PhysicalDevice physical_device = instance->m_PhysicalDevice;
+	physical_device.getFeatures2(&physicalDeviceFeatures2);
+
+	return mkU<VK_Device>(physical_device,
+							extensions,
+							physicalDeviceFeatures2, 
+							instance->m_QueueFamilyIndices);
+}
+
 int main(int argc, char* argv[])
 {
 	SDL_Init(SDL_INIT_VIDEO);
@@ -122,82 +147,96 @@ int main(int argc, char* argv[])
 	}
 	
 	instance->PickPhysicalDeivce();
-	instance->CreateLogicDevice();
+
+	// Extentsions
+	uPtr<VK_Device> device = CreateLogicalDevice(instance.get());
 
 	int width, height;
 	SDL_GetWindowSize(window, &width, &height);
 
-	instance->CreateSwapchain(width, height);
-	instance->CreateImageViews();
+	vk::PhysicalDevice p_device = instance->m_PhysicalDevice;
 
-	uPtr<VK_CommandPool> command_pool = mkU<VK_CommandPool>(instance->m_LogicalDevice, instance->m_QueueFamilyIndices.GraphicsValue());
-	uPtr<VK_CommandBuffer> command_buffer = mkU<VK_CommandBuffer>(instance->m_LogicalDevice, command_pool->m_CommandPool);
+	uPtr<VK_Swapchain> swapchain = mkU<VK_Swapchain>(p_device, 
+												instance->m_Surface, 
+												instance->m_QueueFamilyIndices, 
+												width, height);
+
+	VkDevice logicalDevice = device->vk_Device;
+
+	uPtr<VK_CommandPool> command_pool = mkU<VK_CommandPool>(logicalDevice, instance->m_QueueFamilyIndices.GraphicsIdx());
+	uPtr<VK_CommandBuffer> command_buffer = mkU<VK_CommandBuffer>(logicalDevice, command_pool->m_CommandPool);
 
 
-	VkImage texImage;
-	VkDeviceMemory texImageMemory;
-	Image::FromFile(instance.get(),
-		command_pool->m_CommandPool,
-		"images/wall.jpg",
-		VK_FORMAT_R8G8B8A8_UNORM,
-		VK_IMAGE_TILING_OPTIMAL,
-		VK_IMAGE_USAGE_SAMPLED_BIT,
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		texImage,
-		texImageMemory
-	);
+	//VkImage texImage;
+	//VkDeviceMemory texImageMemory;
+	//Image::FromFile(instance.get(),
+	//	command_pool->m_CommandPool,
+	//	"images/wall.jpg",
+	//	VK_FORMAT_R8G8B8A8_UNORM,
+	//	VK_IMAGE_TILING_OPTIMAL,
+	//	VK_IMAGE_USAGE_SAMPLED_BIT,
+	//	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+	//	VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+	//	texImage,
+	//	texImageMemory
+	//);
 
-	std::vector<Model*> models;
-	const float halfWidth = 2.5f;
-	models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
-		{
-			{ { -halfWidth, halfWidth + 2.0f, -5.0f }, { 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f } },
-			{ { halfWidth, halfWidth + 2.0f, -5.0f }, { 0.0f, 1.0f, 0.0f },{ 0.0f, 0.0f } },
-			{ { halfWidth, -halfWidth + 2.0f, -5.0f }, { 0.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },
-			{ { -halfWidth, -halfWidth + 2.0f, -5.0f }, { 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
-		},
-		{ 0, 1, 2, 2, 3, 0 }
-	));
+	//std::vector<Model*> models;
+	//const float halfWidth = 2.5f;
+	//models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
+	//	{
+	//		{ { -halfWidth, halfWidth + 2.0f, -5.0f }, { 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f } },
+	//		{ { halfWidth, halfWidth + 2.0f, -5.0f }, { 0.0f, 1.0f, 0.0f },{ 0.0f, 0.0f } },
+	//		{ { halfWidth, -halfWidth + 2.0f, -5.0f }, { 0.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },
+	//		{ { -halfWidth, -halfWidth + 2.0f, -5.0f }, { 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
+	//	},
+	//	{ 0, 1, 2, 2, 3, 0 }
+	//));
+	//
+	//const float halfWidth_1 = 6.0f;
+	//const float quadHeight = -2.0f;
+	//models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
+	//	{
+	//		{ { -halfWidth_1, quadHeight, halfWidth_1 - 5.0f}, { 1.0f, 1.0f, 0.0f },{ 1.0f, 0.0f } },
+	//		{ { halfWidth_1, quadHeight, halfWidth_1 - 5.0f}, { 0.0f, 1.0f, 1.0f },{ 0.0f, 0.0f } },
+	//		{ { halfWidth_1, quadHeight, -halfWidth_1 - 5.0f}, { 1.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },
+	//		{ { -halfWidth_1, quadHeight,  -halfWidth_1 - 5.0f}, { 0.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
+	//	},
+	//	// { 0, 1, 2, 2, 3, 0 }
+	//	{ 0, 2, 1, 3, 2, 0 }
+	//));
+
+	//Camera* camera = new Camera(instance.get(), width / height);
+
 	
-	const float halfWidth_1 = 6.0f;
-	const float quadHeight = -2.0f;
-	models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
-		{
-			{ { -halfWidth_1, quadHeight, halfWidth_1 - 5.0f}, { 1.0f, 1.0f, 0.0f },{ 1.0f, 0.0f } },
-			{ { halfWidth_1, quadHeight, halfWidth_1 - 5.0f}, { 0.0f, 1.0f, 1.0f },{ 0.0f, 0.0f } },
-			{ { halfWidth_1, quadHeight, -halfWidth_1 - 5.0f}, { 1.0f, 0.0f, 1.0f },{ 0.0f, 1.0f } },
-			{ { -halfWidth_1, quadHeight,  -halfWidth_1 - 5.0f}, { 0.0f, 1.0f, 1.0f },{ 1.0f, 1.0f } }
-		},
-		// { 0, 1, 2, 2, 3, 0 }
-		{ 0, 2, 1, 3, 2, 0 }
-	));
+	//models[0]->SetTexture(texImage);
+	//models[1]->SetTexture(texImage);
 
-	Camera* camera = new Camera(instance.get(), width / height);
+	vk::Device vk_device = device->vk_Device;
 
-	
-	models[0]->SetTexture(texImage);
-	models[1]->SetTexture(texImage);
+	swapchain->vk_ImageFormat;
+	VkExtent2D extent = swapchain->vk_ImageExtent;
+	VkFormat format = static_cast<VkFormat>(swapchain->vk_ImageFormat);
 
-	vk::Device vk_device = instance->m_LogicalDevice;
+	std::vector<Model*> m;
 
-	uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(instance->m_LogicalDevice, 
-																			instance->m_SwapchainExtent, 
-																			instance->m_SwapchainImageFormat,
-																			models, camera);
-	CreateGraphicsPipeline(vk_device, graphics_pipeline.get());
+	//uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(logicalDevice, 
+	//																		extent,
+	//																		static_cast<VkFormat>(swapchain->vk_ImageFormat),
+	//																		m, nullptr);
+	//CreateGraphicsPipeline(vk_device, graphics_pipeline.get());
 	
 
 	// mesh pipeline
 	
-	uPtr<VK_MeshGraphicsPipeline> mesh_pipeline = mkU<VK_MeshGraphicsPipeline>(instance->m_LogicalDevice,
-																				instance->m_SwapchainExtent,
-																				instance->m_SwapchainImageFormat,
-																				models, camera);
+	uPtr<VK_MeshGraphicsPipeline> mesh_pipeline = mkU<VK_MeshGraphicsPipeline>(logicalDevice,
+																				extent,
+																				static_cast<VkFormat>(swapchain->vk_ImageFormat),
+																				m, nullptr);
 
 	CreateMeshPipeline(vk_device, mesh_pipeline.get());
 
-	instance->CreateFrameBuffers(graphics_pipeline->m_RenderPass);
+	swapchain->CreateFramebuffers(mesh_pipeline->m_RenderPass);
 	
 	uint32_t image_index;
 	VkClearValue clear_color = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
@@ -209,8 +248,8 @@ int main(int argc, char* argv[])
 
 	VkSemaphoreCreateInfo semaphore_create_info = {};
 	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-	if (vkCreateSemaphore(instance->m_LogicalDevice, &semaphore_create_info, nullptr, &image_available_semaphore) != VK_SUCCESS ||
-		vkCreateSemaphore(instance->m_LogicalDevice, &semaphore_create_info, nullptr, &render_finished_semaphore) != VK_SUCCESS)
+	if (vkCreateSemaphore(logicalDevice, &semaphore_create_info, nullptr, &image_available_semaphore) != VK_SUCCESS ||
+		vkCreateSemaphore(logicalDevice, &semaphore_create_info, nullptr, &render_finished_semaphore) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Failed to Create Semaphore!");
 	}
@@ -218,7 +257,7 @@ int main(int argc, char* argv[])
 	VkFenceCreateInfo fence_create_info = {};
 	fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-	if (vkCreateFence(instance->m_LogicalDevice, &fence_create_info, nullptr, &fence) != VK_SUCCESS)
+	if (vkCreateFence(logicalDevice, &fence_create_info, nullptr, &fence) != VK_SUCCESS)
 	{
 		throw std::runtime_error("Failed to Create Fence!");
 	}
@@ -226,8 +265,6 @@ int main(int argc, char* argv[])
 	// Main Loop
 	SDL_Event e;
 	bool bQuit = false;
-
-	VkDevice device = instance->m_LogicalDevice;
 
 	while (!bQuit)
 	{
@@ -238,10 +275,10 @@ int main(int argc, char* argv[])
 
 			// DrawFrame
 			// Wait for previous frame
-			vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
-			vkResetFences(device, 1, &fence);
+			vkWaitForFences(logicalDevice, 1, &fence, VK_TRUE, UINT64_MAX);
+			vkResetFences(logicalDevice, 1, &fence);
 
-			vkAcquireNextImageKHR(device, instance->m_Swapchain, UINT64_MAX, image_available_semaphore, VK_NULL_HANDLE, &image_index);
+			vkAcquireNextImageKHR(logicalDevice, swapchain->vk_Swapchain, UINT64_MAX, image_available_semaphore, VK_NULL_HANDLE, &image_index);
 			vkResetCommandBuffer(command_buffer->m_CommandBuffer, 0);
 
 			// Record Command Buffer
@@ -251,11 +288,11 @@ int main(int argc, char* argv[])
 				VkRenderPassBeginInfo render_pass_begin_info = {};
 				render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 				render_pass_begin_info.renderPass = mesh_pipeline->m_RenderPass;
-				render_pass_begin_info.framebuffer = instance->m_SwapchainFramebuffers[image_index];
+				render_pass_begin_info.framebuffer = swapchain->vk_Framebuffers[image_index];
 				render_pass_begin_info.clearValueCount = 1;
 				render_pass_begin_info.pClearValues = &clear_color;
 				render_pass_begin_info.renderArea.offset = { 0, 0 };
-				render_pass_begin_info.renderArea.extent = instance->m_SwapchainExtent;
+				render_pass_begin_info.renderArea.extent = swapchain->vk_ImageExtent;
 
 				vkCmdBeginRenderPass(command_buffer->m_CommandBuffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -266,8 +303,8 @@ int main(int argc, char* argv[])
 				viewport.x = 0.0f;
 				viewport.y = 0.0f;
 
-				viewport.width = static_cast<float>(instance->m_SwapchainExtent.width);
-				viewport.height = static_cast<float>(instance->m_SwapchainExtent.height);
+				viewport.width = static_cast<float>(swapchain->vk_ImageExtent.width);
+				viewport.height = static_cast<float>(swapchain->vk_ImageExtent.height);
 				viewport.minDepth = 0.f;
 				viewport.maxDepth = 1.f;
 
@@ -276,7 +313,7 @@ int main(int argc, char* argv[])
 
 				VkRect2D scissor{};
 				scissor.offset = { 0, 0 };
-				scissor.extent = instance->m_SwapchainExtent;
+				scissor.extent = swapchain->vk_ImageExtent;
 
 				vkCmdSetScissor(command_buffer->m_CommandBuffer, 0, 1, &scissor);
 
@@ -337,7 +374,7 @@ int main(int argc, char* argv[])
 			submit_info.signalSemaphoreCount = static_cast<uint32_t>(signal_semaphores.size());
 			submit_info.pSignalSemaphores = signal_semaphores.data();
 
-			if (vkQueueSubmit(instance->m_GraphicsQueue, 1, &submit_info, fence) != VK_SUCCESS)
+			if (vkQueueSubmit(device->vk_GraphicsQueue, 1, &submit_info, fence) != VK_SUCCESS)
 			{
 				throw std::runtime_error("Failed to submit command!");
 			}
@@ -348,36 +385,38 @@ int main(int argc, char* argv[])
 			present_info.waitSemaphoreCount = 1;
 			present_info.pWaitSemaphores = signal_semaphores.data();
 
-			std::array<VkSwapchainKHR, 1> swapchains{instance->m_Swapchain};
+			std::array<VkSwapchainKHR, 1> swapchains{swapchain->vk_Swapchain};
 			present_info.swapchainCount = static_cast<uint32_t>(swapchains.size());
 			present_info.pSwapchains = swapchains.data();
 			present_info.pImageIndices = &image_index;
 
-			vkQueuePresentKHR(instance->m_PresentQueue, &present_info);
+			vkQueuePresentKHR(device->vk_PresentQueue, &present_info);
 		}
 	}
 
-	vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
-	vkResetFences(device, 1, &fence);
+	vkWaitForFences(logicalDevice, 1, &fence, VK_TRUE, UINT64_MAX);
+	vkResetFences(logicalDevice, 1, &fence);
 
 	//vk_device.destroyShaderModule(vert_module);
 	//vk_device.destroyShaderModule(frag_module);
 
-	vkDestroyImage(instance->m_LogicalDevice, texImage, nullptr);
-	vkFreeMemory(instance->m_LogicalDevice, texImageMemory, nullptr);
+	//vkDestroyImage(logicalDevice, texImage, nullptr);
+	//vkFreeMemory(logicalDevice, texImageMemory, nullptr);
 
-	vkDestroyFence(instance->m_LogicalDevice, fence, nullptr);
-	vkDestroySemaphore(instance->m_LogicalDevice, image_available_semaphore, nullptr);
-	vkDestroySemaphore(instance->m_LogicalDevice, render_finished_semaphore, nullptr);
+	vkDestroyFence(logicalDevice, fence, nullptr);
+	vkDestroySemaphore(logicalDevice, image_available_semaphore, nullptr);
+	vkDestroySemaphore(logicalDevice, render_finished_semaphore, nullptr);
 
-	for (int i = 0; i < models.size(); i++) {
-		delete models[i];
-	}
-	delete camera;
+	//for (int i = 0; i < models.size(); i++) {
+	//	delete models[i];
+	//}
+	//delete camera;
 
 	command_pool.reset();
-	graphics_pipeline.reset();
+	//graphics_pipeline.reset();
 	mesh_pipeline.reset();
+	swapchain.reset();
+	device.reset();
 	instance.reset();
 
 	SDL_DestroyWindowSurface(window);

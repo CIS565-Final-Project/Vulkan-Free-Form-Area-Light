@@ -2,6 +2,9 @@
 #include "BufferUtils.h"
 #include "Image.h"
 
+#include "device.h"
+using namespace VK_Renderer;
+
 Model::Model(VK_Renderer::VK_Instance* instance, VkCommandPool commandPool, const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices)
   : m_instance(instance), vertices(vertices), indices(indices) {
 
@@ -19,24 +22,24 @@ Model::Model(VK_Renderer::VK_Instance* instance, VkCommandPool commandPool, cons
 
 Model::~Model() {
     if (indices.size() > 0) {
-        vkDestroyBuffer(m_instance->m_LogicalDevice, indexBuffer, nullptr);
-        vkFreeMemory(m_instance->m_LogicalDevice, indexBufferMemory, nullptr);
+        vkDestroyBuffer(VK_Device::GetVkDevice(), indexBuffer, nullptr);
+        vkFreeMemory(VK_Device::GetVkDevice(), indexBufferMemory, nullptr);
     }
 
     if (vertices.size() > 0) {
-        vkDestroyBuffer(m_instance->m_LogicalDevice, vertexBuffer, nullptr);
-        vkFreeMemory(m_instance->m_LogicalDevice, vertexBufferMemory, nullptr);
+        vkDestroyBuffer(VK_Device::GetVkDevice(), vertexBuffer, nullptr);
+        vkFreeMemory(VK_Device::GetVkDevice(), vertexBufferMemory, nullptr);
     }
 
-    vkDestroyBuffer(m_instance->m_LogicalDevice, modelBuffer, nullptr);
-    vkFreeMemory(m_instance->m_LogicalDevice, modelBufferMemory, nullptr);
+    vkDestroyBuffer(VK_Device::GetVkDevice(), modelBuffer, nullptr);
+    vkFreeMemory(VK_Device::GetVkDevice(), modelBufferMemory, nullptr);
 
     if (textureView != VK_NULL_HANDLE) {
-        vkDestroyImageView(m_instance->m_LogicalDevice, textureView, nullptr);
+        vkDestroyImageView(VK_Device::GetVkDevice(), textureView, nullptr);
     }
 
     if (textureSampler != VK_NULL_HANDLE) {
-        vkDestroySampler(m_instance->m_LogicalDevice, textureSampler, nullptr);
+        vkDestroySampler(VK_Device::GetVkDevice(), textureSampler, nullptr);
     }
 }
 
@@ -78,7 +81,7 @@ void Model::SetTexture(VkImage texture) {
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 0.0f;
 
-    if (vkCreateSampler(m_instance->m_LogicalDevice, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+    if (vkCreateSampler(VK_Device::GetVkDevice(), &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create texture sampler");
     }
     

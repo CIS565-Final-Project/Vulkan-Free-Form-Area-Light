@@ -10,13 +10,13 @@ void BufferUtils::CreateBuffer(VK_Renderer::VK_Instance* instance, VkDeviceSize 
     bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateBuffer(instance->m_LogicalDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create vertex buffer");
-    }
+    //if (vkCreateBuffer(instance->m_LogicalDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+    //    throw std::runtime_error("Failed to create vertex buffer");
+    //}
 
     // Query buffer's memory requirements
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(instance->m_LogicalDevice, buffer, &memRequirements);
+    //vkGetBufferMemoryRequirements(instance->m_LogicalDevice, buffer, &memRequirements);
 
     // Allocate memory in device
     VkMemoryAllocateInfo allocInfo = {};
@@ -24,12 +24,12 @@ void BufferUtils::CreateBuffer(VK_Renderer::VK_Instance* instance, VkDeviceSize 
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = instance->GetMemoryTypeIndex(memRequirements.memoryTypeBits, properties);
 
-    if (vkAllocateMemory(instance->m_LogicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to allocate vertex buffer");
-    }
+    //if (vkAllocateMemory(instance->m_LogicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+    //  throw std::runtime_error("Failed to allocate vertex buffer");
+    //}
 
     // Associate allocated memory with vertex buffer
-    vkBindBufferMemory(instance->m_LogicalDevice, buffer, bufferMemory, 0);
+    //vkBindBufferMemory(instance->m_LogicalDevice, buffer, bufferMemory, 0);
 }
 
 void BufferUtils::CopyBuffer(VK_Renderer::VK_Instance* instance, VkCommandPool commandPool, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
@@ -40,7 +40,7 @@ void BufferUtils::CopyBuffer(VK_Renderer::VK_Instance* instance, VkCommandPool c
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(instance->m_LogicalDevice, &allocInfo, &commandBuffer);
+    //vkAllocateCommandBuffers(instance->m_LogicalDevice, &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -59,9 +59,9 @@ void BufferUtils::CopyBuffer(VK_Renderer::VK_Instance* instance, VkCommandPool c
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    vkQueueSubmit(instance->m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(instance->m_GraphicsQueue);
-    vkFreeCommandBuffers(instance->m_LogicalDevice, commandPool, 1, &commandBuffer);
+    //vkQueueSubmit(instance->m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    //vkQueueWaitIdle(instance->m_GraphicsQueue);
+    //vkFreeCommandBuffers(instance->m_LogicalDevice, commandPool, 1, &commandBuffer);
 }
 
 void BufferUtils::CreateBufferFromData(VK_Renderer::VK_Instance* instance, VkCommandPool commandPool, void* bufferData, VkDeviceSize bufferSize, VkBufferUsageFlags bufferUsage, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
@@ -75,9 +75,9 @@ void BufferUtils::CreateBufferFromData(VK_Renderer::VK_Instance* instance, VkCom
 
     // Fill the staging buffer
     void *data;
-    vkMapMemory(instance->m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, bufferData, static_cast<size_t>(bufferSize));
-    vkUnmapMemory(instance->m_LogicalDevice, stagingBufferMemory);
+    //vkMapMemory(instance->m_LogicalDevice, stagingBufferMemory, 0, bufferSize, 0, &data);
+    //memcpy(data, bufferData, static_cast<size_t>(bufferSize));
+    //vkUnmapMemory(instance->m_LogicalDevice, stagingBufferMemory);
 
     // Create the buffer
     VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | bufferUsage;
@@ -88,6 +88,6 @@ void BufferUtils::CreateBufferFromData(VK_Renderer::VK_Instance* instance, VkCom
     BufferUtils::CopyBuffer(instance, commandPool, stagingBuffer, buffer, bufferSize);
 
     // No need for the staging buffer anymore
-    vkDestroyBuffer(instance->m_LogicalDevice, stagingBuffer, nullptr);
-    vkFreeMemory(instance->m_LogicalDevice, stagingBufferMemory, nullptr);
+    //vkDestroyBuffer(instance->m_LogicalDevice, stagingBuffer, nullptr);
+    //vkFreeMemory(instance->m_LogicalDevice, stagingBufferMemory, nullptr);
 }

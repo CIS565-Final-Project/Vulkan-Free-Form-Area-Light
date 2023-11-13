@@ -11,7 +11,12 @@ namespace VK_Renderer
 	class VK_GraphicsPipeline
 	{
 	public:
-		VK_GraphicsPipeline(VkDevice device, const VkExtent2D& extent, const VkFormat& swapchain_image_format, std::vector<Model*>& models, Camera* camera);
+		VK_GraphicsPipeline(VkDevice device, 
+							const VkExtent2D& extent, 
+							const VkFormat& swapchain_image_format, 
+							std::vector<Model*>& models, 
+							Camera* camera);
+
 		~VK_GraphicsPipeline();
 
 		virtual void CreatePipeline(const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo);
