@@ -6,6 +6,11 @@ set(SRC_INDLUDE_DIR "${CMAKE_SOURCE_DIR}/src")
 set(SDL_INCLUDE_DIR "${EXT_ROOT_DIR}/SDL/include")
 set(GLM_INCLUDE_DIR "${EXT_ROOT_DIR}/glm/glm")
 set(STB_INCLUDE_DIR "${EXT_ROOT_DIR}/stb")
+set(TINYOBJ_INCLUDE_DIR "${EXT_ROOT_DIR}/tinyobjloader")
+
+add_library(TinyObjLoader 
+	"${EXT_ROOT_DIR}/tinyobjloader/tiny_obj_loader.cc"
+)
 
 file(GLOB_RECURSE exe_Sources
 	"*.cpp"
@@ -36,11 +41,13 @@ PUBLIC
 	${SDL_INCLUDE_DIR}
 	${GLM_INCLUDE_DIR}
 	${STB_INCLUDE_DIR}
+	${TINYOBJ_INCLUDE_DIR}
 )
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
 	Vulkan::Vulkan
 	SDL2::SDL2
 	SDL2::SDL2main
+	TinyObjLoader
 )
 

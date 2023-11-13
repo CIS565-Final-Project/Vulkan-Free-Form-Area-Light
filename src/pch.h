@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <fstream>
 
-constexpr unsigned int Max_Physical_Device_Count = 2;
+#include <glm.hpp>
 
 #define uPtr std::unique_ptr
 #define sPtr std::shared_ptr;

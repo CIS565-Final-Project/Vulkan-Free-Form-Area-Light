@@ -13,13 +13,27 @@ file(GLOB IMAGES
 	"images/*.hdr"
 )
 
+file(GLOB MESHES
+    "meshes/*.obj"
+    "meshes/*.mtl"
+	"meshes/*.fbx"
+	"meshes/*.gltf"
+)
+
 #message("Shaders: ${Shaders_Sources}")
 #message("Images: ${IMAGES}")
+#message("Meshes: ${MESHES}")
 
 #copy images
 foreach(IMAGE ${IMAGES})
     get_filename_component(fname ${IMAGE} NAME)
     configure_file(${IMAGE} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/images/${fname} COPYONLY)
+endforeach()
+
+#copy meshes
+foreach(MESH ${MESHES})
+    get_filename_component(fname ${MESH} NAME)
+    configure_file(${MESH} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/meshes/${fname} COPYONLY)
 endforeach()
 
 #compile shaders
