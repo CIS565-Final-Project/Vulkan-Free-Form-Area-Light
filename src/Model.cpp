@@ -45,6 +45,7 @@ void Model::SetTexture(VkImage texture) {
     this->texture = texture;
     //this->textureView = Image::CreateView(m_instance, texture, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
     this->textureView = Image::CreateView(m_instance, texture, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT);
+    //this->textureView = Image::CreateView(m_instance, texture, VK_FORMAT_R32G32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT);
 
     // --- Specify all filters and transformations ---
     VkSamplerCreateInfo samplerInfo = {};

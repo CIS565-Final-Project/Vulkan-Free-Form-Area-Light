@@ -16,6 +16,7 @@
 
 
 using namespace VK_Renderer;
+using namespace glm;
 
 int main(int argc, char* argv[])
 {
@@ -59,6 +60,7 @@ int main(int argc, char* argv[])
 		command_pool->m_CommandPool,
 		// "images/wall.jpg",
 		"images/ltc.dds",
+		//"images/ltc_amp.dds",
 		VK_FORMAT_R8G8B8A8_UNORM,
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -69,7 +71,7 @@ int main(int argc, char* argv[])
 	);
 
 	std::vector<Model*> models;
-	const float halfWidth = 2.5f;
+	//const float halfWidth = 2.5f;
 	//models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
 	//	{
 	//		{ { -halfWidth, halfWidth + 2.0f, -5.0f }, { 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f } },
@@ -80,7 +82,7 @@ int main(int argc, char* argv[])
 	//	{ 0, 1, 2, 2, 3, 0 }
 	//));
 	
-	const float halfWidth_1 = 12.0f;
+	const float halfWidth_1 = 10.0f;
 	const float quadHeight = -2.0f;
 	models.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
 		{
@@ -271,7 +273,7 @@ int main(int argc, char* argv[])
 
 	SDL_DestroyWindowSurface(window);
 	SDL_DestroyWindow(window);
-	
+
 	//LTCFit::GenerateTexture("images/ltc");
 	system("pause");
 	return 0;
