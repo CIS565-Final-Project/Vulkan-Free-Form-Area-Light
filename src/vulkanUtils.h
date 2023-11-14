@@ -2,6 +2,18 @@
 
 #include <vulkan/vulkan.hpp>
 
+#ifdef GLOBAL_USE_DOUBLE
+#define vk_FormatFloat	vk::Format::eR64Sfloat
+#define vk_FormatFloat2	vk::Format::eR64G64Sfloat
+#define vk_FormatFloat3	vk::Format::eR64G64B64Sfloat
+#define vk_FormatFloat4	vk::Format::eR64G64B64A64Sfloat
+#else
+#define vk_FormatFloat	vk::Format::eR32Sfloat				
+#define vk_FormatFloat2	vk::Format::eR32G32Sfloat	
+#define vk_FormatFloat3	vk::Format::eR32G32B32Sfloat
+#define vk_FormatFloat4	vk::Format::eR32G32B32A32Sfloat
+#endif
+
 namespace VK_Renderer
 {
 	struct QueueFamilyIndices

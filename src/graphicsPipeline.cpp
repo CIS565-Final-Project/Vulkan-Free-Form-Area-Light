@@ -1,14 +1,14 @@
 #include "graphicsPipeline.h"
 #include <glm.hpp>
 
-#include "Camera.h"
 #include "device.h"
+#include "pipelineInput.h"
 
 namespace VK_Renderer
 {
 	VK_GraphicsPipeline::VK_GraphicsPipeline(const VK_Device& device,
-												const vk::Extent2D& extent,
-												const vk::Format& imageFormat)
+											 const vk::Extent2D& extent,
+											 const vk::Format& imageFormat)
 		: m_Device(device),
 		  vk_Extent(extent),
 		  vk_SwapchainImageFormat(imageFormat)
@@ -24,14 +24,9 @@ namespace VK_Renderer
 		m_Device.GetDevice().destroyRenderPass(vk_RenderPass);
 	}
 
-	void VK_GraphicsPipeline::CreatePipeline(const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo)
+	void VK_GraphicsPipeline::CreatePipeline(const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo, 
+											const VK_PipelineInput& pipelineInput)
 	{
-		// Vertex Input
-		vk::PipelineVertexInputStateCreateInfo vert_input_create_info{
-			.vertexBindingDescriptionCount = 0,
-			.vertexAttributeDescriptionCount = 0
-		};
-
 		// Input Assembly
 		vk::PipelineInputAssemblyStateCreateInfo input_assembly_create_info{
 			.topology = vk::PrimitiveTopology::eTriangleList,
@@ -109,7 +104,7 @@ namespace VK_Renderer
 		vk::GraphicsPipelineCreateInfo pipeline_create_info{
 			.stageCount = static_cast<uint32_t>(pipelineShaderStagesCreateInfo.size()),
 			.pStages = pipelineShaderStagesCreateInfo.data(),
-			.pVertexInputState = &vert_input_create_info,
+			.pVertexInputState = &pipelineInput.GetPipeVertInputCreateInfo(),
 			.pInputAssemblyState = &input_assembly_create_info,
 			.pViewportState = &viewport_state_create_info,
 			.pRasterizationState = &rasterization_create_info,

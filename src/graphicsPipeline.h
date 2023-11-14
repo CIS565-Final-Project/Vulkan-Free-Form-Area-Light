@@ -5,6 +5,7 @@
 namespace VK_Renderer
 {
 	class VK_Device;
+	class VK_PipelineInput;
 
 	class VK_GraphicsPipeline
 	{
@@ -15,7 +16,8 @@ namespace VK_Renderer
 
 		~VK_GraphicsPipeline();
 
-		virtual void CreatePipeline(const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo);
+		virtual void CreatePipeline(const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo, 
+									const VK_PipelineInput& pipelineInput);
 
 	protected:
 		void CreateRenderPass();

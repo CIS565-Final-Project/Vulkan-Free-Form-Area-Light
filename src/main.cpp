@@ -8,6 +8,7 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #include "Camera.h"
 #include "Image.h"
 #include "graphicsPipeline.h"
+#include "pipelineInput.h"
 #include "commandPool.h"
 #include "commandbuffer.h"
 
@@ -54,7 +55,10 @@ void CreateGraphicsPipeline(vk::Device vk_device, VK_GraphicsPipeline* pipeline)
 		},
 	};
 	
-	pipeline->CreatePipeline(shader_stages);
+	VK_GeneralPipeInput input;
+	input.SetupPipelineVertexInputCreateInfo();
+
+	pipeline->CreatePipeline(shader_stages, input);
 
 	vk_device.destroyShaderModule(vert_module);
 	vk_device.destroyShaderModule(frag_module);
@@ -99,7 +103,10 @@ void CreateMeshPipeline(vk::Device vk_device, VK_GraphicsPipeline* pipeline)
 		},
 	};
 
-	pipeline->CreatePipeline(shader_stages);
+	VK_PipelineInput input;
+	input.SetupPipelineVertexInputCreateInfo();
+
+	pipeline->CreatePipeline(shader_stages, input);
 
 	vk_device.destroyShaderModule(task_module);
 	vk_device.destroyShaderModule(mesh_module);
@@ -234,11 +241,11 @@ int main(int argc, char* argv[])
 
 	std::vector<Model*> m;
 
-	//uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(logicalDevice, 
-	//																		extent,
-	//																		static_cast<VkFormat>(swapchain->vk_ImageFormat),
-	//																		m, nullptr);
-	//CreateGraphicsPipeline(vk_device, graphics_pipeline.get());
+	uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(*device,
+																			swapchain->vk_ImageExtent,
+																			swapchain->vk_ImageFormat);
+
+	CreateGraphicsPipeline(vk_device, graphics_pipeline.get());
 	
 
 	// mesh pipeline
@@ -329,8 +336,6 @@ int main(int argc, char* argv[])
 
 				command_buffers[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
 
-				//vkCmdDraw(command_buffer->m_CommandBuffer, 3, 1, 0, 0);
-				
 				//vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_PipelineLayout, 0, 1, &graphics_pipeline->cameraDescriptorSet, 0, nullptr);
 
 				//for (uint32_t j = 0; j < models.size(); ++j) {
@@ -401,7 +406,7 @@ int main(int argc, char* argv[])
 
 	device->GetGraphicsCommandPool()->FreeCommandBuffer(command_buffers);
 
-	//graphics_pipeline.reset();
+	graphics_pipeline.reset();
 	mesh_pipeline.reset();
 	swapchain.reset();
 	device.reset();
