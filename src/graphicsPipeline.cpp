@@ -19,9 +19,9 @@ namespace VK_Renderer
 
 	VK_GraphicsPipeline::~VK_GraphicsPipeline()
 	{
-		m_Device.NativeDevice().destroyPipeline(vk_Pipeline);
-		m_Device.NativeDevice().destroyPipelineLayout(vk_PipelineLayout);
-		m_Device.NativeDevice().destroyRenderPass(vk_RenderPass);
+		m_Device.GetDevice().destroyPipeline(vk_Pipeline);
+		m_Device.GetDevice().destroyPipelineLayout(vk_PipelineLayout);
+		m_Device.GetDevice().destroyRenderPass(vk_RenderPass);
 	}
 
 	void VK_GraphicsPipeline::CreatePipeline(const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo)
@@ -104,7 +104,7 @@ namespace VK_Renderer
 
 		vk::PipelineLayoutCreateInfo pipeline_layout_create_info{};
 
-		vk_PipelineLayout = m_Device.NativeDevice().createPipelineLayout(pipeline_layout_create_info);
+		vk_PipelineLayout = m_Device.GetDevice().createPipelineLayout(pipeline_layout_create_info);
 
 		vk::GraphicsPipelineCreateInfo pipeline_create_info{
 			.stageCount = static_cast<uint32_t>(pipelineShaderStagesCreateInfo.size()),
@@ -122,7 +122,7 @@ namespace VK_Renderer
 		};
 
 		// Create Pipeline
-		vk::ResultValue<vk::Pipeline> result = m_Device.NativeDevice().createGraphicsPipeline(vk::PipelineCache(), pipeline_create_info);
+		vk::ResultValue<vk::Pipeline> result = m_Device.GetDevice().createGraphicsPipeline(vk::PipelineCache(), pipeline_create_info);
 		if (result.result != vk::Result::eSuccess) {
 			throw std::runtime_error("Failed to create graphics pipeline");
 		}
@@ -173,6 +173,6 @@ namespace VK_Renderer
 			.dependencyCount = 1,
 			.pDependencies = &dependency
 		};
-		vk_RenderPass = m_Device.NativeDevice().createRenderPass(create_info);
+		vk_RenderPass = m_Device.GetDevice().createRenderPass(create_info);
 	}
 }

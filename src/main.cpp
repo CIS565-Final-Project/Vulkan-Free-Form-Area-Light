@@ -13,8 +13,10 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 #include "device.h"
 #include "swapchain.h"
+#include "buffer.h"
 
 #include "scene/mesh.h"
+#include "scene/scene.h"
 
 #include "Model.h"
 #include "Camera.h"
@@ -175,8 +177,7 @@ int main(int argc, char* argv[])
 													instance->m_QueueFamilyIndices, 
 													width, height);
 
-	uPtr<VK_CommandPool> command_pool = mkU<VK_CommandPool>(*device, instance->m_QueueFamilyIndices.GraphicsIdx());
-	VK_CommandBuffer command_buffers(*device, command_pool->vk_CommandPool);
+	VK_CommandBuffer command_buffers = device->GetGraphicsCommandPool()->AllocateCommandBuffers();
 
 	//VkImage texImage;
 	//VkDeviceMemory texImageMemory;
@@ -223,7 +224,13 @@ int main(int argc, char* argv[])
 	//models[0]->SetTexture(texImage);
 	//models[1]->SetTexture(texImage);
 
-	vk::Device vk_device = device->vk_Device;
+	vk::Device vk_device = device->GetDevice();
+
+	VK_Buffer buffer(*device);
+	std::vector<float> test_data(10);
+
+	buffer.CreateFromData(test_data.data(), sizeof(float) * test_data.size(), vk::BufferUsageFlagBits::eVertexBuffer, vk::SharingMode::eExclusive);
+	buffer.Free();
 
 	std::vector<Model*> m;
 
@@ -252,10 +259,10 @@ int main(int argc, char* argv[])
 	VkSemaphoreCreateInfo semaphore_create_info = {};
 	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-	vk::Semaphore image_available_semaphore = device->NativeDevice().createSemaphore(vk::SemaphoreCreateInfo{});
-	vk::Semaphore render_finished_semaphore = device->NativeDevice().createSemaphore(vk::SemaphoreCreateInfo{});
+	vk::Semaphore image_available_semaphore = device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
+	vk::Semaphore render_finished_semaphore = device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
 
-	vk::Fence fence = device->NativeDevice().createFence(vk::FenceCreateInfo{
+	vk::Fence fence = device->GetDevice().createFence(vk::FenceCreateInfo{
 		.flags = vk::FenceCreateFlagBits::eSignaled
 	});
 
@@ -272,10 +279,10 @@ int main(int argc, char* argv[])
 
 			// DrawFrame
 			// Wait for previous frame
-			device->NativeDevice().waitForFences(fence, vk::True, UINT64_MAX);
-			device->NativeDevice().resetFences(fence);
+			device->GetDevice().waitForFences(fence, vk::True, UINT64_MAX);
+			device->GetDevice().resetFences(fence);
 
-			vk::ResultValue result = device->NativeDevice().acquireNextImageKHR(swapchain->vk_Swapchain, UINT64_MAX, image_available_semaphore, nullptr);
+			vk::ResultValue result = device->GetDevice().acquireNextImageKHR(swapchain->vk_Swapchain, UINT64_MAX, image_available_semaphore, nullptr);
 			if (result.result != vk::Result::eSuccess)
 			{
 				throw std::runtime_error("Fail to acquire next image KHR");
@@ -285,7 +292,7 @@ int main(int argc, char* argv[])
 			
 			// Record Command Buffer
 			{
-				command_buffers.Begin();
+				command_buffers.Begin(vk::CommandBufferUsageFlagBits::eRenderPassContinue);
 
 				command_buffers[0].beginRenderPass(vk::RenderPassBeginInfo{
 					.renderPass = mesh_pipeline->vk_RenderPass,
@@ -354,7 +361,7 @@ int main(int argc, char* argv[])
 
 			std::array<vk::PipelineStageFlags, 1> wait_stages{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
 
-			device->NativeGraphicsQueue().submit(vk::SubmitInfo{
+			device->GetGraphicsQueue().submit(vk::SubmitInfo{
 				.waitSemaphoreCount = static_cast<uint32_t>(wait_semaphore.size()),
 				.pWaitSemaphores = wait_semaphore.data(),
 				.pWaitDstStageMask = wait_stages.data(),
@@ -365,7 +372,7 @@ int main(int argc, char* argv[])
 			}, fence);
 
 			std::array<vk::SwapchainKHR, 1> swapchains{swapchain->vk_Swapchain};
-			device->NativePresentQueue().presentKHR(vk::PresentInfoKHR{
+			device->GetPresentQueue().presentKHR(vk::PresentInfoKHR{
 				.waitSemaphoreCount = 1,
 				.pWaitSemaphores = signal_semaphores.data(),
 				.swapchainCount = static_cast<uint32_t>(swapchains.size()),
@@ -375,24 +382,25 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	device->NativeDevice().waitForFences(fence, vk::True, UINT64_MAX);
-	device->NativeDevice().resetFences(fence);
+	device->GetDevice().waitForFences(fence, vk::True, UINT64_MAX);
+	device->GetDevice().resetFences(fence);
 
 	//vk_device.destroyShaderModule(vert_module);
 	//vk_device.destroyShaderModule(frag_module);
 
 	//vkDestroyImage(logicalDevice, texImage, nullptr);
 	//vkFreeMemory(logicalDevice, texImageMemory, nullptr);
-	device->NativeDevice().destroyFence(fence);
-	device->NativeDevice().destroySemaphore(image_available_semaphore);
-	device->NativeDevice().destroySemaphore(render_finished_semaphore);
+	device->GetDevice().destroyFence(fence);
+	device->GetDevice().destroySemaphore(image_available_semaphore);
+	device->GetDevice().destroySemaphore(render_finished_semaphore);
 
 	//for (int i = 0; i < models.size(); i++) {
 	//	delete models[i];
 	//}
 	//delete camera;
 
-	command_pool.reset();
+	device->GetGraphicsCommandPool()->FreeCommandBuffer(command_buffers);
+
 	//graphics_pipeline.reset();
 	mesh_pipeline.reset();
 	swapchain.reset();

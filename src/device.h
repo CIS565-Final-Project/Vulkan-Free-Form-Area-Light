@@ -6,6 +6,8 @@
 
 namespace VK_Renderer
 {
+	class VK_CommandPool;
+
 	// Custom feature handler
 	class VK_Device
 	{
@@ -17,18 +19,24 @@ namespace VK_Renderer
 					const uint32_t queue_count = 1);
 		~VK_Device();
 
-		inline vk::Device NativeDevice()		const { return vk_Device; }
-		inline vk::Queue NativeGraphicsQueue()	const { return vk_GraphicsQueue; }
-		inline vk::Queue NativePresentQueue()	const { return vk_PresentQueue; }
-		inline vk::Queue NativeComputeQueue()	const { return vk_ComputeQueue; }
-		inline vk::Queue NativeTransferQueue()	const { return vk_TransferQueue; }
+		vk::Device const GetDevice() const { return vk_Device; }
 
-	public:
+		uint32_t GetMemoryTypeIndex(uint32_t typeBits, vk::MemoryPropertyFlags properties) const;
+
+	protected:
 		vk::Device vk_Device;
+		DeclareWithGetFunc(protected, vk::PhysicalDevice, vk, PhysicalDevice, const);
 
-		vk::Queue vk_GraphicsQueue;
-		vk::Queue vk_PresentQueue;
-		vk::Queue vk_ComputeQueue;
-		vk::Queue vk_TransferQueue;
+		DeclareWithGetFunc(protected, vk::Queue, vk, GraphicsQueue, const);
+		DeclareWithGetFunc(protected, vk::Queue, vk, PresentQueue, const);
+		DeclareWithGetFunc(protected, vk::Queue, vk, ComputeQueue, const);
+		DeclareWithGetFunc(protected, vk::Queue, vk, TransferQueue, const);
+
+		DeclarePtrWithGetFunc(protected, uPtr, VK_CommandPool, vk, GraphicsCommandPool, const);
+		DeclarePtrWithGetFunc(protected, uPtr, VK_CommandPool, vk, PresentCommandPool, const);
+		DeclarePtrWithGetFunc(protected, uPtr, VK_CommandPool, vk, ComputeCommandPool, const);
+		DeclarePtrWithGetFunc(protected, uPtr, VK_CommandPool, vk, TransferCommandPool, const);
+
+		vk::PhysicalDeviceMemoryProperties vk_DeviceMemoryProperties;
 	};
 }

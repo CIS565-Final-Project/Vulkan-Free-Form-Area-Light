@@ -1,4 +1,5 @@
 #include "device.h"
+#include "commandPool.h"
 
 namespace VK_Renderer
 {
@@ -7,7 +8,10 @@ namespace VK_Renderer
 							vk::PhysicalDeviceFeatures2 physicalDeviceFeatures2,
 							const QueueFamilyIndices& queueFamilyIdx,
 							const uint32_t queue_count)
+		: vk_PhysicalDevice(physicalDevice)
 	{
+		vk_DeviceMemoryProperties = vk_PhysicalDevice.getMemoryProperties();
+
 		std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
 		std::set<uint32_t> unique_queues = 
 		{ 
@@ -48,10 +52,31 @@ namespace VK_Renderer
 		vk_Device.getQueue(queueFamilyIdx.ComputeIdx(), 0, &vk_ComputeQueue);
 		vk_Device.getQueue(queueFamilyIdx.MemTransferIdx(), 0, &vk_TransferQueue);
 
+		vk_GraphicsCommandPool = mkU<VK_CommandPool>(*this, queueFamilyIdx.GraphicsIdx());
+		vk_PresentCommandPool = mkU<VK_CommandPool>(*this, queueFamilyIdx.PresentIdx());
+		vk_ComputeCommandPool = mkU<VK_CommandPool>(*this, queueFamilyIdx.ComputeIdx());
+		vk_TransferCommandPool = mkU<VK_CommandPool>(*this, queueFamilyIdx.MemTransferIdx());
 	}
 
 	VK_Device::~VK_Device()
 	{
+		vk_GraphicsCommandPool.reset();
+		vk_PresentCommandPool.reset();
+		vk_ComputeCommandPool.reset();
+		vk_TransferCommandPool.reset();
 		vk_Device.destroy();
+	}
+	uint32_t VK_Device::GetMemoryTypeIndex(uint32_t typeBits, vk::MemoryPropertyFlags properties) const
+	{
+		// Iterate over all memory types available for the device used in this example
+		for (uint32_t i = 0; i < vk_DeviceMemoryProperties.memoryTypeCount; i++) {
+			if ((typeBits & 1) == 1) {
+				if ((vk_DeviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+					return i;
+				}
+			}
+			typeBits >>= 1;
+		}
+		throw std::runtime_error("Could not find a suitable memory type!");
 	}
 }

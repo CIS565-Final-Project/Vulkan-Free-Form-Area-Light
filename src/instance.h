@@ -14,7 +14,6 @@ namespace VK_Renderer
 		~VK_Instance();
 
 		void PickPhysicalDeivce();
-		uint32_t GetMemoryTypeIndex(uint32_t typeBits, vk::MemoryPropertyFlagBits properties) const;
 
 	protected:
 		vk::DebugUtilsMessengerCreateInfoEXT CreateDebugMessengerCreateInfo();
@@ -31,12 +30,10 @@ namespace VK_Renderer
 		vk::PhysicalDevice vk_PhysicalDevice;
 
 		vk::DebugUtilsMessengerEXT vk_DebugUtilsMessenger;
-		vk::PhysicalDeviceMemoryProperties vk_DeviceMemoryProperties;
 
 		QueueFamilyIndices m_QueueFamilyIndices;
 
 		std::vector<const char*> m_Extensions;
-
 	public:
 		static void CheckAvailableExtensions();
 	};

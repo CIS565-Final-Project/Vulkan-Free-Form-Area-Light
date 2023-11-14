@@ -60,12 +60,12 @@ namespace VK_Renderer
 			create_info.pQueueFamilyIndices = nullptr;
 		}
 
-		if (m_Device.NativeDevice().createSwapchainKHR(&create_info, nullptr, &vk_Swapchain) != vk::Result::eSuccess)
+		if (m_Device.GetDevice().createSwapchainKHR(&create_info, nullptr, &vk_Swapchain) != vk::Result::eSuccess)
 		{
 			throw std::runtime_error("failed to create swap chain!");
 		}
 
-		vk_SwapchainImages = m_Device.NativeDevice().getSwapchainImagesKHR(vk_Swapchain);
+		vk_SwapchainImages = m_Device.GetDevice().getSwapchainImagesKHR(vk_Swapchain);
 
 		CreateImageViews();
 	}
@@ -74,14 +74,14 @@ namespace VK_Renderer
 	{
 		for (const auto& fb : vk_Framebuffers)
 		{
-			m_Device.NativeDevice().destroyFramebuffer(fb);
+			m_Device.GetDevice().destroyFramebuffer(fb);
 		}
 		for (const auto& view : vk_SwapchainImageViews)
 		{
-			m_Device.NativeDevice().destroyImageView(view);
+			m_Device.GetDevice().destroyImageView(view);
 		}
 
-		m_Device.NativeDevice().destroySwapchainKHR(vk_Swapchain);
+		m_Device.GetDevice().destroySwapchainKHR(vk_Swapchain);
 	}
 
 	void VK_Swapchain::CreateImageViews()
@@ -90,7 +90,7 @@ namespace VK_Renderer
 		VkImageViewCreateInfo create_info;
 		for (size_t i = 0; i < vk_SwapchainImageViews.size(); ++i)
 		{
-			vk_SwapchainImageViews[i] = m_Device.NativeDevice().createImageView(vk::ImageViewCreateInfo{
+			vk_SwapchainImageViews[i] = m_Device.GetDevice().createImageView(vk::ImageViewCreateInfo{
 				.image = vk_SwapchainImages[i],
 				.viewType = vk::ImageViewType::e2D,
 				.format = vk_ImageFormat,
@@ -112,7 +112,7 @@ namespace VK_Renderer
 
 		for (size_t i = 0; i < vk_Framebuffers.size(); ++i)
 		{
-			vk_Framebuffers[i] = m_Device.NativeDevice().createFramebuffer(vk::FramebufferCreateInfo{
+			vk_Framebuffers[i] = m_Device.GetDevice().createFramebuffer(vk::FramebufferCreateInfo{
 				.renderPass = renderPass,
 				.attachmentCount = 1,
 				.pAttachments = &vk_SwapchainImageViews[i],

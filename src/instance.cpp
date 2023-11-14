@@ -75,19 +75,9 @@ namespace VK_Renderer
 	
 	VK_Instance::~VK_Instance()
 	{
-
-
-		//if (ENABLE_VALIDATION)
-		//{
-		//	auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_Instance, "vkDestroyDebugUtilsMessengerEXT");
-		//	if (func != nullptr)
-		//	{
-		//		func(m_Instance, m_DebugUtilsMessenger, nullptr);
-		//	}
-		//}
-
-		//vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
-		//vkDestroyInstance(m_Instance, nullptr);
+		if (vk_Surface) vk_Instance.destroySurfaceKHR(vk_Surface);
+		if (vk_DebugUtilsMessenger) vk_Instance.destroyDebugUtilsMessengerEXT(vk_DebugUtilsMessenger);
+		vk_Instance.destroy();
 	}
 
 	void VK_Instance::PickPhysicalDeivce()
@@ -110,8 +100,6 @@ namespace VK_Renderer
 		}
 		if (vk_PhysicalDevice == nullptr)
 			throw std::runtime_error("Not suitable physical device found!");
-
-		vk_DeviceMemoryProperties = vk_PhysicalDevice.getMemoryProperties();
 	}
 
 	bool VK_Instance::CheckDeviceExtensionSupport(VkPhysicalDevice device)
@@ -270,18 +258,5 @@ namespace VK_Renderer
 		}
 
 		return indices;
-	}
-
-	uint32_t VK_Instance::GetMemoryTypeIndex(uint32_t typeBits, vk::MemoryPropertyFlagBits properties) const {
-		// Iterate over all memory types available for the device used in this example
-		for (uint32_t i = 0; i < vk_DeviceMemoryProperties.memoryTypeCount; i++) {
-			if ((typeBits & 1) == 1) {
-				if ((vk_DeviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-					return i;
-				}
-			}
-			typeBits >>= 1;
-		}
-		throw std::runtime_error("Could not find a suitable memory type!");
 	}
 }

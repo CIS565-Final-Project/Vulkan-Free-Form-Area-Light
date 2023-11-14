@@ -28,6 +28,16 @@
 	#define Float float
 #endif
 
+#define DeclareWithGetFunc(accessible, type, prefix, name, ...) accessible:\
+																	type prefix##_##name;\
+																public: \
+																	type __VA_ARGS__ Get##name##() __VA_ARGS__ { return prefix##_##name; }\
+
+#define DeclarePtrWithGetFunc(accessible, ptrType, type, prefix, name, ...) accessible:\
+																	ptrType<type> prefix##_##name;\
+																public: \
+																	type __VA_ARGS__ * Get##name##() __VA_ARGS__ { return prefix##_##name.get(); }\
+
 namespace VK_Renderer
 {
 	inline std::vector<char> ReadFile(const std::string& file)
