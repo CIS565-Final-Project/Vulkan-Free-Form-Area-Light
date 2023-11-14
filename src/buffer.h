@@ -11,19 +11,24 @@ namespace VK_Renderer
 	public:
 		VK_Buffer(VK_Device const & device);
 		
-		void CreateFromData(void const* data,
-							vk::DeviceSize size,
-							vk::BufferUsageFlags usage,
-							vk::SharingMode sharingMode,
-							vk::MemoryPropertyFlags properties = vk::MemoryPropertyFlagBits::eDeviceLocal);
+		virtual void Create(vk::DeviceSize size,
+			vk::BufferUsageFlags usage,
+			vk::SharingMode sharingMode,
+			vk::MemoryPropertyFlags properties) = 0;
 
-		void Update(void const* data,
-					vk::DeviceSize offset,
-					vk::DeviceSize size,
-					vk::SharingMode sharingMode);
-		void Free() const;
+		virtual void CreateFromData(void const* data,
+			vk::DeviceSize size,
+			vk::BufferUsageFlags usage,
+			vk::SharingMode sharingMode,
+			vk::MemoryPropertyFlags properties) =0;
+
+		virtual void Update(void const* data,
+			vk::DeviceSize offset,
+			vk::DeviceSize size) = 0;
+
+		virtual void Free() const;
 	
-	public:
+	protected:
 		static void FreeBuffer(vk::Device device, vk::Buffer buffer, vk::DeviceMemory deviceMemory);
 
 		static void CreateBuffer(VK_Device const & device,
@@ -38,8 +43,7 @@ namespace VK_Renderer
 								  vk::Buffer buffer,
 								  void const* data,
 								  vk::DeviceSize offset,
-								  vk::DeviceSize size,
-								  vk::SharingMode sharingMode);
+								  vk::DeviceSize size);
 
 	protected:
 		const VK_Device& m_Device;
@@ -47,5 +51,52 @@ namespace VK_Renderer
 		vk::DeviceMemory vk_DeviceMemory;
 	public:
 		vk::Buffer vk_Buffer;
+	};
+
+	class VK_MappedBuffer : public VK_Buffer
+	{
+	public:
+		VK_MappedBuffer(VK_Device const& device);
+
+		virtual void Create(vk::DeviceSize size,
+							vk::BufferUsageFlags usage,
+							vk::SharingMode sharingMode,
+							vk::MemoryPropertyFlags properties);
+
+		virtual void CreateFromData(void const* data,
+									vk::DeviceSize size,
+									vk::BufferUsageFlags usage,
+									vk::SharingMode sharingMode,
+									vk::MemoryPropertyFlags properties = vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+		virtual void Update(void const* data,
+							vk::DeviceSize offset,
+							vk::DeviceSize size);
+
+		virtual void Free() const;
+
+	protected:
+		void* m_MappedMemory;
+	};
+
+	class VK_DeviceBuffer : public VK_Buffer
+	{
+	public:
+		VK_DeviceBuffer(VK_Device const& device);
+
+		virtual void Create(vk::DeviceSize size,
+							vk::BufferUsageFlags usage,
+							vk::SharingMode sharingMode,
+							vk::MemoryPropertyFlags properties);
+
+		virtual void CreateFromData(void const* data,
+									vk::DeviceSize size,
+									vk::BufferUsageFlags usage,
+									vk::SharingMode sharingMode,
+									vk::MemoryPropertyFlags properties = vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+		virtual void Update(void const* data,
+							vk::DeviceSize offset,
+							vk::DeviceSize size);
 	};
 }

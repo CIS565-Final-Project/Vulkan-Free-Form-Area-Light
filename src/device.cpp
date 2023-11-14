@@ -60,12 +60,27 @@ namespace VK_Renderer
 
 	VK_Device::~VK_Device()
 	{
+		vk_Device.destroyDescriptorPool(vk_DescriptorPool);
 		vk_GraphicsCommandPool.reset();
 		vk_PresentCommandPool.reset();
 		vk_ComputeCommandPool.reset();
 		vk_TransferCommandPool.reset();
 		vk_Device.destroy();
 	}
+
+	void VK_Device::CreateDescriptiorPool(uint32_t const& descriptorCount, uint32_t const& maxSets)
+	{
+		vk::DescriptorPoolSize desc_pool_size{
+			.descriptorCount = descriptorCount
+		};
+
+		vk_DescriptorPool = vk_Device.createDescriptorPool(vk::DescriptorPoolCreateInfo{
+			.maxSets = maxSets,
+			.poolSizeCount = 1,
+			.pPoolSizes = &desc_pool_size,
+		});
+	}
+
 	uint32_t VK_Device::GetMemoryTypeIndex(uint32_t typeBits, vk::MemoryPropertyFlags properties) const
 	{
 		// Iterate over all memory types available for the device used in this example

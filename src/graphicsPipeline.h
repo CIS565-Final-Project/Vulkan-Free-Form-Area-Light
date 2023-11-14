@@ -17,7 +17,8 @@ namespace VK_Renderer
 		~VK_GraphicsPipeline();
 
 		virtual void CreatePipeline(const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo, 
-									const VK_PipelineInput& pipelineInput);
+									const VK_PipelineInput& pipelineInput, 
+									std::vector<vk::DescriptorSetLayout> const& descripotrSetLayouts);
 
 	protected:
 		void CreateRenderPass();

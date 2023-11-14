@@ -19,9 +19,13 @@ namespace VK_Renderer
 					const uint32_t queue_count = 1);
 		~VK_Device();
 
+		void CreateDescriptiorPool(uint32_t const & descriptorCount, uint32_t const& maxSets);
+
 		vk::Device const GetDevice() const { return vk_Device; }
 
 		uint32_t GetMemoryTypeIndex(uint32_t typeBits, vk::MemoryPropertyFlags properties) const;
+
+		vk::DescriptorPool vk_DescriptorPool;
 
 	protected:
 		vk::Device vk_Device;

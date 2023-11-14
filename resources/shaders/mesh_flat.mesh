@@ -11,6 +11,10 @@ struct Task
 	vec3 color;
 };
 
+layout(set = 0, binding = 0) uniform TestUniform {
+    float data;
+} u_Float;
+
 taskPayloadSharedEXT Task IN;
 
 // Vertex Ouput
@@ -51,6 +55,7 @@ void main()
 	{
 		gl_MeshVerticesEXT[i].gl_Position = vec4(position[IN.task_id][i], 0, 1);
 		v_out[i].color = IN.color;//color[i];
+		v_out[i].color.r = u_Float.data;
 	}
 	gl_PrimitiveTriangleIndicesEXT[0] =  uvec3(0, 1, 2);
 }

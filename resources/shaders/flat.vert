@@ -21,22 +21,24 @@ layout(set = 0, binding = 0) uniform CameraBufferObject {
 
 layout(set = 1, binding = 0) uniform ModelBufferObject {
     mat4 model;
+    mat3 modelInv;
 };
 
 layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inColor;
-layout(location = 2) in vec2 inTexCoord;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec2 inUV;
 
-layout(location = 0) out vec3 vs_Color;
-layout(location = 1) out vec2 fragTexCoord;
+layout(location = 0) out vec3 vs_Position;
+layout(location = 1) out vec3 vs_Normal;
+layout(location = 2) out vec2 vs_UV;
 
 void main()
 {
-	// gl_Position = vec4(position[gl_VertexIndex], 0.0, 1.0);
-	// vs_Color = color[gl_VertexIndex];
-	// 
+	vec4 position = camera.proj * camera.view  * model * vec4(inPosition,  1.0);
+	vs_Position = position.xyz;
 
-	gl_Position = camera.proj * camera.view  * model * vec4(inPosition,  1.0);
-	// vs_Color = inColor;
-	fragTexCoord = inTexCoord;
+	vs_Normal = modelInv * inNormal;
+	vs_UV = inUV;
+
+	gl_Position = position;
 }

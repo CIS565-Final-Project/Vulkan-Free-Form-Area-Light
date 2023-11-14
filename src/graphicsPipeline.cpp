@@ -25,7 +25,8 @@ namespace VK_Renderer
 	}
 
 	void VK_GraphicsPipeline::CreatePipeline(const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo, 
-											const VK_PipelineInput& pipelineInput)
+											const VK_PipelineInput& pipelineInput,
+											std::vector<vk::DescriptorSetLayout> const& descripotrSetLayouts)
 	{
 		// Input Assembly
 		vk::PipelineInputAssemblyStateCreateInfo input_assembly_create_info{
@@ -97,7 +98,11 @@ namespace VK_Renderer
 			.blendConstants = std::array<float, 4>{0.f, 0.f, 0.f, 0.f}
 		};
 
-		vk::PipelineLayoutCreateInfo pipeline_layout_create_info{};
+		// PipelineLayout
+		vk::PipelineLayoutCreateInfo pipeline_layout_create_info{
+			.setLayoutCount = static_cast<uint32_t>(descripotrSetLayouts.size()),
+			.pSetLayouts = descripotrSetLayouts.data()
+		};
 
 		vk_PipelineLayout = m_Device.GetDevice().createPipelineLayout(pipeline_layout_create_info);
 

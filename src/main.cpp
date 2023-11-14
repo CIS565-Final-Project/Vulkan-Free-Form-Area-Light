@@ -15,6 +15,7 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #include "device.h"
 #include "swapchain.h"
 #include "buffer.h"
+#include "uniform.h"
 
 #include "scene/mesh.h"
 #include "scene/scene.h"
@@ -26,7 +27,9 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 using namespace VK_Renderer;
 
-void CreateGraphicsPipeline(vk::Device vk_device, VK_GraphicsPipeline* pipeline)
+void CreateGraphicsPipeline(vk::Device vk_device, 
+							VK_GraphicsPipeline* pipeline, 
+							std::vector<vk::DescriptorSetLayout> const& descripotrSetLayouts)
 {
 	// Create required shader stages
 	auto vert_shader = ReadFile("shaders/flat.vert.spv");
@@ -58,13 +61,15 @@ void CreateGraphicsPipeline(vk::Device vk_device, VK_GraphicsPipeline* pipeline)
 	VK_GeneralPipeInput input;
 	input.SetupPipelineVertexInputCreateInfo();
 
-	pipeline->CreatePipeline(shader_stages, input);
+	pipeline->CreatePipeline(shader_stages, input, descripotrSetLayouts);
 
 	vk_device.destroyShaderModule(vert_module);
 	vk_device.destroyShaderModule(frag_module);
 }
 
-void CreateMeshPipeline(vk::Device vk_device, VK_GraphicsPipeline* pipeline)
+void CreateMeshPipeline(vk::Device vk_device, 
+						VK_GraphicsPipeline* pipeline,
+						std::vector<vk::DescriptorSetLayout> const& descripotrSetLayouts)
 {
 	// Create required shader stages
 	auto task_shader = ReadFile("shaders/mesh_flat.task.spv");
@@ -106,7 +111,7 @@ void CreateMeshPipeline(vk::Device vk_device, VK_GraphicsPipeline* pipeline)
 	VK_PipelineInput input;
 	input.SetupPipelineVertexInputCreateInfo();
 
-	pipeline->CreatePipeline(shader_stages, input);
+	pipeline->CreatePipeline(shader_stages, input, descripotrSetLayouts);
 
 	vk_device.destroyShaderModule(task_module);
 	vk_device.destroyShaderModule(mesh_module);
@@ -233,19 +238,31 @@ int main(int argc, char* argv[])
 
 	vk::Device vk_device = device->GetDevice();
 
-	VK_Buffer buffer(*device);
+	VK_DeviceBuffer buffer(*device);
 	std::vector<float> test_data(10);
 
-	buffer.CreateFromData(test_data.data(), sizeof(float) * test_data.size(), vk::BufferUsageFlagBits::eVertexBuffer, vk::SharingMode::eExclusive);
+	buffer.CreateFromData(test_data.data(), 
+		sizeof(float) * test_data.size(), 
+		vk::BufferUsageFlagBits::eVertexBuffer, 
+		vk::SharingMode::eExclusive, 
+		vk::MemoryPropertyFlags{});
 	buffer.Free();
 
 	std::vector<Model*> m;
 
-	uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(*device,
-																			swapchain->vk_ImageExtent,
-																			swapchain->vk_ImageFormat);
+	device->CreateDescriptiorPool(1, 10);
 
-	CreateGraphicsPipeline(vk_device, graphics_pipeline.get());
+	VK_BufferUniform test_uniform(*device);
+	test_uniform.Create(0, vk::ShaderStageFlagBits::eMeshEXT, 3, sizeof(float));
+	float test_vaule = 1.f;
+	test_uniform.m_MappedBuffers[0].Update(&test_vaule, 0, sizeof(float));
+	test_uniform.m_MappedBuffers[1].Update(&test_vaule, 0, sizeof(float));
+	test_uniform.m_MappedBuffers[2].Update(&test_vaule, 0, sizeof(float));
+	//uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(*device,
+	//																		swapchain->vk_ImageExtent,
+	//																		swapchain->vk_ImageFormat);
+	//
+	//CreateGraphicsPipeline(vk_device, graphics_pipeline.get());
 	
 
 	// mesh pipeline
@@ -254,18 +271,16 @@ int main(int argc, char* argv[])
 																	  swapchain->vk_ImageExtent,
 																	  swapchain->vk_ImageFormat);
 
-	CreateMeshPipeline(vk_device, mesh_pipeline.get());
+	std::vector<vk::DescriptorSetLayout> descriptor_set_layouts(1, test_uniform.vk_DescriptorSetLayout);
+	CreateMeshPipeline(vk_device, mesh_pipeline.get(), descriptor_set_layouts);
 
 	swapchain->CreateFramebuffers(mesh_pipeline->vk_RenderPass);
-	
+
 	uint32_t image_index;
 	vk::ClearValue clear_color{};
 	clear_color.setColor({ {{0.0f, 0.0f, 0.0f, 1.0f}} });
 
 	// Create synchronization objects
-	VkSemaphoreCreateInfo semaphore_create_info = {};
-	semaphore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
 	vk::Semaphore image_available_semaphore = device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
 	vk::Semaphore render_finished_semaphore = device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
 
@@ -334,8 +349,14 @@ int main(int argc, char* argv[])
 				uint32_t num_workgroups_y = 1;
 				uint32_t num_workgroups_z = 1;
 
-				command_buffers[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
+				command_buffers[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+														mesh_pipeline->vk_PipelineLayout,
+														uint32_t(0),
+														test_uniform.vk_DescriptorSets[image_index], nullptr);
 
+				command_buffers[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
+				
+				//command_buffers[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics, graphics_pipeline->vk_PipelineLayout, 0, 1, );
 				//vkCmdBindDescriptorSets(command_buffer->m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline->m_PipelineLayout, 0, 1, &graphics_pipeline->cameraDescriptorSet, 0, nullptr);
 
 				//for (uint32_t j = 0; j < models.size(); ++j) {
@@ -403,10 +424,10 @@ int main(int argc, char* argv[])
 	//	delete models[i];
 	//}
 	//delete camera;
-
+	test_uniform.Free();
 	device->GetGraphicsCommandPool()->FreeCommandBuffer(command_buffers);
 
-	graphics_pipeline.reset();
+	//graphics_pipeline.reset();
 	mesh_pipeline.reset();
 	swapchain.reset();
 	device.reset();
