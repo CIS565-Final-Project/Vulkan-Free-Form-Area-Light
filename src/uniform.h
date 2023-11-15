@@ -13,10 +13,9 @@ namespace VK_Renderer
 	public:
 		VK_Uniform(VK_Device const& device);
 
-		virtual void Create(uint32_t const& binding,
-							vk::ShaderStageFlags stageFlags,
-							uint32_t const& count,
-							vk::DeviceSize uniformSize) = 0;
+		virtual void Create(vk::ShaderStageFlags stageFlags,
+							std::vector<vk::DeviceSize> const& uniformSizes,
+							uint32_t const& count) = 0;
 
 		virtual void Free();
 
@@ -24,7 +23,6 @@ namespace VK_Renderer
 		VK_Device const& m_Device;
 
 	public:
-		vk::DescriptorSetLayoutBinding vk_DescriptorSetLayoutBinding;
 		vk::DescriptorSetLayout vk_DescriptorSetLayout;
 	};
 
@@ -33,10 +31,9 @@ namespace VK_Renderer
 	public:
 		VK_BufferUniform(VK_Device const & device);
 
-		void Create(uint32_t const& binding,
-					vk::ShaderStageFlags stageFlags,
-					uint32_t const& count,
-					vk::DeviceSize uniformSize);
+		void Create(vk::ShaderStageFlags stageFlags,
+					std::vector<vk::DeviceSize> const& uniformSizes,
+					uint32_t const& count);
 
 		void Free();
 
@@ -49,10 +46,9 @@ namespace VK_Renderer
 	public:
 		VK_StorageBufferUniform(VK_Device const& device);
 
-		void Create(uint32_t const& binding,
-			vk::ShaderStageFlags stageFlags,
-			uint32_t const& count,
-			vk::DeviceSize uniformSize);
+		void Create(vk::ShaderStageFlags stageFlags,
+					std::vector<vk::DeviceSize> const& uniformSizes,
+					uint32_t const& count);
 
 		void Free();
 

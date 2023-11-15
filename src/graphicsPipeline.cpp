@@ -56,7 +56,7 @@ namespace VK_Renderer
 			.polygonMode = vk::PolygonMode::eFill,
 
 			.cullMode = vk::CullModeFlagBits::eBack,
-			.frontFace = vk::FrontFace::eClockwise,
+			.frontFace = vk::FrontFace::eCounterClockwise,
 
 			.depthBiasEnable = vk::False,
 			.depthBiasConstantFactor = 0.f,

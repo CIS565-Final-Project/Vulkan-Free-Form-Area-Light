@@ -53,12 +53,11 @@ namespace VK_Renderer
 				Triangle triangle;
 				for (size_t v = 0; v < fv; v++) 
 				{
-					
 					// access to vertex
 					tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
-					triangle.pId[v] = 3 * idx.vertex_index;
-					triangle.nId[v] = 3 * idx.normal_index;
-					triangle.uvId[v] = 2 * idx.texcoord_index;
+					triangle.pId[v] = idx.vertex_index;
+					triangle.nId[v] = idx.normal_index;
+					triangle.uvId[v] = idx.texcoord_index;
 				}
 				triangle.materialId = shape.mesh.material_ids[f];
 				m_Triangles.push_back(std::move(triangle));

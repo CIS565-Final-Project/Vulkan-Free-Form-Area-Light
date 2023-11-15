@@ -33,6 +33,12 @@ struct CameraUBO
 	glm::mat4 viewProjMat;
 };
 
+struct MeshletInfo
+{
+	uint32_t Meshlet_Size;
+	uint32_t Triangle_Count;
+};
+
 void CreateGraphicsPipeline(vk::Device vk_device, 
 							VK_GraphicsPipeline* pipeline, 
 							std::vector<vk::DescriptorSetLayout> const& descripotrSetLayouts)
@@ -271,12 +277,40 @@ int main(int argc, char* argv[])
 
 	VK_BufferUniform cam_uniform(*device);
 
-	cam_uniform.Create(0, vk::ShaderStageFlagBits::eMeshEXT, 3, sizeof(CameraUBO));
-	float test_vaule = 1.f;
+	cam_uniform.Create(vk::ShaderStageFlagBits::eMeshEXT, { sizeof(CameraUBO) }, 3);
 
 	VK_StorageBufferUniform storaging_buffer_unifom(*device);
-	storaging_buffer_unifom.Create(0, vk::ShaderStageFlagBits::eMeshEXT, 1, sizeof(glm::vec4) * test_data.size());
-	storaging_buffer_unifom.m_Buffers[0].Update(test_data.data(), 0, sizeof(glm::vec4) * test_data.size());
+	
+	Mesh mesh;
+	//mesh.LoadMeshFromFile("meshes/sphere.obj");
+	mesh.LoadMeshFromFile("meshes/cube.obj");
+
+	MeshletInfo meshlet_info{
+		.Meshlet_Size = 32,
+		.Triangle_Count = static_cast<uint32_t>(mesh.m_Triangles.size())
+	};
+
+	VK_BufferUniform meshlet_uniform(*device);
+
+	meshlet_uniform.Create(vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT, { sizeof(MeshletInfo) }, 1);
+	meshlet_uniform.m_MappedBuffers[0].Update(&meshlet_info, 0, sizeof(MeshletInfo));
+
+	std::vector<glm::ivec4> triangles;
+
+	for (Triangle const& tri : mesh.m_Triangles)
+	{
+		triangles.emplace_back(tri.pId, tri.materialId);
+	}
+
+	storaging_buffer_unifom.Create(vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT,
+		{ 
+			sizeof(glm::ivec4)* triangles.size(),
+			sizeof(Float) * mesh.m_Positions.size(),
+		}, 
+	1);
+
+	storaging_buffer_unifom.m_Buffers[0].Update(triangles.data(), 0, sizeof(glm::ivec4)* triangles.size());
+	storaging_buffer_unifom.m_Buffers[1].Update(mesh.m_Positions.data(), 0, sizeof(Float)* mesh.m_Positions.size());
 
 	// mesh pipeline	
 	uPtr<VK_GraphicsPipeline> mesh_pipeline = mkU<VK_GraphicsPipeline>(*device,
@@ -285,7 +319,8 @@ int main(int argc, char* argv[])
 
 	std::vector<vk::DescriptorSetLayout> descriptor_set_layouts{ 
 		cam_uniform.vk_DescriptorSetLayout,  
-		storaging_buffer_unifom.vk_DescriptorSetLayout
+		storaging_buffer_unifom.vk_DescriptorSetLayout,
+		meshlet_uniform.vk_DescriptorSetLayout
 	};
 	CreateMeshPipeline(vk_device, mesh_pipeline.get(), descriptor_set_layouts);
 
@@ -321,20 +356,16 @@ int main(int argc, char* argv[])
 				glm::ivec2 mouse_cur;
 				SDL_GetMouseState(&mouse_cur.x, &mouse_cur.y);
 				Uint32 mouseState = SDL_GetMouseState(nullptr, nullptr);
-				if (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT))
-				{
-					glm::vec2 offset = 0.001f * glm::vec2(mouse_cur - mouse_pre);
-					//camera.m_Transform.Translate({ offset.x, offset.y, 0});
-					camera.m_Transform.Rotate(-offset.x, { 0, 1, 0 });
-					camera.m_Transform.Rotate(-offset.y, { 1, 0, 0 });
-					camera.RecomputeProjView();
-				}
 				if (mouseState & SDL_BUTTON(SDL_BUTTON_RIGHT))
 				{
 					glm::vec2 offset = 0.001f * glm::vec2(mouse_cur - mouse_pre);
-					//camera.m_Transform.Translate({ offset.x, offset.y, 0});
-					camera.m_Transform.Rotate(-offset.x, { 0, 1, 0 });
-					camera.m_Transform.Rotate(-offset.y, { 1, 0, 0 });
+					camera.m_Transform.Translate({ -offset.x, offset.y, 0});
+					camera.RecomputeProjView();
+				}
+				if (mouseState & SDL_BUTTON(SDL_BUTTON_MIDDLE))
+				{
+					glm::vec2 offset = 0.01f * glm::vec2(mouse_cur - mouse_pre);
+					camera.m_Transform.RotateAround(glm::vec3(0.f), { 0.1f * offset.y, -offset.x, 0 });
 					camera.RecomputeProjView();
 				}
 				mouse_pre = mouse_cur;
@@ -386,7 +417,7 @@ int main(int argc, char* argv[])
 				});
 
 				// Draw call
-				uint32_t num_workgroups_x = 2;
+				uint32_t num_workgroups_x = (triangles.size() + meshlet_info.Meshlet_Size - 1) / meshlet_info.Meshlet_Size;
 				uint32_t num_workgroups_y = 1;
 				uint32_t num_workgroups_z = 1;
 				camera.RecomputeProjView();
@@ -399,7 +430,8 @@ int main(int argc, char* argv[])
 
 				vk::ArrayProxy<vk::DescriptorSet> arr{
 					cam_uniform.vk_DescriptorSets[image_index],
-					storaging_buffer_unifom.vk_DescriptorSets[0]
+					storaging_buffer_unifom.vk_DescriptorSets[0],
+					meshlet_uniform.vk_DescriptorSets[0]
 				};
 
 				command_buffers[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
@@ -479,6 +511,7 @@ int main(int argc, char* argv[])
 	//delete camera;
 	buffer.Free();
 	cam_uniform.Free();
+	meshlet_uniform.Free();
 	storaging_buffer_unifom.Free();
 	device->GetGraphicsCommandPool()->FreeCommandBuffer(command_buffers);
 

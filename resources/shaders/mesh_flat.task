@@ -8,18 +8,35 @@ struct Task
 	vec3 color;
 };
 
-const vec3 color[3] = vec3[](
-	vec3(1.0, 0.0, 0.0),
-	vec3(0.0, 1.0, 0.0),
-	vec3(0.0, 0.0, 1.0)
-);
-
 taskPayloadSharedEXT Task OUT;
+
+layout(set = 2, binding = 0) uniform MeshletInfo {
+    uint Meshlet_Size;
+	uint Triangle_Count;
+};
+
+// A simple hash function
+float hash(int n) {
+    float a = float(n);
+    return fract(sin(a) * 43758.5453);
+}
+
+// Generate a random color from an integer
+vec3 randomColor(int seed) {
+    // Use the hash function to generate random values for each color channel
+    float r = hash(seed);
+    float g = hash(seed + 1);
+    float b = hash(seed + 2);
+
+    return vec3(r, g, b);
+}
 
 void main()
 {
 	OUT.task_id = int(gl_WorkGroupID.x);
-	OUT.color = color[OUT.task_id];
+	OUT.color = randomColor(OUT.task_id);
 
-	EmitMeshTasksEXT(1, 1, 1);// use gl_WorkGroupID to index in mesh shader
+	uint remain = Triangle_Count - max(OUT.task_id * Meshlet_Size, 0);
+
+	EmitMeshTasksEXT(min(remain, Meshlet_Size), 1, 1);// use gl_WorkGroupID to index in mesh shader
 }
