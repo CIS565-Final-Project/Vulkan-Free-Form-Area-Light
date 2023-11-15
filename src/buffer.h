@@ -13,14 +13,12 @@ namespace VK_Renderer
 		
 		virtual void Create(vk::DeviceSize size,
 			vk::BufferUsageFlags usage,
-			vk::SharingMode sharingMode,
-			vk::MemoryPropertyFlags properties) = 0;
+			vk::SharingMode sharingMode) = 0;
 
 		virtual void CreateFromData(void const* data,
 			vk::DeviceSize size,
 			vk::BufferUsageFlags usage,
-			vk::SharingMode sharingMode,
-			vk::MemoryPropertyFlags properties) =0;
+			vk::SharingMode sharingMode) =0;
 
 		virtual void Update(void const* data,
 			vk::DeviceSize offset,
@@ -60,14 +58,12 @@ namespace VK_Renderer
 
 		virtual void Create(vk::DeviceSize size,
 							vk::BufferUsageFlags usage,
-							vk::SharingMode sharingMode,
-							vk::MemoryPropertyFlags properties);
+							vk::SharingMode sharingMode);
 
 		virtual void CreateFromData(void const* data,
 									vk::DeviceSize size,
 									vk::BufferUsageFlags usage,
-									vk::SharingMode sharingMode,
-									vk::MemoryPropertyFlags properties = vk::MemoryPropertyFlagBits::eDeviceLocal);
+									vk::SharingMode sharingMode);
 
 		virtual void Update(void const* data,
 							vk::DeviceSize offset,
@@ -86,14 +82,12 @@ namespace VK_Renderer
 
 		virtual void Create(vk::DeviceSize size,
 							vk::BufferUsageFlags usage,
-							vk::SharingMode sharingMode,
-							vk::MemoryPropertyFlags properties);
+							vk::SharingMode sharingMode);
 
 		virtual void CreateFromData(void const* data,
 									vk::DeviceSize size,
 									vk::BufferUsageFlags usage,
-									vk::SharingMode sharingMode,
-									vk::MemoryPropertyFlags properties = vk::MemoryPropertyFlagBits::eDeviceLocal);
+									vk::SharingMode sharingMode);
 
 		virtual void Update(void const* data,
 							vk::DeviceSize offset,

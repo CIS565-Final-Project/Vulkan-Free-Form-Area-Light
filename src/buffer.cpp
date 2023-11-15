@@ -100,10 +100,10 @@ namespace VK_Renderer
 		:VK_Buffer(device)
 	{}
 
-	void VK_MappedBuffer::Create(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::SharingMode sharingMode, vk::MemoryPropertyFlags properties)
+	void VK_MappedBuffer::Create(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::SharingMode sharingMode)
 	{
 		CreateBuffer(m_Device, vk_Buffer, vk_DeviceMemory, size, usage | vk::BufferUsageFlagBits::eTransferDst, sharingMode, 
-			properties | vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+					vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
 		vk::Result result = m_Device.GetDevice().mapMemory(vk_DeviceMemory, vk::DeviceSize(0), size, vk::MemoryMapFlags(), &m_MappedMemory);
 		if (result != vk::Result::eSuccess)
@@ -113,9 +113,9 @@ namespace VK_Renderer
 		}
 	}
 
-	void VK_MappedBuffer::CreateFromData(void const* data, vk::DeviceSize size, vk::BufferUsageFlags usage, vk::SharingMode sharingMode, vk::MemoryPropertyFlags properties)
+	void VK_MappedBuffer::CreateFromData(void const* data, vk::DeviceSize size, vk::BufferUsageFlags usage, vk::SharingMode sharingMode)
 	{
-		Create(size, usage, sharingMode, properties);
+		Create(size, usage, sharingMode);
 		std::memcpy(m_MappedMemory, data, size);
 	}
 
@@ -138,19 +138,22 @@ namespace VK_Renderer
 	
 	void VK_DeviceBuffer::Create(vk::DeviceSize size, 
 		vk::BufferUsageFlags usage, 
-		vk::SharingMode sharingMode, 
-		vk::MemoryPropertyFlags properties)
+		vk::SharingMode sharingMode)
 	{
-		CreateBuffer(m_Device, vk_Buffer, vk_DeviceMemory, size, usage | vk::BufferUsageFlagBits::eTransferDst, sharingMode, properties);
+		CreateBuffer(m_Device, 
+					vk_Buffer, 
+					vk_DeviceMemory, 
+					size, 
+					usage | vk::BufferUsageFlagBits::eTransferDst, 
+					sharingMode, vk::MemoryPropertyFlagBits::eDeviceLocal);
 	}
 
 	void VK_DeviceBuffer::CreateFromData(void const* data, 
 		vk::DeviceSize size, 
 		vk::BufferUsageFlags usage, 
-		vk::SharingMode sharingMode, 
-		vk::MemoryPropertyFlags properties)
+		vk::SharingMode sharingMode)
 	{
-		Create(size, usage, sharingMode, properties);
+		Create(size, usage, sharingMode);
 		Update(data, 0, size);
 	}
 

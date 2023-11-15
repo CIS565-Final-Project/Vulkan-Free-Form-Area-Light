@@ -42,7 +42,7 @@ namespace VK_Renderer
 			.preTransform = details.cpabilities.currentTransform,
 			.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
 			.presentMode = present_mode,
-			.clipped = vk::True
+			.clipped = vk::True,
 		};
 
 		uint32_t queue_family_indices[] = { m_QueueFamilyIndices.GraphicsIdx(), m_QueueFamilyIndices.PresentIdx() };

@@ -15,6 +15,10 @@ layout(set = 0, binding = 0) uniform CameraUBO {
     mat4 viewProjMat;
 } u_CamUBO;
 
+layout(set = 1, binding = 0) buffer Vertices {
+    vec4 vertices[];
+};
+
 taskPayloadSharedEXT Task IN;
 
 // Vertex Ouput
@@ -53,7 +57,7 @@ void main()
 
 	for(int i = 0; i < 3; ++i)
 	{
-		gl_MeshVerticesEXT[i].gl_Position = u_CamUBO.viewProjMat * vec4(position[IN.task_id][i], 1);
+		gl_MeshVerticesEXT[i].gl_Position = u_CamUBO.viewProjMat * vertices[IN.task_id * 3 + i];
 		v_out[i].color = IN.color;//color[i];
 	}
 	gl_PrimitiveTriangleIndicesEXT[0] =  uvec3(0, 2, 1);

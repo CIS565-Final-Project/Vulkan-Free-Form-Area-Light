@@ -250,14 +250,20 @@ int main(int argc, char* argv[])
 	vk::Device vk_device = device->GetDevice();
 
 	VK_DeviceBuffer buffer(*device);
-	std::vector<float> test_data(10);
+	std::vector<glm::vec4> test_data={
+		glm::vec4(1., -1., 0, 1),
+		glm::vec4(1.,  1., 0, 1),
+		glm::vec4(-1., -1., 0, 1),
+		glm::vec4(-1., -1., 0, 1),
+		glm::vec4(1.,  1., 0, 1),
+		glm::vec4(-1.,  1., 0, 1)
+	};
 
 	buffer.CreateFromData(test_data.data(), 
-		sizeof(float) * test_data.size(), 
-		vk::BufferUsageFlagBits::eVertexBuffer, 
-		vk::SharingMode::eExclusive, 
-		vk::MemoryPropertyFlags{});
-	buffer.Free();
+		sizeof(glm::vec4) * test_data.size(), 
+		vk::BufferUsageFlagBits::eStorageBuffer, 
+		vk::SharingMode::eExclusive);
+	
 
 	std::vector<Model*> m;
 
@@ -268,12 +274,19 @@ int main(int argc, char* argv[])
 	cam_uniform.Create(0, vk::ShaderStageFlagBits::eMeshEXT, 3, sizeof(CameraUBO));
 	float test_vaule = 1.f;
 
+	VK_StorageBufferUniform storaging_buffer_unifom(*device);
+	storaging_buffer_unifom.Create(0, vk::ShaderStageFlagBits::eMeshEXT, 1, sizeof(glm::vec4) * test_data.size());
+	storaging_buffer_unifom.m_Buffers[0].Update(test_data.data(), 0, sizeof(glm::vec4) * test_data.size());
+
 	// mesh pipeline	
 	uPtr<VK_GraphicsPipeline> mesh_pipeline = mkU<VK_GraphicsPipeline>(*device,
 																	  swapchain->vk_ImageExtent,
 																	  swapchain->vk_ImageFormat);
 
-	std::vector<vk::DescriptorSetLayout> descriptor_set_layouts(1, cam_uniform.vk_DescriptorSetLayout);
+	std::vector<vk::DescriptorSetLayout> descriptor_set_layouts{ 
+		cam_uniform.vk_DescriptorSetLayout,  
+		storaging_buffer_unifom.vk_DescriptorSetLayout
+	};
 	CreateMeshPipeline(vk_device, mesh_pipeline.get(), descriptor_set_layouts);
 
 	swapchain->CreateFramebuffers(mesh_pipeline->vk_RenderPass);
@@ -304,11 +317,26 @@ int main(int argc, char* argv[])
 			if (e.type == SDL_QUIT) bQuit = true;
 			if (e.type == SDL_MOUSEMOTION)
 			{
+				const Uint8* state = SDL_GetKeyboardState(nullptr);
 				glm::ivec2 mouse_cur;
 				SDL_GetMouseState(&mouse_cur.x, &mouse_cur.y);
-				glm::vec2 offset = 0.03f * glm::vec2(mouse_cur - mouse_pre);
-				camera.m_Transform.Translate({ offset.x, offset.y, 0});
-				camera.RecomputeProjView();
+				Uint32 mouseState = SDL_GetMouseState(nullptr, nullptr);
+				if (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT))
+				{
+					glm::vec2 offset = 0.001f * glm::vec2(mouse_cur - mouse_pre);
+					//camera.m_Transform.Translate({ offset.x, offset.y, 0});
+					camera.m_Transform.Rotate(-offset.x, { 0, 1, 0 });
+					camera.m_Transform.Rotate(-offset.y, { 1, 0, 0 });
+					camera.RecomputeProjView();
+				}
+				if (mouseState & SDL_BUTTON(SDL_BUTTON_RIGHT))
+				{
+					glm::vec2 offset = 0.001f * glm::vec2(mouse_cur - mouse_pre);
+					//camera.m_Transform.Translate({ offset.x, offset.y, 0});
+					camera.m_Transform.Rotate(-offset.x, { 0, 1, 0 });
+					camera.m_Transform.Rotate(-offset.y, { 1, 0, 0 });
+					camera.RecomputeProjView();
+				}
 				mouse_pre = mouse_cur;
 			}
 
@@ -369,10 +397,15 @@ int main(int argc, char* argv[])
 				glm::vec4 v1 = view_proj_mat * glm::vec4( 1.,  1., 0, 1.f);
 				glm::vec4 v2 = view_proj_mat * glm::vec4(-1., -1., 0, 1.f);
 
+				vk::ArrayProxy<vk::DescriptorSet> arr{
+					cam_uniform.vk_DescriptorSets[image_index],
+					storaging_buffer_unifom.vk_DescriptorSets[0]
+				};
+
 				command_buffers[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
 														mesh_pipeline->vk_PipelineLayout,
 														uint32_t(0),
-														cam_uniform.vk_DescriptorSets[image_index], nullptr);
+														arr, nullptr);
 
 				command_buffers[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
 				
@@ -444,7 +477,9 @@ int main(int argc, char* argv[])
 	//	delete models[i];
 	//}
 	//delete camera;
+	buffer.Free();
 	cam_uniform.Free();
+	storaging_buffer_unifom.Free();
 	device->GetGraphicsCommandPool()->FreeCommandBuffer(command_buffers);
 
 	//graphics_pipeline.reset();

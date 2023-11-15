@@ -13,6 +13,13 @@ namespace VK_Renderer
 	public:
 		VK_Uniform(VK_Device const& device);
 
+		virtual void Create(uint32_t const& binding,
+							vk::ShaderStageFlags stageFlags,
+							uint32_t const& count,
+							vk::DeviceSize uniformSize) = 0;
+
+		virtual void Free();
+
 	protected:
 		VK_Device const& m_Device;
 
@@ -35,5 +42,21 @@ namespace VK_Renderer
 
 		std::vector<vk::DescriptorSet> vk_DescriptorSets;
 		std::vector<VK_MappedBuffer> m_MappedBuffers;
+	};
+
+	class VK_StorageBufferUniform : public VK_Uniform
+	{
+	public:
+		VK_StorageBufferUniform(VK_Device const& device);
+
+		void Create(uint32_t const& binding,
+			vk::ShaderStageFlags stageFlags,
+			uint32_t const& count,
+			vk::DeviceSize uniformSize);
+
+		void Free();
+
+		std::vector<vk::DescriptorSet> vk_DescriptorSets;
+		std::vector<VK_DeviceBuffer> m_Buffers;
 	};
 }
