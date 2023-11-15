@@ -19,6 +19,7 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 #include "scene/mesh.h"
 #include "scene/scene.h"
+#include "scene/perspectiveCamera.h"
 
 #include "Model.h"
 #include "Camera.h"
@@ -26,6 +27,11 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #include <glm.hpp>
 
 using namespace VK_Renderer;
+
+struct CameraUBO 
+{
+	glm::mat4 viewProjMat;
+};
 
 void CreateGraphicsPipeline(vk::Device vk_device, 
 							VK_GraphicsPipeline* pipeline, 
@@ -139,6 +145,13 @@ uPtr<VK_Device> CreateLogicalDevice(const VK_Instance* instance)
 							instance->m_QueueFamilyIndices);
 }
 
+PerspectiveCamera camera = PerspectiveCamera{
+	.m_Transform = Transformation{
+		.position = {0, 0, -10}
+	},
+	.resolution = {680, 680}
+};
+
 int main(int argc, char* argv[])
 {
 	// Load necessary functions before any function call
@@ -231,8 +244,6 @@ int main(int argc, char* argv[])
 	//));
 
 	//Camera* camera = new Camera(instance.get(), width / height);
-
-	
 	//models[0]->SetTexture(texImage);
 	//models[1]->SetTexture(texImage);
 
@@ -252,26 +263,17 @@ int main(int argc, char* argv[])
 
 	device->CreateDescriptiorPool(1, 10);
 
-	VK_BufferUniform test_uniform(*device);
-	test_uniform.Create(0, vk::ShaderStageFlagBits::eMeshEXT, 3, sizeof(float));
-	float test_vaule = 1.f;
-	test_uniform.m_MappedBuffers[0].Update(&test_vaule, 0, sizeof(float));
-	test_uniform.m_MappedBuffers[1].Update(&test_vaule, 0, sizeof(float));
-	test_uniform.m_MappedBuffers[2].Update(&test_vaule, 0, sizeof(float));
-	//uPtr<VK_GraphicsPipeline> graphics_pipeline = mkU<VK_GraphicsPipeline>(*device,
-	//																		swapchain->vk_ImageExtent,
-	//																		swapchain->vk_ImageFormat);
-	//
-	//CreateGraphicsPipeline(vk_device, graphics_pipeline.get());
-	
+	VK_BufferUniform cam_uniform(*device);
 
-	// mesh pipeline
-	
+	cam_uniform.Create(0, vk::ShaderStageFlagBits::eMeshEXT, 3, sizeof(CameraUBO));
+	float test_vaule = 1.f;
+
+	// mesh pipeline	
 	uPtr<VK_GraphicsPipeline> mesh_pipeline = mkU<VK_GraphicsPipeline>(*device,
 																	  swapchain->vk_ImageExtent,
 																	  swapchain->vk_ImageFormat);
 
-	std::vector<vk::DescriptorSetLayout> descriptor_set_layouts(1, test_uniform.vk_DescriptorSetLayout);
+	std::vector<vk::DescriptorSetLayout> descriptor_set_layouts(1, cam_uniform.vk_DescriptorSetLayout);
 	CreateMeshPipeline(vk_device, mesh_pipeline.get(), descriptor_set_layouts);
 
 	swapchain->CreateFramebuffers(mesh_pipeline->vk_RenderPass);
@@ -291,6 +293,8 @@ int main(int argc, char* argv[])
 	// Main Loop
 	SDL_Event e;
 	bool bQuit = false;
+	
+	glm::ivec2 mouse_pre;
 
 	while (!bQuit)
 	{
@@ -298,6 +302,15 @@ int main(int argc, char* argv[])
 		while (SDL_PollEvent(&e) != 0) {
 			//close the window when user alt-f4s or clicks the X button			
 			if (e.type == SDL_QUIT) bQuit = true;
+			if (e.type == SDL_MOUSEMOTION)
+			{
+				glm::ivec2 mouse_cur;
+				SDL_GetMouseState(&mouse_cur.x, &mouse_cur.y);
+				glm::vec2 offset = 0.03f * glm::vec2(mouse_cur - mouse_pre);
+				camera.m_Transform.Translate({ offset.x, offset.y, 0});
+				camera.RecomputeProjView();
+				mouse_pre = mouse_cur;
+			}
 
 			// DrawFrame
 			// Wait for previous frame
@@ -348,11 +361,18 @@ int main(int argc, char* argv[])
 				uint32_t num_workgroups_x = 2;
 				uint32_t num_workgroups_y = 1;
 				uint32_t num_workgroups_z = 1;
+				camera.RecomputeProjView();
+				glm::mat4 view_proj_mat = camera.GetProjViewMatrix();
+				cam_uniform.m_MappedBuffers[image_index].Update(&view_proj_mat, 0, sizeof(glm::mat4));
+				
+				glm::vec4 v0 = view_proj_mat * glm::vec4( 1., -1., 0, 1.f);
+				glm::vec4 v1 = view_proj_mat * glm::vec4( 1.,  1., 0, 1.f);
+				glm::vec4 v2 = view_proj_mat * glm::vec4(-1., -1., 0, 1.f);
 
 				command_buffers[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
 														mesh_pipeline->vk_PipelineLayout,
 														uint32_t(0),
-														test_uniform.vk_DescriptorSets[image_index], nullptr);
+														cam_uniform.vk_DescriptorSets[image_index], nullptr);
 
 				command_buffers[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
 				
@@ -424,7 +444,7 @@ int main(int argc, char* argv[])
 	//	delete models[i];
 	//}
 	//delete camera;
-	test_uniform.Free();
+	cam_uniform.Free();
 	device->GetGraphicsCommandPool()->FreeCommandBuffer(command_buffers);
 
 	//graphics_pipeline.reset();

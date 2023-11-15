@@ -5,7 +5,7 @@
 
 namespace VK_Renderer
 {
-	class Transformable
+	class Transformation
 	{
 	public:
 		inline void Translate(glm::vec3 const& translate) {
@@ -19,11 +19,5 @@ namespace VK_Renderer
 	public:
 		glm::vec3 position;
 		glm::quat rotation;
-	};
-
-	class Transform
-	{
-	public:
-		
 	};
 }

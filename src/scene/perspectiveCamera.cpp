@@ -1,15 +1,17 @@
 #include "perspectiveCamera.h"
 
+#include <gtc/matrix_transform.hpp>
 
 namespace VK_Renderer
 {
 	void PerspectiveCamera::RecomputeProjView()
 	{
-		m_ViewMatrix = glm::toMat4(rotation) * 
+		glm::mat4 R = glm::toMat3(m_Transform.rotation);
+		m_ViewMatrix = R * 
 		glm::mat4(
-			glm::vec4(1.f, 0.f, 0.f, -position.x),
-			glm::vec4(0.f, 1.f, 0.f, -position.y),
-			glm::vec4(0.f, 0.f, 1.f, -position.z),
+			glm::vec4(1.f, 0.f, 0.f, -m_Transform.position.x),
+			glm::vec4(0.f, 1.f, 0.f, -m_Transform.position.y),
+			glm::vec4(0.f, 0.f, 1.f, -m_Transform.position.z),
 			glm::vec4(0, 0, 0, 1)
 		);
 
@@ -18,12 +20,14 @@ namespace VK_Renderer
 		float const S = 1.f / glm::tan(fovy / 2.f);
 		float const P = far / (far - near);
 		float const Q = -P * near;
+		m_ViewMatrix = glm::lookAt(m_Transform.position, { 0, 0, 0 }, {0, 1, 0});
+		m_ProjMatrix = glm::perspective(fovy, aspect, near, far);
 
-		m_ProjMatrix = {
-			glm::vec4(S / aspect, 0.f, 0.f, 0.f),
-			glm::vec4(0.f, S, 0.f, 0.f),
-			glm::vec4(0.f, 0.f, P, Q),
-			glm::vec4(0.f, 0.f, 1.f, 0.f),
-		};
+		//m_ProjMatrix = {
+		//	glm::vec4(S / aspect, 0.f, 0.f, 0.f),
+		//	glm::vec4(0.f, S, 0.f, 0.f),
+		//	glm::vec4(0.f, 0.f, P, Q),
+		//	glm::vec4(0.f, 0.f, 1.f, 0.f),
+		//};
 	}
 }
