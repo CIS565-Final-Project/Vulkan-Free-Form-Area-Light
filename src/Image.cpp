@@ -2,9 +2,8 @@
 #include <stb_image.h>
 
 #include "Image.h"
-#include "BufferUtils.h"
 
-#include "device.h"
+#include "renderEngine/device.h"
 using namespace VK_Renderer;
 
 void Image::Create(VK_Renderer::VK_Instance* instance, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
@@ -210,7 +209,7 @@ void Image::FromFile(VK_Renderer::VK_Instance* instance, VkCommandPool commandPo
 
     VkBufferUsageFlags stagingUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     VkMemoryPropertyFlags stagingProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    BufferUtils::CreateBuffer(instance, imageSize, stagingUsage, stagingProperties, stagingBuffer, stagingBufferMemory);
+    //BufferUtils::CreateBuffer(instance, imageSize, stagingUsage, stagingProperties, stagingBuffer, stagingBufferMemory);
 
     // Copy pixel values to the buffer
     void* data;

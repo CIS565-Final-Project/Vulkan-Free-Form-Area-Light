@@ -10,7 +10,7 @@ namespace VK_Renderer
 	class VK_Instance
 	{
 	public:
-		VK_Instance(SDL_Window* window, const std::string& app_name);
+		VK_Instance(std::vector<char const*>const& instanceExtensions, const std::string& app_name);
 		~VK_Instance();
 
 		void PickPhysicalDeivce();

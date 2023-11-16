@@ -27,7 +27,7 @@ namespace VK_Renderer
 		return VK_FALSE;
 	}
 
-	VK_Instance::VK_Instance(SDL_Window* window, const std::string& app_name)
+	VK_Instance::VK_Instance(std::vector<char const*>const& instanceExtensions, const std::string& app_name)
 	{		
 		vk::ApplicationInfo app_info{
 			.pApplicationName = app_name.c_str(),
@@ -40,11 +40,7 @@ namespace VK_Renderer
 			.pApplicationInfo = &app_info
 		};
 
-		unsigned int sdl_ext_count = 0;
-		SDL_Vulkan_GetInstanceExtensions(window, &sdl_ext_count, NULL);
-
-		m_Extensions.resize(sdl_ext_count);
-		SDL_Vulkan_GetInstanceExtensions(window, &sdl_ext_count, m_Extensions.data());
+		std::vector<char const*> exts = instanceExtensions;
 
 		// create a separate debug utils messenger specifically for 
 		// vkCreateInstance and vkDestroyInstance
@@ -57,12 +53,12 @@ namespace VK_Renderer
 			create_info.enabledLayerCount = static_cast<uint32_t>(ValidationLayers.size());
 			create_info.ppEnabledLayerNames = ValidationLayers.data();
 			create_info.pNext = &debug_utils_messenger_create_info;
-			m_Extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-			m_Extensions.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+			exts.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			exts.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 		} 
 
-		create_info.enabledExtensionCount = m_Extensions.size();
-		create_info.ppEnabledExtensionNames = m_Extensions.data();
+		create_info.enabledExtensionCount = exts.size();
+		create_info.ppEnabledExtensionNames = exts.data();
 		
 		vk_Instance = vk::createInstance(create_info);
 
