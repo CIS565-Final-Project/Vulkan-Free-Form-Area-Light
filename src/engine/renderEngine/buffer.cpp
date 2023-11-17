@@ -96,11 +96,11 @@ namespace VK_Renderer
 		FreeBuffer(m_Device.GetDevice(), vk_Buffer, vk_DeviceMemory);
 	}
 
-	VK_MappedBuffer::VK_MappedBuffer(VK_Device const& device)
+	VK_StagingBuffer::VK_StagingBuffer(VK_Device const& device)
 		:VK_Buffer(device)
 	{}
 
-	void VK_MappedBuffer::Create(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::SharingMode sharingMode)
+	void VK_StagingBuffer::Create(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::SharingMode sharingMode)
 	{
 		CreateBuffer(m_Device, vk_Buffer, vk_DeviceMemory, size, usage | vk::BufferUsageFlagBits::eTransferDst, sharingMode, 
 					vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
@@ -113,20 +113,20 @@ namespace VK_Renderer
 		}
 	}
 
-	void VK_MappedBuffer::CreateFromData(void const* data, vk::DeviceSize size, vk::BufferUsageFlags usage, vk::SharingMode sharingMode)
+	void VK_StagingBuffer::CreateFromData(void const* data, vk::DeviceSize size, vk::BufferUsageFlags usage, vk::SharingMode sharingMode)
 	{
 		Create(size, usage, sharingMode);
 		std::memcpy(m_MappedMemory, data, size);
 	}
 
-	void VK_MappedBuffer::Update(void const* data, 
+	void VK_StagingBuffer::Update(void const* data, 
 		vk::DeviceSize offset, 
 		vk::DeviceSize size)
 	{
 		std::memcpy(reinterpret_cast<char*>(m_MappedMemory) + offset, data, size);
 	}
 
-	void VK_MappedBuffer::Free() const
+	void VK_StagingBuffer::Free() const
 	{
 		m_Device.GetDevice().unmapMemory(vk_DeviceMemory);
 		FreeBuffer(m_Device.GetDevice(), vk_Buffer, vk_DeviceMemory);

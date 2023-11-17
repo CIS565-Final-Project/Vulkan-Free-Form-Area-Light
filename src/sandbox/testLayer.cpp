@@ -6,6 +6,10 @@
 
 using namespace VK_Renderer;
 
+std::vector<vk::DescriptorSet> samplerSet;
+vk::DescriptorSetLayoutBinding samplerLayoutbinding;
+vk::DescriptorSetLayout samplerLayout;
+
 struct CameraUBO
 {
 	glm::mat4 viewProjMat;
@@ -90,8 +94,18 @@ void RenderLayer::OnAttach()
 
 	Mesh mesh;
 	//mesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
-	mesh.LoadMeshFromFile("meshes/sphere.obj");
+	//mesh.LoadMeshFromFile("meshes/sphere.obj");
 	//mesh.LoadMeshFromFile("meshes/cube.obj");
+	mesh.LoadMeshFromFile("meshes/plane.obj");
+
+	m_Texture = mkU<VK_Texture>(*m_Device);
+
+	m_Texture->CreateFromFile("images/wall.jpg", 1, vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eSampled, vk::SharingMode::eExclusive);
+	m_Texture->TransitionLayout(VK_ImageLayout{
+			.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+			.accessFlag = vk::AccessFlagBits::eShaderRead,
+			.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
+	});
 
 	// Create Uniforms
 	m_CameraUniform = mkU<VK_BufferUniform>(*m_Device);
@@ -113,12 +127,46 @@ void RenderLayer::OnAttach()
 	m_MeshShaderInputUniform->Create(vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT,
 		{
 			sizeof(glm::ivec4) * triangles.size(),
-			sizeof(Float) * mesh.m_Positions.size(),
+			sizeof(Float)* mesh.m_Positions.size(),
+			sizeof(Float) * mesh.m_UVs.size(),
 		},
-		1);
+	1);
+
+	samplerLayoutbinding = {
+		.binding = 0,
+		.descriptorType = vk::DescriptorType::eCombinedImageSampler,
+		.descriptorCount = 1,
+		.stageFlags = vk::ShaderStageFlagBits::eAllGraphics
+	};
+
+	samplerLayout = m_Device->GetDevice().createDescriptorSetLayout(vk::DescriptorSetLayoutCreateInfo{
+		.bindingCount = 1,
+		.pBindings = &samplerLayoutbinding,
+	});
+
+	samplerSet = m_Device->GetDevice().allocateDescriptorSets(vk::DescriptorSetAllocateInfo{
+			.descriptorPool = m_Device->vk_DescriptorPool,
+			.descriptorSetCount = 1,
+			.pSetLayouts = &samplerLayout
+	});
+
+	vk::DescriptorImageInfo imageInfo{
+		.sampler = m_Texture->GetSampler(),
+		.imageView = m_Texture->GetImageView(),
+		.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal,
+	};
+	m_Device->GetDevice().updateDescriptorSets(vk::WriteDescriptorSet{
+					.dstSet = samplerSet[0],
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = vk::DescriptorType::eCombinedImageSampler,
+					.pImageInfo = &imageInfo
+	}, nullptr);
 
 	m_MeshShaderInputUniform->m_Buffers[0].Update(triangles.data(), 0, sizeof(glm::ivec4) * triangles.size());
 	m_MeshShaderInputUniform->m_Buffers[1].Update(mesh.m_Positions.data(), 0, sizeof(Float) * mesh.m_Positions.size());
+	m_MeshShaderInputUniform->m_Buffers[2].Update(mesh.m_UVs.data(), 0, sizeof(Float) * mesh.m_UVs.size());
 
 	// Create Pipeline
 	m_MeshShaderPipeline = mkU<VK_GraphicsPipeline>(*m_Device,
@@ -128,7 +176,8 @@ void RenderLayer::OnAttach()
 	std::vector<vk::DescriptorSetLayout> descriptor_set_layouts{
 		m_CameraUniform->vk_DescriptorSetLayout,
 		m_MeshShaderInputUniform->vk_DescriptorSetLayout,
-		m_MeshletUniform->vk_DescriptorSetLayout
+		m_MeshletUniform->vk_DescriptorSetLayout,
+		samplerLayout
 	};
 	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderPipeline.get(), descriptor_set_layouts);
 	m_Swapchain->CreateFramebuffers(m_MeshShaderPipeline->vk_RenderPass);
@@ -156,6 +205,8 @@ void RenderLayer::OnDetech()
 	m_Device->GetDevice().destroyFence(fence);
 	m_Device->GetDevice().destroySemaphore(image_available_semaphore);
 	m_Device->GetDevice().destroySemaphore(render_finished_semaphore);
+
+	m_Device->GetDevice().destroyDescriptorSetLayout(samplerLayout);
 
 	m_MeshShaderPipeline.reset();
 
@@ -226,7 +277,8 @@ void RenderLayer::OnUpdate(double const& deltaTime)
 		vk::ArrayProxy<vk::DescriptorSet> arr{
 			m_CameraUniform->vk_DescriptorSets[image_index],
 			m_MeshShaderInputUniform->vk_DescriptorSets[0],
-			m_MeshletUniform->vk_DescriptorSets[0]
+			m_MeshletUniform->vk_DescriptorSets[0],
+			samplerSet[0]
 		};
 
 		command_buffers[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,

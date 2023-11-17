@@ -51,10 +51,10 @@ namespace VK_Renderer
 		vk::Buffer vk_Buffer;
 	};
 
-	class VK_MappedBuffer : public VK_Buffer
+	class VK_StagingBuffer : public VK_Buffer
 	{
 	public:
-		VK_MappedBuffer(VK_Device const& device);
+		VK_StagingBuffer(VK_Device const& device);
 
 		virtual void Create(vk::DeviceSize size,
 							vk::BufferUsageFlags usage,

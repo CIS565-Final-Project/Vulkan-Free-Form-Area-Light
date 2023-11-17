@@ -68,6 +68,15 @@ namespace VK_Renderer
 		vk_Device.destroy();
 	}
 
+	vk::UniqueDeviceMemory VK_Device::AllocateImageMemory(vk::Image image) const
+	{
+		vk::MemoryRequirements mem_requirements = vk_Device.getImageMemoryRequirements(image);
+		return vk_Device.allocateMemoryUnique(vk::MemoryAllocateInfo{
+			.allocationSize = mem_requirements.size,
+			.memoryTypeIndex = GetMemoryTypeIndex(mem_requirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal)
+		});
+	}
+
 	void VK_Device::CreateDescriptiorPool(uint32_t const& descriptorCount, uint32_t const& maxSets)
 	{
 		vk::DescriptorPoolSize desc_pool_size{

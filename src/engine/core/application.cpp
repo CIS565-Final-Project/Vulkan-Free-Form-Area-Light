@@ -95,6 +95,10 @@ namespace MyCore
 				}
 
 				// TODO: OnImGui
+				for (auto& layer : m_Layers)
+				{
+					layer->OnImGui(0.f);
+				}
 			}
 		}
 	}

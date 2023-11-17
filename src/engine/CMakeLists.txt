@@ -14,6 +14,7 @@ add_library(TinyObjLoader
 # Engine Lib
 file(TO_CMAKE_PATH ${CMAKE_SOURCE_DIR} PROJ_BASE_PATH_NORMALIZED)
 add_definitions(-DPROJ_BASE_PATH="${PROJ_BASE_PATH_NORMALIZED}")
+add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
 
 source_group(Sources FILES ${exe_Sources})
 source_group(Headers FILES ${exe_Header})

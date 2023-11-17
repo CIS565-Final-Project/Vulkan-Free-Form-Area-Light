@@ -24,6 +24,10 @@ layout(set = 1, binding = 1) buffer Positions {
     float positions[];
 };
 
+layout(set = 1, binding = 2) buffer UVs {
+    float uvs[];
+};
+
 layout(set = 2, binding = 0) uniform MeshletInfo {
     uint Meshlet_Size;
 	uint Triangle_Count;

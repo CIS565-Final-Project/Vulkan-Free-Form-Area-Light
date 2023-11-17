@@ -17,6 +17,7 @@ struct MeshletInfo;
 #include "renderEngine/swapchain.h"
 #include "renderEngine/buffer.h"
 #include "renderEngine/uniform.h"
+#include "renderEngine/texture.h"
 
 #include "scene/mesh.h"
 #include "scene/scene.h"
@@ -44,6 +45,7 @@ protected:
 	uPtr<VK_Renderer::PerspectiveCamera> m_Camera;
 	uPtr<VK_Renderer::VK_CommandBuffer> m_CommandBuffer;
 	
+	uPtr<VK_Renderer::VK_Texture> m_Texture;
 	uPtr<VK_Renderer::VK_PipelineInput> m_PipelineInput;
 	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderPipeline;
 	uPtr<VK_Renderer::VK_BufferUniform> m_CameraUniform;

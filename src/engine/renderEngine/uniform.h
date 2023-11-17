@@ -38,7 +38,7 @@ namespace VK_Renderer
 		void Free();
 
 		std::vector<vk::DescriptorSet> vk_DescriptorSets;
-		std::vector<VK_MappedBuffer> m_MappedBuffers;
+		std::vector<VK_StagingBuffer> m_MappedBuffers;
 	};
 
 	class VK_StorageBufferUniform : public VK_Uniform
