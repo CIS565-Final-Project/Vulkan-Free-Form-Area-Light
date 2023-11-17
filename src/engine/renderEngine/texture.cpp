@@ -105,8 +105,8 @@ namespace VK_Renderer
 
 	void VK_Texture::Free()
 	{
-		if (vk_ImageView) m_Device.GetDevice().destroyImageView(vk_ImageView);
 		if (vk_Sampler) m_Device.GetDevice().destroySampler(vk_Sampler);
+		if (vk_ImageView) m_Device.GetDevice().destroyImageView(vk_ImageView);
 		if (vk_Image) m_Device.GetDevice().destroyImage(vk_Image);
 	}
 

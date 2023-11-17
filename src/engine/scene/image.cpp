@@ -12,6 +12,7 @@ namespace VK_Renderer
 
 	void Image::LoadFromFile(std::string const& file)
 	{
+		stbi_set_flip_vertically_on_load(true);
 		m_RawData = stbi_load(file.c_str(), 
 								&m_Resolution.x, &m_Resolution.y, &m_Resolution.z, 
 								STBI_rgb_alpha);
@@ -19,5 +20,7 @@ namespace VK_Renderer
 		if (!m_RawData) {
 			throw std::runtime_error("Failed to load texture image");
 		}
+
+		stbi_set_flip_vertically_on_load(false);
 	}
 }

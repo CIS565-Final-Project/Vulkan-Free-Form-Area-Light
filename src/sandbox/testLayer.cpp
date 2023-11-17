@@ -17,6 +17,13 @@ struct MeshletInfo
 	uint32_t Triangle_Count;
 };
 
+struct TriangleInfo
+{
+	glm::ivec4 pId;
+	glm::ivec4 nId;
+	glm::ivec4 uvId;
+};
+
 void CreateMeshPipeline(vk::Device vk_device,
 	VK_GraphicsPipeline* pipeline,
 	std::vector<vk::DescriptorSetLayout> const& descripotrSetLayouts)
@@ -69,8 +76,8 @@ void CreateMeshPipeline(vk::Device vk_device,
 }
 
 RenderLayer::RenderLayer(std::string const& name)
-	: Layer(name), 
-	  image_index(0)
+	: Layer(name),
+	image_index(0)
 {
 }
 
@@ -80,7 +87,7 @@ void RenderLayer::OnAttach()
 	m_Camera->m_Transform = Transformation{
 		.position = {0, 0, -10}
 	};
-	m_Camera->resolution = {680, 680};
+	m_Camera->resolution = { 680, 680 };
 
 	m_Device = Application::GetInstance()->GetRenderEngine()->GetDevice();
 	m_Swapchain = Application::GetInstance()->GetRenderEngine()->GetSwapchain();
@@ -96,22 +103,26 @@ void RenderLayer::OnAttach()
 	//mesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
 	//mesh.LoadMeshFromFile("meshes/sphere.obj");
 	//mesh.LoadMeshFromFile("meshes/cube.obj");
-	mesh.LoadMeshFromFile("meshes/plane.obj");
+	mesh.LoadMeshFromFile("meshes/wahoo.obj");
 
 	m_Texture = mkU<VK_Texture>(*m_Device);
 
-	m_Texture->CreateFromFile("images/wall.jpg", 1, vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eSampled, vk::SharingMode::eExclusive);
+	m_Texture->CreateFromFile("images/wahoo.bmp", 1, vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eSampled, vk::SharingMode::eExclusive);
 	m_Texture->TransitionLayout(VK_ImageLayout{
 			.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
 			.accessFlag = vk::AccessFlagBits::eShaderRead,
 			.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
-	});
+		});
 
-	std::vector<glm::ivec4> triangles;
+	std::vector<TriangleInfo> triangles;
 
 	for (Triangle const& tri : mesh.m_Triangles)
 	{
-		triangles.emplace_back(tri.pId, tri.materialId);
+		triangles.emplace_back(
+			glm::ivec4(tri.pId, tri.materialId),
+			glm::ivec4(tri.nId, 0),
+			glm::ivec4(tri.uvId, 0)
+		);
 	}
 
 	m_MeshletInfo = mkU<MeshletInfo>(32, static_cast<uint32_t>(mesh.m_Triangles.size()));
@@ -123,10 +134,11 @@ void RenderLayer::OnAttach()
 	m_NormalBuffer = mkU<VK_DeviceBuffer>(*m_Device);
 	m_UVBuffer = mkU<VK_DeviceBuffer>(*m_Device);
 
-
 	m_MeshletInfoBuffer->CreateFromData(m_MeshletInfo.get(), sizeof(MeshletInfo), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
-	m_TriangleBuffer->CreateFromData(triangles.data(), sizeof(glm::ivec4) * triangles.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_TriangleBuffer->CreateFromData(triangles.data(), sizeof(TriangleInfo) * triangles.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
 	m_PositionBuffer->CreateFromData(mesh.m_Positions.data(), sizeof(Float) * mesh.m_Positions.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_NormalBuffer->CreateFromData(mesh.m_Normals.data(), sizeof(Float) * mesh.m_Normals.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_UVBuffer->CreateFromData(mesh.m_UVs.data(), sizeof(Float) * mesh.m_UVs.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
 
 	// Create Descriptors
 	m_CamDescriptor = mkU<VK_Descriptor>(*m_Device);
@@ -142,7 +154,7 @@ void RenderLayer::OnAttach()
 				.range = m_CamBuffer->GetSize()
 			}
 		}
-	});
+		});
 
 	m_MeshShaderInputDescriptor->Create({
 		VK_DescriptorBinding{
@@ -173,6 +185,24 @@ void RenderLayer::OnAttach()
 			}
 		},
 		VK_DescriptorBinding{
+			.type = vk::DescriptorType::eStorageBuffer,
+			.stage = vk::ShaderStageFlagBits::eMeshEXT,
+			.bufferInfo = vk::DescriptorBufferInfo{
+				.buffer = m_NormalBuffer->GetBuffer(),
+				.offset = 0,
+				.range = m_NormalBuffer->GetSize()
+			}
+		},
+		VK_DescriptorBinding{
+			.type = vk::DescriptorType::eStorageBuffer,
+			.stage = vk::ShaderStageFlagBits::eMeshEXT,
+			.bufferInfo = vk::DescriptorBufferInfo{
+				.buffer = m_UVBuffer->GetBuffer(),
+				.offset = 0,
+				.range = m_UVBuffer->GetSize()
+			}
+		},
+		VK_DescriptorBinding{
 			.type = vk::DescriptorType::eCombinedImageSampler,
 			.stage = vk::ShaderStageFlagBits::eFragment,
 			.imageInfo = vk::DescriptorImageInfo{
@@ -181,7 +211,7 @@ void RenderLayer::OnAttach()
 				.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
 			}
 		},
-	});
+		});
 
 	// Create Pipeline
 	m_MeshShaderPipeline = mkU<VK_GraphicsPipeline>(*m_Device,
@@ -199,7 +229,7 @@ void RenderLayer::OnAttach()
 	render_finished_semaphore = m_Device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
 	fence = m_Device->GetDevice().createFence(vk::FenceCreateInfo{
 		.flags = vk::FenceCreateFlagBits::eSignaled
-	});
+		});
 }
 
 void RenderLayer::OnDetech()
