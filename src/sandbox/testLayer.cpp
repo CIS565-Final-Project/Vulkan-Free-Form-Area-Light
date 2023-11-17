@@ -107,7 +107,8 @@ void RenderLayer::OnAttach()
 
 	m_Texture = mkU<VK_Texture>(*m_Device);
 
-	m_Texture->CreateFromFile("images/wahoo.bmp", 1, vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eSampled, vk::SharingMode::eExclusive);
+	//m_Texture->CreateFromFile("images/wahoo.bmp", 1, vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eSampled, vk::SharingMode::eExclusive);
+	m_Texture->CreateFromFile("images/ltc.dds", 1, vk::Format::eR32G32B32A32Sfloat, vk::ImageUsageFlagBits::eSampled, vk::SharingMode::eExclusive);
 	m_Texture->TransitionLayout(VK_ImageLayout{
 			.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
 			.accessFlag = vk::AccessFlagBits::eShaderRead,

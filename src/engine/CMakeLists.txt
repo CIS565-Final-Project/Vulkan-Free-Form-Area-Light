@@ -54,4 +54,5 @@ target_link_libraries(Engine
 	SDL2::SDL2
 	SDL2::SDL2main
 	TinyObjLoader
+	dds_image
 )
