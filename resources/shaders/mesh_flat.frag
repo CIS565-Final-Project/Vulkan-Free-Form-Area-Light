@@ -9,7 +9,7 @@ layout (location = 0) in PerVertexData
 
 layout (location = 0) out vec3 fs_Color;
 
-layout(set = 3, binding = 0) uniform sampler2D u_Texture;
+layout(set = 1, binding = 3) uniform sampler2D u_Texture;
 
 void main()
 {

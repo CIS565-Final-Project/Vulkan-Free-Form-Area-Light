@@ -10,7 +10,7 @@ struct Task
 
 taskPayloadSharedEXT Task OUT;
 
-layout(set = 2, binding = 0) uniform MeshletInfo {
+layout(set = 1, binding = 0) uniform MeshletInfo {
     uint Meshlet_Size;
 	uint Triangle_Count;
 };

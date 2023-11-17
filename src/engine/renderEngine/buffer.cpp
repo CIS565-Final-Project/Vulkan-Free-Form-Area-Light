@@ -102,6 +102,7 @@ namespace VK_Renderer
 
 	void VK_StagingBuffer::Create(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::SharingMode sharingMode)
 	{
+		vk_Size = size;
 		CreateBuffer(m_Device, vk_Buffer, vk_DeviceMemory, size, usage | vk::BufferUsageFlagBits::eTransferDst, sharingMode, 
 					vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
 
@@ -140,6 +141,7 @@ namespace VK_Renderer
 		vk::BufferUsageFlags usage, 
 		vk::SharingMode sharingMode)
 	{
+		vk_Size = size;
 		CreateBuffer(m_Device, 
 					vk_Buffer, 
 					vk_DeviceMemory, 

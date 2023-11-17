@@ -47,8 +47,8 @@ namespace VK_Renderer
 		const VK_Device& m_Device;
 
 		vk::DeviceMemory vk_DeviceMemory;
-	public:
-		vk::Buffer vk_Buffer;
+		DeclareWithGetFunc(protected, vk::DeviceSize, vk, Size, const);
+		DeclareWithGetFunc(protected, vk::Buffer, vk, Buffer, const);
 	};
 
 	class VK_StagingBuffer : public VK_Buffer

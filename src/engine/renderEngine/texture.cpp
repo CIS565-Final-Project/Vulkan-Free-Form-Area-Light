@@ -156,7 +156,7 @@ namespace VK_Renderer
 
 		cmd.Begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-		cmd[0].copyBufferToImage(staging_buffer.vk_Buffer, vk_Image, m_Layout.layout, vk::BufferImageCopy{
+		cmd[0].copyBufferToImage(staging_buffer.GetBuffer(), vk_Image, m_Layout.layout, vk::BufferImageCopy{
 			.bufferOffset = 0,
 			.bufferRowLength = 0,
 			.bufferImageHeight = 0,
