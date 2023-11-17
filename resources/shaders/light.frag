@@ -15,5 +15,6 @@ void main()
 	//vec3 color = 1.f - vs_Color;
 	//outColor = vec4(color, 1.f);
 
-	outColor = vec4(vec3(1.f) - texture(texSampler, vs_TexCoord).rgb, 1.f);
+	// outColor = vec4(vec3(1.f) - texture(texSampler, vs_TexCoord).rgb, 1.f);
+	outColor = vec4(1.f);
 }

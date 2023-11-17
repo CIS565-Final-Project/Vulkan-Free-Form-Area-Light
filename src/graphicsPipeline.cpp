@@ -210,8 +210,8 @@ namespace VK_Renderer
 		CreateModelDescriptorSets(shadingModelDescriptorSets, m_shadingModels);
 		CreateModelDescriptorSets(lightModelDescriptorSets, m_lightModels);
 
-		m_shadingPipelineInfo.vertShaderPath = "shaders/flat.vert.spv";
-		m_shadingPipelineInfo.fragShaderPath = "shaders/flat.frag.spv";
+		m_shadingPipelineInfo.vertShaderPath = "shaders/ltc.vert.spv";
+		m_shadingPipelineInfo.fragShaderPath = "shaders/ltc.frag.spv";
 		m_shadingPipelineInfo.descriptorSetLayouts = { cameraDescriptorSetLayout, modelDescriptorSetLayout };
 		CreateStandardPipeline(m_shadingPipelineInfo);
 
