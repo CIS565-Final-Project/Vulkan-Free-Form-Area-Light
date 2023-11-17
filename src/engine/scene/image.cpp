@@ -1,7 +1,7 @@
 #include "image.h"
 
 #include <stb_image.h>
-#include "dds.h"
+#include <dds.h>
 #include <iostream>
 namespace VK_Renderer
 {
