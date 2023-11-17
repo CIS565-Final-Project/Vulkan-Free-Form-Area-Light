@@ -1,0 +1,42 @@
+#version 450
+
+#extension GL_EXT_mesh_shader : require
+
+struct Task
+{
+	int task_id;
+	vec3 color;
+};
+
+taskPayloadSharedEXT Task OUT;
+
+layout(set = 1, binding = 0) uniform MeshletInfo {
+    uint Meshlet_Size;
+	uint Triangle_Count;
+};
+
+// A simple hash function
+float hash(int n) {
+    float a = float(n);
+    return fract(sin(a) * 43758.5453);
+}
+
+// Generate a random color from an integer
+vec3 randomColor(int seed) {
+    // Use the hash function to generate random values for each color channel
+    float r = hash(seed);
+    float g = hash(seed + 1);
+    float b = hash(seed + 2);
+
+    return vec3(r, g, b);
+}
+
+void main()
+{
+	OUT.task_id = int(gl_WorkGroupID.x);
+	OUT.color = randomColor(OUT.task_id);
+
+	uint remain = Triangle_Count - max(OUT.task_id * Meshlet_Size, 0);
+
+	EmitMeshTasksEXT(min(remain, Meshlet_Size), 1, 1);// use gl_WorkGroupID to index in mesh shader
+}
