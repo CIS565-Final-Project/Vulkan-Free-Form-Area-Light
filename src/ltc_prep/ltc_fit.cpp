@@ -4,7 +4,7 @@
 #include "nelder_mead.h"//如果直接放到ltc_fit.h 那么这个cpp会编译一次nelder_mead.h include ltc_fit.h的main也会编译一次
 #include <iostream>
 #include <stb_image_write.h>
-#include <dds.hpp>
+#include <dds.h>
 // size of precomputed table (theta, alpha)
 const int N = 64;
 // number of samples used to compute the error during fitting

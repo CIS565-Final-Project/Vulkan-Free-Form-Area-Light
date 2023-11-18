@@ -10,5 +10,5 @@ PUBLIC
 )
 target_include_directories(dds
 PUBLIC
-    dds.h
+    "./"
 )
