@@ -42,7 +42,7 @@ namespace VK_Renderer
 			.extent = vk_Extent,
 			.mipLevels = vk_SubresourceRange.levelCount,
 			.arrayLayers = vk_SubresourceRange.layerCount,
-			.samples = vk::SampleCountFlagBits::e1,
+			.samples = createInfo.sampleCount,
 			.tiling = vk::ImageTiling::eOptimal,
 			.usage = createInfo.usage | vk::ImageUsageFlagBits::eTransferDst,
 			.sharingMode = createInfo.sharingMode,

@@ -103,15 +103,17 @@ void RenderLayer::OnAttach()
 	//mesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
 	//mesh.LoadMeshFromFile("meshes/sphere.obj");
 	//mesh.LoadMeshFromFile("meshes/cube.obj");
-	mesh.LoadMeshFromFile("meshes/wahoo.obj");
+	mesh.LoadMeshFromFile("meshes/plane.obj");
 
 	m_Texture = mkU<VK_Texture2D>(*m_Device);
 	m_DepthTex = mkU<VK_Texture2D>(*m_Device);
+	m_ColorTex = mkU<VK_Texture2D>(*m_Device);
 
 	m_DepthTex->Create(vk::Extent3D{m_Swapchain->vk_ImageExtent.width, m_Swapchain->vk_ImageExtent.height, 1}, 
 						TextureCreateInfo{ .format = vk::Format::eD32Sfloat,
-								.aspectMask = vk::ImageAspectFlagBits::eDepth, 
-								.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment});
+											.aspectMask = vk::ImageAspectFlagBits::eDepth, 
+											.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
+											.sampleCount = m_Device->GetDeviceProperties().maxSampleCount});
 
 	m_DepthTex->TransitionLayout({
 		.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
@@ -119,7 +121,13 @@ void RenderLayer::OnAttach()
 		.pipelineStage = vk::PipelineStageFlagBits::eEarlyFragmentTests
 	});
 
-	m_Texture->CreateFromFile("images/wahoo.bmp", {.format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
+	m_ColorTex->Create(vk::Extent3D{ m_Swapchain->vk_ImageExtent.width, m_Swapchain->vk_ImageExtent.height, 1 },
+		TextureCreateInfo{ .format = m_Swapchain->vk_ImageFormat,
+							.aspectMask = vk::ImageAspectFlagBits::eColor,
+							.usage = vk::ImageUsageFlagBits::eColorAttachment,
+							.sampleCount = m_Device->GetDeviceProperties().maxSampleCount });
+
+	m_Texture->CreateFromFile("images/wall.jpg", {.format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
 	//m_Texture->CreateFromFile("images/ltc.dds", {.format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
 
 	m_Texture->TransitionLayout(VK_ImageLayout{
@@ -237,7 +245,7 @@ void RenderLayer::OnAttach()
 		m_MeshShaderInputDescriptor->GetDescriptorSetLayout(),
 	};
 	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderPipeline.get(), descriptor_set_layouts);
-	m_Swapchain->CreateFramebuffers(m_MeshShaderPipeline->vk_RenderPass, { m_DepthTex->GetImageView() });
+	m_Swapchain->CreateFramebuffers(m_MeshShaderPipeline->vk_RenderPass, { m_DepthTex->GetImageView(), m_ColorTex->GetImageView() });
 
 	image_available_semaphore = m_Device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
 	render_finished_semaphore = m_Device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
@@ -264,9 +272,10 @@ void RenderLayer::OnDetech()
 
 void RenderLayer::OnUpdate(double const& deltaTime)
 {
-	static std::array<vk::ClearValue, 2> clear_color{};
-	clear_color[0].setColor({ {{0.0f, 0.0f, 0.0f, 1.0f}} });
-	clear_color[1].setDepthStencil({.depth = 1.f, .stencil = 0});
+	static std::array<vk::ClearValue, 3> clear_color{};
+	clear_color[0].setColor({ .float32 = {{0.0f, 0.0f, 0.0f, 1.0f}} });
+	clear_color[1].setDepthStencil({ .depth = 1.f, .stencil = 0 });
+	clear_color[2].setColor({ .float32 = {{0.0f, 0.0f, 0.0f, 1.0f}} });
 
 	m_Device->GetDevice().waitForFences(fence, vk::True, UINT64_MAX);
 	m_Device->GetDevice().resetFences(fence);

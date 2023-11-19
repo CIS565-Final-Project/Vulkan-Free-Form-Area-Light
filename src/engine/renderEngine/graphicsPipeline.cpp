@@ -66,7 +66,7 @@ namespace VK_Renderer
 		};
 		// Multisampling
 		vk::PipelineMultisampleStateCreateInfo multisample_create_info{
-			.rasterizationSamples = vk::SampleCountFlagBits::e1,
+			.rasterizationSamples = m_Device.GetDeviceProperties().maxSampleCount,
 			.sampleShadingEnable = vk::False,
 			.minSampleShading = 1.f,
 			.alphaToCoverageEnable = vk::False,
@@ -142,9 +142,9 @@ namespace VK_Renderer
 
 	void VK_GraphicsPipeline::CreateRenderPass()
 	{
-		// color attachment 
+		// attachments
 		std::vector<vk::AttachmentDescription> attachments{
-			// Color Attachments
+			// Color Attachments resolve (Present to Screen)
 			{
 				.format = vk_SwapchainImageFormat,
 				.samples = vk::SampleCountFlagBits::e1,
@@ -158,25 +158,40 @@ namespace VK_Renderer
 			// Depth Attachments
 			{
 				.format = vk::Format::eD32Sfloat,
-				.samples = vk::SampleCountFlagBits::e1,
+				.samples = m_Device.GetDeviceProperties().maxSampleCount,
 				.loadOp = vk::AttachmentLoadOp::eClear,
 				.storeOp = vk::AttachmentStoreOp::eDontCare,
 				.stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
 				.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
 				.initialLayout = vk::ImageLayout::eUndefined,
 				.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+			},
+			// Color Attachments
+			{
+				.format = vk_SwapchainImageFormat,
+				.samples = m_Device.GetDeviceProperties().maxSampleCount,
+				.loadOp = vk::AttachmentLoadOp::eClear,
+				.storeOp = vk::AttachmentStoreOp::eStore,
+				.stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
+				.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
+				.initialLayout = vk::ImageLayout::eUndefined,
+				.finalLayout = vk::ImageLayout::eColorAttachmentOptimal,
 			}
 		};
 
 		// attachment reference
-		vk::AttachmentReference color_Attachment_ref{
+		vk::AttachmentReference resolve_attachment_ref{
 			.attachment = 0,
 			.layout = vk::ImageLayout::eColorAttachmentOptimal
 		};
-
 		vk::AttachmentReference depth_attachment_ref{
 			.attachment = 1,
 			.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal
+		};
+
+		vk::AttachmentReference color_Attachment_ref{
+			.attachment = 2,
+			.layout = vk::ImageLayout::eColorAttachmentOptimal
 		};
 
 		// Subpass
@@ -184,7 +199,8 @@ namespace VK_Renderer
 			.pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
 			.colorAttachmentCount = 1,
 			.pColorAttachments = &color_Attachment_ref,
-			.pDepthStencilAttachment = &depth_attachment_ref
+			.pResolveAttachments = &resolve_attachment_ref,
+			.pDepthStencilAttachment = &depth_attachment_ref,
 		};
 
 		vk::SubpassDependency dependency{

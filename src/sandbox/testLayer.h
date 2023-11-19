@@ -47,6 +47,7 @@ protected:
 	
 	uPtr<VK_Renderer::VK_Texture2D> m_Texture;
 	uPtr<VK_Renderer::VK_Texture2D> m_DepthTex;
+	uPtr<VK_Renderer::VK_Texture2D> m_ColorTex;
 
 	uPtr<VK_Renderer::VK_PipelineInput> m_PipelineInput;
 	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderPipeline;
