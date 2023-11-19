@@ -4,9 +4,6 @@
 #include <SDL_vulkan.h>
 
 #include "renderEngine/renderEngine.h"
-#include "renderEngine/instance.h"
-#include "renderEngine/swapchain.h"
-#include "renderEngine/device.h"
 
 namespace MyCore
 {
@@ -55,6 +52,8 @@ namespace MyCore
 	
 	Application::~Application()
 	{
+		m_RenderEngine->WaitIdle();
+
 		for (auto& layer : m_Layers)
 		{
 			layer->OnDetech();
@@ -69,12 +68,17 @@ namespace MyCore
 
 	void Application::Run()
 	{
+		m_RenderEngine->RecordCommandBuffer();
+
 		b_IsRunning = true;
 		SDL_Event e;
 		while (b_IsRunning)
 		{
 			while (SDL_PollEvent(&e) != 0) 
 			{
+				// compute delta time
+				double delta_t = 0.f;
+
 				if (e.type == SDL_QUIT) b_IsRunning = false;
 				// OnEvent
 				for (auto& layer : m_Layers)
@@ -85,19 +89,20 @@ namespace MyCore
 				// OnUpdate
 				for (auto& layer : m_Layers)
 				{
-					layer->OnUpdate(0.f);
+					layer->OnUpdate(delta_t);
 				}
 
 				// OnRender
 				for (auto& layer : m_Layers)
 				{
-					layer->OnRender(0.f);
+					layer->OnRender(delta_t);
 				}
+				m_RenderEngine->OnRender(delta_t);
 
 				// TODO: OnImGui
 				for (auto& layer : m_Layers)
 				{
-					layer->OnImGui(0.f);
+					layer->OnImGui(delta_t);
 				}
 			}
 		}

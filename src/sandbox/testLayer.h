@@ -39,17 +39,17 @@ public:
 	virtual void OnEvent(SDL_Event const&);
 
 	void RecordCmd();
+	void RecordSubcommand();
 
 protected:
+	VK_Renderer::VK_RenderEngine* m_Engine;
 	VK_Renderer::VK_Device* m_Device;
 	VK_Renderer::VK_Swapchain* m_Swapchain;
 
 	uPtr<VK_Renderer::PerspectiveCamera> m_Camera;
-	uPtr<VK_Renderer::VK_CommandBuffer> m_CommandBuffer;
+	uPtr<VK_Renderer::VK_CommandBuffer> m_Cmd;
 	
 	uPtr<VK_Renderer::VK_Texture2D> m_Texture;
-	uPtr<VK_Renderer::VK_Texture2D> m_DepthTex;
-	uPtr<VK_Renderer::VK_Texture2D> m_ColorTex;
 
 	uPtr<VK_Renderer::VK_PipelineInput> m_PipelineInput;
 	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderPipeline;
@@ -65,8 +65,4 @@ protected:
 	uPtr<VK_Renderer::VK_Descriptor> m_MeshShaderInputDescriptor;
 
 	uPtr<MeshletInfo> m_MeshletInfo;
-
-	uint32_t image_index;
-	vk::Semaphore image_available_semaphore;
-	vk::Semaphore render_finished_semaphore;
 };

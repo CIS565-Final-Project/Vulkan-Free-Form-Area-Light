@@ -6,25 +6,19 @@
 
 namespace VK_Renderer
 {
-	VK_GraphicsPipeline::VK_GraphicsPipeline(const VK_Device& device,
-											 const vk::Extent2D& extent,
-											 const vk::Format& imageFormat)
-		: m_Device(device),
-		  vk_Extent(extent),
-		  vk_SwapchainImageFormat(imageFormat)
+	VK_GraphicsPipeline::VK_GraphicsPipeline(const VK_Device& device)
+		: m_Device(device)
 	{
-		// create the Renderpass before creating pipeline
-		CreateRenderPass();
 	}
 
 	VK_GraphicsPipeline::~VK_GraphicsPipeline()
 	{
 		m_Device.GetDevice().destroyPipeline(vk_Pipeline);
 		m_Device.GetDevice().destroyPipelineLayout(vk_PipelineLayout);
-		m_Device.GetDevice().destroyRenderPass(vk_RenderPass);
 	}
 
-	void VK_GraphicsPipeline::CreatePipeline(const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo, 
+	void VK_GraphicsPipeline::CreatePipeline(GraphicspipelineCreateInfo const& createInfo, 
+											const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo,
 											const VK_PipelineInput& pipelineInput,
 											std::vector<vk::DescriptorSetLayout> const& descripotrSetLayouts)
 	{
@@ -128,8 +122,8 @@ namespace VK_Renderer
 			.pColorBlendState = &color_blend_create_info,
 			.pDynamicState = &dynamic_state_create_info,
 			.layout = vk_PipelineLayout,
-			.renderPass = vk_RenderPass,
-			.subpass = 0,
+			.renderPass = createInfo.renderPass,
+			.subpass = createInfo.subpassIdx
 		};
 
 		// Create Pipeline
@@ -138,88 +132,5 @@ namespace VK_Renderer
 			throw std::runtime_error("Failed to create graphics pipeline");
 		}
 		vk_Pipeline = result.value;
-	}
-
-	void VK_GraphicsPipeline::CreateRenderPass()
-	{
-		// attachments
-		std::vector<vk::AttachmentDescription> attachments{
-			// Resolve Attachments (Present to Screen)
-			{
-				.format = vk_SwapchainImageFormat,
-				.samples = vk::SampleCountFlagBits::e1,
-				.loadOp = vk::AttachmentLoadOp::eClear,
-				.storeOp = vk::AttachmentStoreOp::eStore,
-				.stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-				.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-				.initialLayout = vk::ImageLayout::eUndefined,
-				.finalLayout = vk::ImageLayout::ePresentSrcKHR,
-			},
-			// Depth Attachments
-			{
-				.format = vk::Format::eD32Sfloat,
-				.samples = m_Device.GetDeviceProperties().maxSampleCount,
-				.loadOp = vk::AttachmentLoadOp::eClear,
-				.storeOp = vk::AttachmentStoreOp::eDontCare,
-				.stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-				.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-				.initialLayout = vk::ImageLayout::eUndefined,
-				.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
-			},
-			// Color Attachments
-			{
-				.format = vk_SwapchainImageFormat,
-				.samples = m_Device.GetDeviceProperties().maxSampleCount,
-				.loadOp = vk::AttachmentLoadOp::eClear,
-				.storeOp = vk::AttachmentStoreOp::eStore,
-				.stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-				.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-				.initialLayout = vk::ImageLayout::eUndefined,
-				.finalLayout = vk::ImageLayout::eColorAttachmentOptimal,
-			}
-		};
-
-		// attachment reference
-		vk::AttachmentReference resolve_attachment_ref{
-			.attachment = 0,
-			.layout = vk::ImageLayout::eColorAttachmentOptimal
-		};
-		vk::AttachmentReference depth_attachment_ref{
-			.attachment = 1,
-			.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal
-		};
-
-		vk::AttachmentReference color_Attachment_ref{
-			.attachment = 2,
-			.layout = vk::ImageLayout::eColorAttachmentOptimal
-		};
-
-		// Subpass
-		vk::SubpassDescription subpass_description{
-			.pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
-			.colorAttachmentCount = 1,
-			.pColorAttachments = &color_Attachment_ref,
-			.pResolveAttachments = &resolve_attachment_ref,
-			.pDepthStencilAttachment = &depth_attachment_ref,
-		};
-
-		vk::SubpassDependency dependency{
-			.srcSubpass = vk::SubpassExternal,
-			.dstSubpass = 0,
-			.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests,
-			.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests,
-			.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
-		};
-
-		// Create RenderPass
-		vk::RenderPassCreateInfo create_info{
-			.attachmentCount = static_cast<uint32_t>(attachments.size()),
-			.pAttachments = attachments.data(),
-			.subpassCount = 1,
-			.pSubpasses = &subpass_description,
-			.dependencyCount = 1,
-			.pDependencies = &dependency
-		};
-		vk_RenderPass = m_Device.GetDevice().createRenderPass(create_info);
 	}
 }

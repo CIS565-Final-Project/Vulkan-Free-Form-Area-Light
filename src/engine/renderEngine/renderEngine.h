@@ -2,12 +2,16 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "instance.h"
+#include "swapchain.h"
+#include "device.h"
+#include "texture.h"
+#include "renderPass.h"
+#include "commandbuffer.h"
+#include "commandPool.h"
+
 namespace VK_Renderer
 {
-	class VK_Instance;
-	class VK_Device;
-	class VK_Swapchain;
-
 	class VK_RenderEngine
 	{
 	public:
@@ -36,9 +40,31 @@ namespace VK_Renderer
 					int const& height);
 		void Reset();
 
+		void WaitIdle() const;
+
+		void RecordCommandBuffer();
+
+		inline void PushCommand(vk::CommandBuffer const& cmd) { m_Commands.push_back(cmd); }
+		inline void AddRenderFinishSemasphore(vk::Semaphore const& semaphore) { m_RenderFinishSemaphores.push_back(semaphore); }
+
+		void OnRender(double const& deltaTime);
+
 	protected:
 		DeclarePtrWithGetFunc(protected, uPtr, VK_Instance, m, Instance);
 		DeclarePtrWithGetFunc(protected, uPtr, VK_Device, m, Device);
 		DeclarePtrWithGetFunc(protected, uPtr, VK_Swapchain, m, Swapchain);
+		DeclarePtrWithGetFunc(protected, uPtr, VK_RenderPass, m, RenderPass);
+
+		DeclarePtrWithGetFunc(protected, uPtr, VK_Texture2D, m, DepthTexture);
+		DeclarePtrWithGetFunc(protected, uPtr, VK_Texture2D, m, ColorTexture);
+
+		DeclarePtrWithGetFunc(protected, uPtr, VK_CommandBuffer, m, CommandBuffer);
+
+		DeclareWithSetFunc(protected, vk::ClearColorValue, vk, ClearColor);
+
+		vk::UniqueSemaphore vk_UniqueRenderFinishedSemaphore;
+
+		std::vector<vk::CommandBuffer> m_Commands;
+		std::vector<vk::Semaphore> m_RenderFinishSemaphores;
 	};
 }

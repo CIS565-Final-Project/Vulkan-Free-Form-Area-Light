@@ -67,10 +67,9 @@ namespace VK_Renderer
 		memcpy(mapped_data, data, size);
 		device.GetDevice().unmapMemory(staging_buffer_mem);
 
-		uPtr<VK_CommandBuffer> cmd_ptr = device.GetTransferCommandPool()->AllocateCommandBuffers();
-		VK_CommandBuffer& cmd = *cmd_ptr;
+		VK_CommandBuffer cmd = device.GetTransferCommandPool()->AllocateCommandBuffers();
 		{
-			cmd.Begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+			cmd.Begin({ .usage = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
 			cmd[0].copyBuffer(staging_buffer, buffer, vk::BufferCopy{
 				.srcOffset = 0,
 				.dstOffset = offset,
@@ -83,7 +82,6 @@ namespace VK_Renderer
 			.pCommandBuffers = &cmd[0]
 		});
 		device.GetTransferQueue().waitIdle();
-		device.GetTransferCommandPool()->FreeCommandBuffer(cmd);
 
 		FreeBuffer(device.GetDevice(), staging_buffer, staging_buffer_mem);
 	}

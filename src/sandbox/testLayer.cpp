@@ -68,7 +68,7 @@ void CreateMeshPipeline(vk::Device vk_device,
 	VK_PipelineInput input;
 	input.SetupPipelineVertexInputCreateInfo();
 
-	pipeline->CreatePipeline(shader_stages, input, descripotrSetLayouts);
+	pipeline->CreatePipeline({.renderPass = Application::GetInstance()->GetRenderEngine()->GetRenderPass()->GetRenderPass()}, shader_stages, input, descripotrSetLayouts);
 
 	vk_device.destroyShaderModule(task_module);
 	vk_device.destroyShaderModule(mesh_module);
@@ -76,8 +76,7 @@ void CreateMeshPipeline(vk::Device vk_device,
 }
 
 RenderLayer::RenderLayer(std::string const& name)
-	: Layer(name),
-	image_index(0)
+	: Layer(name)
 {
 }
 
@@ -90,12 +89,12 @@ void RenderLayer::OnAttach()
 	m_Camera->resolution = { 680, 680 };
 	m_Camera->RecomputeProjView();
 
-	m_Device = Application::GetInstance()->GetRenderEngine()->GetDevice();
-	image_available_semaphore = m_Device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
-	render_finished_semaphore = m_Device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
-	m_Swapchain = Application::GetInstance()->GetRenderEngine()->GetSwapchain();
+	m_Engine = Application::GetInstance()->GetRenderEngine();
+	m_Device = m_Engine->GetDevice();
+	m_Swapchain = m_Engine->GetSwapchain();
 
-	m_CommandBuffer = m_Device->GetGraphicsCommandPool()->AllocateCommandBuffers(3);
+	m_Cmd = mkU<VK_CommandBuffer>(m_Device->GetGraphicsCommandPool()->AllocateCommandBuffers({ .level = vk::CommandBufferLevel::eSecondary }));
+
 	m_Device->CreateDescriptiorPool(1, 10);
 
 	// Create Camera buffer
@@ -110,34 +109,8 @@ void RenderLayer::OnAttach()
 	mesh.LoadMeshFromFile("meshes/plane.obj");
 
 	m_Texture = mkU<VK_Texture2D>(*m_Device);
-	m_DepthTex = mkU<VK_Texture2D>(*m_Device);
-	m_ColorTex = mkU<VK_Texture2D>(*m_Device);
 
-	m_DepthTex->Create(vk::Extent3D{m_Swapchain->vk_ImageExtent.width, m_Swapchain->vk_ImageExtent.height, 1}, 
-						TextureCreateInfo{ .format = vk::Format::eD32Sfloat,
-											.aspectMask = vk::ImageAspectFlagBits::eDepth, 
-											.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
-											.sampleCount = m_Device->GetDeviceProperties().maxSampleCount});
-
-	m_DepthTex->TransitionLayout({
-		.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
-		.accessFlag = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
-		.pipelineStage = vk::PipelineStageFlagBits::eEarlyFragmentTests
-	});
-
-	m_ColorTex->Create(vk::Extent3D{ m_Swapchain->vk_ImageExtent.width, m_Swapchain->vk_ImageExtent.height, 1 },
-		TextureCreateInfo{ .format = m_Swapchain->vk_ImageFormat,
-							.aspectMask = vk::ImageAspectFlagBits::eColor,
-							.usage = vk::ImageUsageFlagBits::eColorAttachment,
-							.sampleCount = m_Device->GetDeviceProperties().maxSampleCount });
-
-	m_ColorTex->TransitionLayout({
-		.layout = vk::ImageLayout::eColorAttachmentOptimal,
-		.accessFlag = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite,
-		.pipelineStage = vk::PipelineStageFlagBits::eColorAttachmentOutput
-	});
-
-	m_Texture->CreateFromFile("images/wall.jpg", {.format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
+	m_Texture->CreateFromFile("images/wall.jpg", { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
 	//m_Texture->CreateFromFile("images/ltc.dds", {.format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
 
 	m_Texture->TransitionLayout(VK_ImageLayout{
@@ -246,78 +219,29 @@ void RenderLayer::OnAttach()
 		});
 
 	// Create Pipeline
-	m_MeshShaderPipeline = mkU<VK_GraphicsPipeline>(*m_Device,
-		m_Swapchain->vk_ImageExtent,
-		m_Swapchain->vk_ImageFormat);
+	m_MeshShaderPipeline = mkU<VK_GraphicsPipeline>(*m_Device);
 
 	std::vector<vk::DescriptorSetLayout> descriptor_set_layouts{
 		m_CamDescriptor->GetDescriptorSetLayout(),
 		m_MeshShaderInputDescriptor->GetDescriptorSetLayout(),
 	};
 	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderPipeline.get(), descriptor_set_layouts);
-	m_Swapchain->CreateFramebuffers(m_MeshShaderPipeline->vk_RenderPass, { m_DepthTex->GetImageView(), m_ColorTex->GetImageView() });
 
 	RecordCmd();
+	m_Engine->PushCommand((*m_Cmd)[0]);
 }
 
 void RenderLayer::OnDetech()
 {
-	m_Device->GetGraphicsQueue().waitIdle();
-
-	m_Device->GetDevice().destroySemaphore(image_available_semaphore);
-	m_Device->GetDevice().destroySemaphore(render_finished_semaphore);
-
-	m_Device->GetGraphicsCommandPool()->FreeCommandBuffer(*m_CommandBuffer);
 }
 
 void RenderLayer::OnUpdate(double const& deltaTime)
 {
+	
 }
 
 void RenderLayer::OnRender(double const& deltaTime)
 {
-#ifndef NDEBUG
-		// the validation layer implementation expects the application to explicitly synchronize with the GPU
-		m_Device->GetPresentQueue().waitIdle();
-#endif
-
-	vk::ResultValue result = m_Device->GetDevice().acquireNextImageKHR(m_Swapchain->vk_Swapchain, std::numeric_limits<uint64_t>::max(), image_available_semaphore, nullptr);
-	if (result.result != vk::Result::eSuccess)
-	{
-		throw std::runtime_error("Fail to acquire next image KHR");
-	}
-
-	image_index = result.value;
-	// Submit Command Buffer
-	VK_CommandBuffer& command_buffers = *m_CommandBuffer;
-	std::vector<vk::Semaphore> wait_semaphore{ image_available_semaphore };
-	std::array<vk::Semaphore, 1> signal_semaphores{ render_finished_semaphore };
-
-	std::array<vk::PipelineStageFlags, 1> wait_stages{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
-
-	m_Device->GetGraphicsQueue().submit(vk::SubmitInfo{
-		.waitSemaphoreCount = static_cast<uint32_t>(wait_semaphore.size()),
-		.pWaitSemaphores = wait_semaphore.data(),
-		.pWaitDstStageMask = wait_stages.data(),
-		.commandBufferCount = 1,
-		.pCommandBuffers = &command_buffers[image_index],
-		.signalSemaphoreCount = static_cast<uint32_t>(signal_semaphores.size()),
-		.pSignalSemaphores = signal_semaphores.data()
-	});
-
-	std::array<vk::SwapchainKHR, 1> swapchains{ m_Swapchain->vk_Swapchain };
-	vk::Result present_result = m_Device->GetPresentQueue().presentKHR(vk::PresentInfoKHR{
-		.waitSemaphoreCount = 1,
-		.pWaitSemaphores = signal_semaphores.data(),
-		.swapchainCount = static_cast<uint32_t>(swapchains.size()),
-		.pSwapchains = swapchains.data(),
-		.pImageIndices = &image_index
-	});
-
-	if (present_result != vk::Result::eSuccess)
-	{
-		throw std::runtime_error("Fail to present!");
-	}
 }
 
 void RenderLayer::OnImGui(double const& deltaTime)
@@ -357,47 +281,31 @@ void RenderLayer::OnEvent(SDL_Event const& e)
 
 void RenderLayer::RecordCmd()
 {
-	static std::array<vk::ClearValue, 3> clear_color{};
-	clear_color[0].setColor({ .float32 = {{0.0f, 0.0f, 0.0f, 1.0f}} });
-	clear_color[1].setDepthStencil({ .depth = 1.f, .stencil = 0 });
-	clear_color[2].setColor({ .float32 = {{0.0f, 0.0f, 0.0f, 1.0f}} });
-
-	m_CommandBuffer->Reset(0);
-	m_CommandBuffer->Reset(1);
-	m_CommandBuffer->Reset(2);
-	for(int i = 0; i < 3; ++i)
-	// Record Command Buffer
+	VK_CommandBuffer& cmd = *m_Cmd;
+	cmd.Reset();
 	{
-		VK_CommandBuffer& command_buffers = *m_CommandBuffer;
-		command_buffers.Begin(vk::CommandBufferUsageFlagBits::eSimultaneousUse, i);
+		cmd.Begin({ .usage = vk::CommandBufferUsageFlagBits::eRenderPassContinue | vk::CommandBufferUsageFlagBits::eSimultaneousUse,
+			.inheritInfo = {
+				.renderPass = Application::GetInstance()->GetRenderEngine()->GetRenderPass()->GetRenderPass(),
+				.subpass = 0}
+			});
 
-		command_buffers[i].beginRenderPass(vk::RenderPassBeginInfo{
-			.renderPass = m_MeshShaderPipeline->vk_RenderPass,
-			.framebuffer = m_Swapchain->vk_Framebuffers[i],
-			.renderArea = vk::Rect2D{
-				.offset = {0, 0},
-				.extent = m_Swapchain->vk_ImageExtent
-			},
-			.clearValueCount = clear_color.size(),
-			.pClearValues = clear_color.data(),
-			}, vk::SubpassContents::eInline);
-
-		command_buffers[i].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderPipeline->vk_Pipeline);
+		cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderPipeline->vk_Pipeline);
 
 		// Viewport and scissors
-		command_buffers[i].setViewport(0, vk::Viewport{
+		cmd[0].setViewport(0, vk::Viewport{
 			.x = 0.f,
 			.y = 0.f,
 			.width = static_cast<float>(m_Swapchain->vk_ImageExtent.width),
 			.height = static_cast<float>(m_Swapchain->vk_ImageExtent.height),
 			.minDepth = 0.f,
 			.maxDepth = 1.f
-		});
+			});
 
-		command_buffers[i].setScissor(0, vk::Rect2D{
+		cmd[0].setScissor(0, vk::Rect2D{
 			.offset = { 0, 0 },
 			.extent = m_Swapchain->vk_ImageExtent
-		});
+			});
 
 		// Draw call
 		uint32_t num_workgroups_x = (m_MeshletInfo->Triangle_Count + m_MeshletInfo->Meshlet_Size - 1) / m_MeshletInfo->Meshlet_Size;
@@ -409,14 +317,13 @@ void RenderLayer::RecordCmd()
 			m_MeshShaderInputDescriptor->GetDescriptorSet()
 		};
 
-		command_buffers[i].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+		cmd[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
 			m_MeshShaderPipeline->vk_PipelineLayout,
 			uint32_t(0),
 			arr, nullptr);
 
-		command_buffers[i].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
+		cmd[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
 
-		command_buffers[i].endRenderPass();
-		command_buffers.End(i);
+		cmd.End();
 	}
 }

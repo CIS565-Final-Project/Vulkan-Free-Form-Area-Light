@@ -115,7 +115,7 @@ namespace VK_Renderer
 
 	void VK_Texture2D::TransitionLayout(VK_ImageLayout const& targetLayout)
 	{
-		uPtr<VK_CommandBuffer> cmd_ptr = m_Device.GetTransferCommandPool()->AllocateCommandBuffers();
+		VK_CommandBuffer cmd = m_Device.GetTransferCommandPool()->AllocateCommandBuffers();
 
 		vk::ImageMemoryBarrier barrier{
 			.srcAccessMask = m_Layout.accessFlag,
@@ -129,8 +129,7 @@ namespace VK_Renderer
 			
 		};
 
-		VK_CommandBuffer& cmd = *cmd_ptr;
-		cmd.Begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+		cmd.Begin({ .usage = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
 		cmd[0].pipelineBarrier(m_Layout.pipelineStage, 
 								targetLayout.pipelineStage, 
 								vk::DependencyFlags{}, nullptr, nullptr, 
@@ -143,8 +142,6 @@ namespace VK_Renderer
 		
 		m_Device.GetTransferQueue().waitIdle();
 
-		m_Device.GetTransferCommandPool()->FreeCommandBuffer(*cmd_ptr);
-
 		m_Layout = targetLayout;
 	}
 
@@ -153,11 +150,8 @@ namespace VK_Renderer
 		VK_StagingBuffer staging_buffer(m_Device);
 		staging_buffer.CreateFromData(data, vk_Size, vk::BufferUsageFlagBits::eTransferSrc, vk::SharingMode::eExclusive);
 		
-		uPtr<VK_CommandBuffer> cmd_ptr = m_Device.GetTransferCommandPool()->AllocateCommandBuffers();
-		
-		VK_CommandBuffer& cmd = *cmd_ptr;
-
-		cmd.Begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+		VK_CommandBuffer cmd = m_Device.GetTransferCommandPool()->AllocateCommandBuffers();
+		cmd.Begin({ .usage = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
 
 		cmd[0].copyBufferToImage(staging_buffer.GetBuffer(), vk_Image, m_Layout.layout, vk::BufferImageCopy{
 			.bufferOffset = 0,
@@ -181,7 +175,6 @@ namespace VK_Renderer
 
 		m_Device.GetTransferQueue().waitIdle();
 		staging_buffer.Free();
-		m_Device.GetTransferCommandPool()->FreeCommandBuffer(*cmd_ptr);
 	}
 	
 	void VK_Texture2D::CopyTo(void* data)

@@ -39,6 +39,11 @@
 																public: \
 																	inline type __VA_ARGS__ * Get##name##() __VA_ARGS__ { return prefix##_##name.get(); }\
 
+#define DeclareWithSetFunc(accessible, type, prefix, name) accessible:\
+																	type prefix##_##name;\
+																public: \
+																	inline void Set##name##(type const&& value) { prefix##_##name = value; }\
+
 namespace VK_Renderer
 {
 	inline std::vector<char> ReadFile(const std::string& file)
