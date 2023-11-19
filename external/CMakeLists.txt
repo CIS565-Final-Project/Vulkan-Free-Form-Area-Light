@@ -9,7 +9,7 @@ add_subdirectory(tinyobjloader)
 set(EXT_ROOT_DIR "${CMAKE_SOURCE_DIR}/external")
 set(GLM_INCLUDE_DIR "${EXT_ROOT_DIR}/glm/glm")
 set(STB_INCLUDE_DIR "${EXT_ROOT_DIR}/stb")
-
+set(IMGUI_INCLUDE_DIR "${EXT_ROOT_DIR}/imgui")
 
 add_library(ExternalLibs INTERFACE)
 target_link_libraries(ExternalLibs
@@ -25,4 +25,5 @@ target_include_directories(ExternalLibs
 INTERFACE 
 	${GLM_INCLUDE_DIR}
 	${STB_INCLUDE_DIR}
+	${IMGUI_INCLUDE_DIR}
 )
