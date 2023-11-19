@@ -10,7 +10,8 @@ namespace VK_Renderer
 	{
 	public:
 		VK_Buffer(VK_Device const & device);
-		
+		virtual ~VK_Buffer();
+
 		virtual void Create(vk::DeviceSize size,
 			vk::BufferUsageFlags usage,
 			vk::SharingMode sharingMode) = 0;
@@ -24,10 +25,10 @@ namespace VK_Renderer
 			vk::DeviceSize offset,
 			vk::DeviceSize size) = 0;
 
-		virtual void Free() const;
+		virtual void Free();
 	
 	protected:
-		static void FreeBuffer(vk::Device device, vk::Buffer buffer, vk::DeviceMemory deviceMemory);
+		static void FreeBuffer(vk::Device device, vk::Buffer& buffer, vk::DeviceMemory& deviceMemory);
 
 		static void CreateBuffer(VK_Device const & device,
 								 vk::Buffer& buffer,
@@ -69,7 +70,7 @@ namespace VK_Renderer
 							vk::DeviceSize offset,
 							vk::DeviceSize size);
 
-		virtual void Free() const;
+		virtual void Free();
 
 	protected:
 		void* m_MappedMemory;

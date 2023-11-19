@@ -45,7 +45,9 @@ protected:
 	uPtr<VK_Renderer::PerspectiveCamera> m_Camera;
 	uPtr<VK_Renderer::VK_CommandBuffer> m_CommandBuffer;
 	
-	uPtr<VK_Renderer::VK_Texture> m_Texture;
+	uPtr<VK_Renderer::VK_Texture2D> m_Texture;
+	uPtr<VK_Renderer::VK_Texture2D> m_DepthTex;
+
 	uPtr<VK_Renderer::VK_PipelineInput> m_PipelineInput;
 	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderPipeline;
 

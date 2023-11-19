@@ -73,6 +73,16 @@ namespace VK_Renderer
 			.alphaToOneEnable = vk::False
 		};
 
+		// Depth Stencil State
+		vk::PipelineDepthStencilStateCreateInfo depth_stencil_create_info{
+			.depthTestEnable = vk::True,
+			.depthWriteEnable = vk::True,
+			.depthCompareOp = vk::CompareOp::eLess,
+			.depthBoundsTestEnable = vk::False,
+			.stencilTestEnable = vk::False
+		};
+
+		// Color Blend State
 		vk::PipelineColorBlendAttachmentState color_blend_attachment{
 			.blendEnable = vk::False,
 
@@ -114,6 +124,7 @@ namespace VK_Renderer
 			.pViewportState = &viewport_state_create_info,
 			.pRasterizationState = &rasterization_create_info,
 			.pMultisampleState = &multisample_create_info,
+			.pDepthStencilState = &depth_stencil_create_info,
 			.pColorBlendState = &color_blend_create_info,
 			.pDynamicState = &dynamic_state_create_info,
 			.layout = vk_PipelineLayout,
@@ -132,42 +143,62 @@ namespace VK_Renderer
 	void VK_GraphicsPipeline::CreateRenderPass()
 	{
 		// color attachment 
-		vk::AttachmentDescription attachment_description{
-			.format = vk_SwapchainImageFormat,
-			.samples = vk::SampleCountFlagBits::e1,
-			.loadOp = vk::AttachmentLoadOp::eClear,
-			.storeOp = vk::AttachmentStoreOp::eStore,
-			.stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-			.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-			.initialLayout = vk::ImageLayout::eUndefined,
-			.finalLayout = vk::ImageLayout::ePresentSrcKHR,
+		std::vector<vk::AttachmentDescription> attachments{
+			// Color Attachments
+			{
+				.format = vk_SwapchainImageFormat,
+				.samples = vk::SampleCountFlagBits::e1,
+				.loadOp = vk::AttachmentLoadOp::eClear,
+				.storeOp = vk::AttachmentStoreOp::eStore,
+				.stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
+				.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
+				.initialLayout = vk::ImageLayout::eUndefined,
+				.finalLayout = vk::ImageLayout::ePresentSrcKHR,
+			},
+			// Depth Attachments
+			{
+				.format = vk::Format::eD32Sfloat,
+				.samples = vk::SampleCountFlagBits::e1,
+				.loadOp = vk::AttachmentLoadOp::eClear,
+				.storeOp = vk::AttachmentStoreOp::eDontCare,
+				.stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
+				.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
+				.initialLayout = vk::ImageLayout::eUndefined,
+				.finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+			}
 		};
 
 		// attachment reference
-		vk::AttachmentReference attachment_ref{
+		vk::AttachmentReference color_Attachment_ref{
 			.attachment = 0,
 			.layout = vk::ImageLayout::eColorAttachmentOptimal
+		};
+
+		vk::AttachmentReference depth_attachment_ref{
+			.attachment = 1,
+			.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal
 		};
 
 		// Subpass
 		vk::SubpassDescription subpass_description{
 			.pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
 			.colorAttachmentCount = 1,
-			.pColorAttachments = &attachment_ref
+			.pColorAttachments = &color_Attachment_ref,
+			.pDepthStencilAttachment = &depth_attachment_ref
 		};
 
 		vk::SubpassDependency dependency{
 			.srcSubpass = vk::SubpassExternal,
 			.dstSubpass = 0,
-			.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
-			.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
-			.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite,
+			.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests,
+			.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eEarlyFragmentTests,
+			.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
 		};
 
 		// Create RenderPass
 		vk::RenderPassCreateInfo create_info{
-			.attachmentCount = 1,
-			.pAttachments = &attachment_description,
+			.attachmentCount = static_cast<uint32_t>(attachments.size()),
+			.pAttachments = attachments.data(),
 			.subpassCount = 1,
 			.pSubpasses = &subpass_description,
 			.dependencyCount = 1,

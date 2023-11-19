@@ -106,19 +106,24 @@ namespace VK_Renderer
 		}
 	}
 
-	void VK_Swapchain::CreateFramebuffers(vk::RenderPass renderPass)
+	void VK_Swapchain::CreateFramebuffers(vk::RenderPass renderPass, 
+										std::vector<vk::ImageView> attachments)
 	{
 		vk_Framebuffers.resize(vk_SwapchainImageViews.size());
 
+		attachments.insert(attachments.begin(), vk::ImageView());
+
 		for (size_t i = 0; i < vk_Framebuffers.size(); ++i)
 		{
+			*attachments.begin() = vk_SwapchainImageViews[i];
+
 			vk_Framebuffers[i] = m_Device.GetDevice().createFramebuffer(vk::FramebufferCreateInfo{
 				.renderPass = renderPass,
-				.attachmentCount = 1,
-				.pAttachments = &vk_SwapchainImageViews[i],
+				.attachmentCount = static_cast<uint32_t>(attachments.size()),
+				.pAttachments = attachments.data(),
 				.width = vk_ImageExtent.width,
 				.height = vk_ImageExtent.height,
-				.layers = 1
+				.layers = 1,
 			});
 		}
 	}

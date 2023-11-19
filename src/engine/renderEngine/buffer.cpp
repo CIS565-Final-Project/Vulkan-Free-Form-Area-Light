@@ -7,15 +7,17 @@
 
 namespace VK_Renderer
 {
-	void VK_Buffer::FreeBuffer(vk::Device device, vk::Buffer buffer, vk::DeviceMemory deviceMemory)
+	void VK_Buffer::FreeBuffer(vk::Device device, vk::Buffer& buffer, vk::DeviceMemory& deviceMemory)
 	{
 		if (buffer)
 		{
 			device.destroyBuffer(buffer);
+			buffer = nullptr;
 		}
 		if (deviceMemory)
 		{
 			device.freeMemory(deviceMemory);
+			deviceMemory = nullptr;
 		}
 	}
 
@@ -91,7 +93,12 @@ namespace VK_Renderer
 	{
 	}
 
-	void VK_Buffer::Free() const
+	VK_Buffer::~VK_Buffer()
+	{
+		Free();
+	}
+
+	void VK_Buffer::Free()
 	{
 		FreeBuffer(m_Device.GetDevice(), vk_Buffer, vk_DeviceMemory);
 	}
@@ -127,7 +134,7 @@ namespace VK_Renderer
 		std::memcpy(reinterpret_cast<char*>(m_MappedMemory) + offset, data, size);
 	}
 
-	void VK_StagingBuffer::Free() const
+	void VK_StagingBuffer::Free()
 	{
 		m_Device.GetDevice().unmapMemory(vk_DeviceMemory);
 		FreeBuffer(m_Device.GetDevice(), vk_Buffer, vk_DeviceMemory);

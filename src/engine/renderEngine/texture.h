@@ -15,22 +15,30 @@ namespace VK_Renderer
 		uint32_t queueFamily{ 0 };
 	};
 
-	class VK_Texture
+	struct TextureCreateInfo
+	{
+		vk::Format format;
+		vk::ImageAspectFlags aspectMask{ vk::ImageAspectFlagBits::eColor };
+		vk::ImageUsageFlags usage;
+		vk::SampleCountFlagBits sampleCount{ vk::SampleCountFlagBits::e1 };
+		vk::SharingMode sharingMode{ vk::SharingMode::eExclusive };
+		uint32_t mipLevel{ 1 };
+		uint32_t arrayLayer{ 1 };
+	};
+
+	class VK_Texture2D
 	{
 	public:
-		VK_Texture(VK_Device const& device);
-		~VK_Texture();
+		VK_Texture2D(VK_Device const& device);
+		~VK_Texture2D();
+
+		void Create(vk::Extent3D const& extent, 
+					TextureCreateInfo const& createInfo);
 
 		void CreateFromFile(std::string const& file,
-							uint32_t const& mipLevels,
-							vk::Format format,
-							vk::ImageUsageFlags usage,
-							vk::SharingMode sharingMode);
+							TextureCreateInfo const& createInfo);
 		void CreateFromImage(Image const& image, 
-							uint32_t const& mipLevels,
-							vk::Format format, 
-							vk::ImageUsageFlags usage,
-							vk::SharingMode sharingMode);
+							TextureCreateInfo const& createInfo);
 
 		void Free();
 

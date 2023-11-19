@@ -8,71 +8,50 @@
 
 namespace VK_Renderer
 {
-	VK_Texture::VK_Texture(VK_Device const& device)
+	VK_Texture2D::VK_Texture2D(VK_Device const& device)
 		: m_Device(device), 
 		  m_Layout{.accessFlag = vk::AccessFlagBits::eNone, 
 					.pipelineStage = vk::PipelineStageFlagBits::eTopOfPipe}
 	{
 	}
-	VK_Texture::~VK_Texture()
+	VK_Texture2D::~VK_Texture2D()
 	{
 		Free();
 	}
-	void VK_Texture::CreateFromFile(std::string const& file, 
-									uint32_t const& mipLevels,
-									vk::Format format,
-									vk::ImageUsageFlags usage,
-									vk::SharingMode sharingMode)
-	{
-		Image image;
-		image.LoadFromFile(file);
-		CreateFromImage(image, mipLevels, format, usage, sharingMode);
-	}
-	void VK_Texture::CreateFromImage(Image const& image, 
-									 uint32_t const& mipLevels,
-									 vk::Format format,
-									 vk::ImageUsageFlags usage,
-									 vk::SharingMode sharingMode)
-	{
-		vk_Extent = { static_cast<uint32_t>(image.GetResolution().x),
-					  static_cast<uint32_t>(image.GetResolution().y), 
-					1 };
 
-		vk_Size = image.GetSize();
+	void VK_Texture2D::Create(vk::Extent3D const& extent,
+								TextureCreateInfo const& createInfo)
+	{
+		Free();
 
-		vk_Format = format;
+		vk_Extent = extent;
+
+		vk_Format = createInfo.format;
 
 		vk_SubresourceRange = {
-			.aspectMask = vk::ImageAspectFlagBits::eColor,
+			.aspectMask = createInfo.aspectMask,
 			.baseMipLevel = 0,
-			.levelCount = 1,
+			.levelCount = createInfo.mipLevel,
 			.baseArrayLayer = 0,
-			.layerCount = 1
+			.layerCount = createInfo.arrayLayer
 		};
 
 		vk_Image = m_Device.GetDevice().createImage(vk::ImageCreateInfo{
 			.imageType = vk::ImageType::e2D,
-			.format = format,
+			.format = vk_Format,
 			.extent = vk_Extent,
-			.mipLevels = mipLevels,
-			.arrayLayers = 1,
+			.mipLevels = vk_SubresourceRange.levelCount,
+			.arrayLayers = vk_SubresourceRange.layerCount,
 			.samples = vk::SampleCountFlagBits::e1,
 			.tiling = vk::ImageTiling::eOptimal,
-			.usage = usage | vk::ImageUsageFlagBits::eTransferDst,
-			.sharingMode = sharingMode,
+			.usage = createInfo.usage | vk::ImageUsageFlagBits::eTransferDst,
+			.sharingMode = createInfo.sharingMode,
 			.initialLayout = vk::ImageLayout::eUndefined,
 		});
 
 		vk_DeviceMemory = m_Device.AllocateImageMemory(vk_Image);
 
 		m_Device.GetDevice().bindImageMemory(vk_Image, vk_DeviceMemory.get(), 0);
-
-		TransitionLayout(VK_ImageLayout{
-			.layout = vk::ImageLayout::eTransferDstOptimal,
-			.accessFlag = vk::AccessFlagBits::eMemoryWrite,
-			.pipelineStage = vk::PipelineStageFlagBits::eTransfer,
-		});
-		CopyFrom(image.GetRawData());
 
 		// Create Image View
 		vk_ImageView = m_Device.GetDevice().createImageView(vk::ImageViewCreateInfo{
@@ -81,6 +60,28 @@ namespace VK_Renderer
 			.format = vk_Format,
 			.subresourceRange = vk_SubresourceRange,
 		});
+	}
+
+	void VK_Texture2D::CreateFromFile(std::string const& file, 
+									TextureCreateInfo const& createInfo)
+	{
+		CreateFromImage(Image{ file }, createInfo);
+	}
+	void VK_Texture2D::CreateFromImage(Image const& image, 
+										TextureCreateInfo const& createInfo)
+	{
+		vk_Size = image.GetSize();
+
+		Create({ static_cast<uint32_t>(image.GetResolution().x),
+				 static_cast<uint32_t>(image.GetResolution().y),
+				 1 
+				}, createInfo);
+		TransitionLayout(VK_ImageLayout{
+			.layout = vk::ImageLayout::eTransferDstOptimal,
+			.accessFlag = vk::AccessFlagBits::eMemoryWrite,
+			.pipelineStage = vk::PipelineStageFlagBits::eTransfer,
+		});
+		CopyFrom(image.GetRawData());
 
 		vk::PhysicalDeviceProperties property = m_Device.GetPhysicalDevice().getProperties();
 
@@ -103,14 +104,16 @@ namespace VK_Renderer
 		});
 	}
 
-	void VK_Texture::Free()
+	void VK_Texture2D::Free()
 	{
+		m_Layout = VK_ImageLayout{ .accessFlag = vk::AccessFlagBits::eNone,
+									.pipelineStage = vk::PipelineStageFlagBits::eTopOfPipe };
 		if (vk_Sampler) m_Device.GetDevice().destroySampler(vk_Sampler);
 		if (vk_ImageView) m_Device.GetDevice().destroyImageView(vk_ImageView);
 		if (vk_Image) m_Device.GetDevice().destroyImage(vk_Image);
 	}
 
-	void VK_Texture::TransitionLayout(VK_ImageLayout const& targetLayout)
+	void VK_Texture2D::TransitionLayout(VK_ImageLayout const& targetLayout)
 	{
 		uPtr<VK_CommandBuffer> cmd_ptr = m_Device.GetTransferCommandPool()->AllocateCommandBuffers();
 
@@ -145,7 +148,7 @@ namespace VK_Renderer
 		m_Layout = targetLayout;
 	}
 
-	void VK_Texture::CopyFrom(void const* data, vk::Offset3D const& offset)
+	void VK_Texture2D::CopyFrom(void const* data, vk::Offset3D const& offset)
 	{
 		VK_StagingBuffer staging_buffer(m_Device);
 		staging_buffer.CreateFromData(data, vk_Size, vk::BufferUsageFlagBits::eTransferSrc, vk::SharingMode::eExclusive);
@@ -181,7 +184,7 @@ namespace VK_Renderer
 		m_Device.GetTransferCommandPool()->FreeCommandBuffer(*cmd_ptr);
 	}
 	
-	void VK_Texture::CopyTo(void* data)
+	void VK_Texture2D::CopyTo(void* data)
 	{
 		
 	}

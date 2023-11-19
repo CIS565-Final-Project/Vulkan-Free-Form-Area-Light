@@ -5,7 +5,11 @@ namespace VK_Renderer
 	class Image
 	{
 	public:
+		Image() {}
+		Image(std::string const& file);
 		virtual ~Image();
+
+		virtual void Free();
 
 		virtual void* GetRawData() const { return m_RawData; }
 		virtual void LoadFromFile(std::string const& file);

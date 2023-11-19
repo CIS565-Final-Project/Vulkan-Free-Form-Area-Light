@@ -105,10 +105,23 @@ void RenderLayer::OnAttach()
 	//mesh.LoadMeshFromFile("meshes/cube.obj");
 	mesh.LoadMeshFromFile("meshes/wahoo.obj");
 
-	m_Texture = mkU<VK_Texture>(*m_Device);
+	m_Texture = mkU<VK_Texture2D>(*m_Device);
+	m_DepthTex = mkU<VK_Texture2D>(*m_Device);
 
-	//m_Texture->CreateFromFile("images/wahoo.bmp", 1, vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eSampled, vk::SharingMode::eExclusive);
-	m_Texture->CreateFromFile("images/ltc.dds", 1, vk::Format::eR32G32B32A32Sfloat, vk::ImageUsageFlagBits::eSampled, vk::SharingMode::eExclusive);
+	m_DepthTex->Create(vk::Extent3D{m_Swapchain->vk_ImageExtent.width, m_Swapchain->vk_ImageExtent.height, 1}, 
+						TextureCreateInfo{ .format = vk::Format::eD32Sfloat,
+								.aspectMask = vk::ImageAspectFlagBits::eDepth, 
+								.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment});
+
+	m_DepthTex->TransitionLayout({
+		.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+		.accessFlag = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
+		.pipelineStage = vk::PipelineStageFlagBits::eEarlyFragmentTests
+	});
+
+	m_Texture->CreateFromFile("images/wahoo.bmp", {.format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
+	//m_Texture->CreateFromFile("images/ltc.dds", {.format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
+
 	m_Texture->TransitionLayout(VK_ImageLayout{
 			.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
 			.accessFlag = vk::AccessFlagBits::eShaderRead,
@@ -224,7 +237,7 @@ void RenderLayer::OnAttach()
 		m_MeshShaderInputDescriptor->GetDescriptorSetLayout(),
 	};
 	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderPipeline.get(), descriptor_set_layouts);
-	m_Swapchain->CreateFramebuffers(m_MeshShaderPipeline->vk_RenderPass);
+	m_Swapchain->CreateFramebuffers(m_MeshShaderPipeline->vk_RenderPass, { m_DepthTex->GetImageView() });
 
 	image_available_semaphore = m_Device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
 	render_finished_semaphore = m_Device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
@@ -242,29 +255,18 @@ void RenderLayer::OnDetech()
 	}
 	m_Device->GetDevice().resetFences(fence);
 
-	m_CamDescriptor.reset();
-	m_MeshShaderInputDescriptor.reset();
-
-	m_CamBuffer->Free();
-	m_MeshletInfoBuffer->Free();
-	m_TriangleBuffer->Free();
-	m_PositionBuffer->Free();
-	m_NormalBuffer->Free();
-	m_UVBuffer->Free();
-
 	m_Device->GetDevice().destroyFence(fence);
 	m_Device->GetDevice().destroySemaphore(image_available_semaphore);
 	m_Device->GetDevice().destroySemaphore(render_finished_semaphore);
-
-	m_MeshShaderPipeline.reset();
 
 	m_Device->GetGraphicsCommandPool()->FreeCommandBuffer(*m_CommandBuffer);
 }
 
 void RenderLayer::OnUpdate(double const& deltaTime)
 {
-	static vk::ClearValue clear_color{};
-	clear_color.setColor({ {{0.0f, 0.0f, 0.0f, 1.0f}} });
+	static std::array<vk::ClearValue, 2> clear_color{};
+	clear_color[0].setColor({ {{0.0f, 0.0f, 0.0f, 1.0f}} });
+	clear_color[1].setDepthStencil({.depth = 1.f, .stencil = 0});
 
 	m_Device->GetDevice().waitForFences(fence, vk::True, UINT64_MAX);
 	m_Device->GetDevice().resetFences(fence);
@@ -289,8 +291,8 @@ void RenderLayer::OnUpdate(double const& deltaTime)
 				.offset = {0, 0},
 				.extent = m_Swapchain->vk_ImageExtent
 			},
-			.clearValueCount = 1,
-			.pClearValues = &clear_color,
+			.clearValueCount = clear_color.size(),
+			.pClearValues = clear_color.data(),
 			}, vk::SubpassContents::eInline);
 
 		command_buffers[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderPipeline->vk_Pipeline);

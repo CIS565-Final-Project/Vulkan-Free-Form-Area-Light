@@ -18,7 +18,8 @@ namespace VK_Renderer
 		~VK_Swapchain();
 
 		void CreateImageViews();
-		void CreateFramebuffers(vk::RenderPass renderPass);
+		void CreateFramebuffers(vk::RenderPass renderPass, 
+								std::vector<vk::ImageView> attachments);
 
 	protected:
 		vk::SurfaceFormatKHR ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) const;

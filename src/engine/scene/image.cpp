@@ -5,14 +5,28 @@
 #include <iostream>
 namespace VK_Renderer
 {
-	Image::~Image()
+    Image::Image(std::string const& file)
+    {
+        LoadFromFile(file);
+    }
+
+    Image::~Image()
 	{
-		if (m_RawData) free(m_RawData);
-		m_RawData = nullptr;
+        Free();
 	}
+
+    void Image::Free()
+    {
+        if (m_RawData) free(m_RawData);
+        m_RawData = nullptr;
+        m_Size = 0;
+        m_Resolution = {};
+    }
 
 	void Image::LoadFromFile(std::string const& file)
 	{
+        Free();
+
 		size_t postfix_start = file.find_last_of(".");
 		std::string file_postfix = file.substr(postfix_start + 1, file.size() - postfix_start);
 		std::cout << "load a " << file_postfix << " image" << std::endl;
