@@ -88,16 +88,20 @@ void RenderLayer::OnAttach()
 		.position = {0, 0, -10}
 	};
 	m_Camera->resolution = { 680, 680 };
+	m_Camera->RecomputeProjView();
 
 	m_Device = Application::GetInstance()->GetRenderEngine()->GetDevice();
+	image_available_semaphore = m_Device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
+	render_finished_semaphore = m_Device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
 	m_Swapchain = Application::GetInstance()->GetRenderEngine()->GetSwapchain();
 
-	m_CommandBuffer = m_Device->GetGraphicsCommandPool()->AllocateCommandBuffers();
+	m_CommandBuffer = m_Device->GetGraphicsCommandPool()->AllocateCommandBuffers(3);
 	m_Device->CreateDescriptiorPool(1, 10);
 
 	// Create Camera buffer
 	m_CamBuffer = mkU<VK_StagingBuffer>(*m_Device);
-	m_CamBuffer->Create(sizeof(CameraUBO), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
+	glm::mat4 vp = m_Camera->GetProjViewMatrix();
+	m_CamBuffer->CreateFromData(&vp, sizeof(CameraUBO), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
 	Mesh mesh;
 	//mesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
@@ -126,6 +130,12 @@ void RenderLayer::OnAttach()
 							.aspectMask = vk::ImageAspectFlagBits::eColor,
 							.usage = vk::ImageUsageFlagBits::eColorAttachment,
 							.sampleCount = m_Device->GetDeviceProperties().maxSampleCount });
+
+	m_ColorTex->TransitionLayout({
+		.layout = vk::ImageLayout::eColorAttachmentOptimal,
+		.accessFlag = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite,
+		.pipelineStage = vk::PipelineStageFlagBits::eColorAttachmentOutput
+	});
 
 	m_Texture->CreateFromFile("images/wall.jpg", {.format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
 	//m_Texture->CreateFromFile("images/ltc.dds", {.format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
@@ -247,23 +257,13 @@ void RenderLayer::OnAttach()
 	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderPipeline.get(), descriptor_set_layouts);
 	m_Swapchain->CreateFramebuffers(m_MeshShaderPipeline->vk_RenderPass, { m_DepthTex->GetImageView(), m_ColorTex->GetImageView() });
 
-	image_available_semaphore = m_Device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
-	render_finished_semaphore = m_Device->GetDevice().createSemaphore(vk::SemaphoreCreateInfo{});
-	fence = m_Device->GetDevice().createFence(vk::FenceCreateInfo{
-		.flags = vk::FenceCreateFlagBits::eSignaled
-		});
+	RecordCmd();
 }
 
 void RenderLayer::OnDetech()
 {
-	vk::Result result = m_Device->GetDevice().waitForFences(fence, vk::True, UINT64_MAX);
-	if (result != vk::Result::eSuccess)
-	{
-		std::cout << "wait for Fence failed!" << std::endl;;
-	}
-	m_Device->GetDevice().resetFences(fence);
+	m_Device->GetGraphicsQueue().waitIdle();
 
-	m_Device->GetDevice().destroyFence(fence);
 	m_Device->GetDevice().destroySemaphore(image_available_semaphore);
 	m_Device->GetDevice().destroySemaphore(render_finished_semaphore);
 
@@ -272,89 +272,25 @@ void RenderLayer::OnDetech()
 
 void RenderLayer::OnUpdate(double const& deltaTime)
 {
-	static std::array<vk::ClearValue, 3> clear_color{};
-	clear_color[0].setColor({ .float32 = {{0.0f, 0.0f, 0.0f, 1.0f}} });
-	clear_color[1].setDepthStencil({ .depth = 1.f, .stencil = 0 });
-	clear_color[2].setColor({ .float32 = {{0.0f, 0.0f, 0.0f, 1.0f}} });
-
-	m_Device->GetDevice().waitForFences(fence, vk::True, UINT64_MAX);
-	m_Device->GetDevice().resetFences(fence);
-
-	vk::ResultValue result = m_Device->GetDevice().acquireNextImageKHR(m_Swapchain->vk_Swapchain, UINT64_MAX, image_available_semaphore, nullptr);
-	if (result.result != vk::Result::eSuccess)
-	{
-		throw std::runtime_error("Fail to acquire next image KHR");
-	}
-	image_index = result.value;
-	m_CommandBuffer->Reset();
-
-	// Record Command Buffer
-	{
-		VK_CommandBuffer& command_buffers = *m_CommandBuffer;
-		command_buffers.Begin(vk::CommandBufferUsageFlagBits::eRenderPassContinue);
-
-		command_buffers[0].beginRenderPass(vk::RenderPassBeginInfo{
-			.renderPass = m_MeshShaderPipeline->vk_RenderPass,
-			.framebuffer = m_Swapchain->vk_Framebuffers[image_index],
-			.renderArea = vk::Rect2D{
-				.offset = {0, 0},
-				.extent = m_Swapchain->vk_ImageExtent
-			},
-			.clearValueCount = clear_color.size(),
-			.pClearValues = clear_color.data(),
-			}, vk::SubpassContents::eInline);
-
-		command_buffers[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderPipeline->vk_Pipeline);
-
-		// Viewport and scissors
-		command_buffers[0].setViewport(0, vk::Viewport{
-			.x = 0.f,
-			.y = 0.f,
-			.width = static_cast<float>(m_Swapchain->vk_ImageExtent.width),
-			.height = static_cast<float>(m_Swapchain->vk_ImageExtent.height),
-			.minDepth = 0.f,
-			.maxDepth = 1.f
-			});
-
-		command_buffers[0].setScissor(0, vk::Rect2D{
-			.offset = { 0, 0 },
-			.extent = m_Swapchain->vk_ImageExtent
-			});
-
-		// Draw call
-		uint32_t num_workgroups_x = (m_MeshletInfo->Triangle_Count + m_MeshletInfo->Meshlet_Size - 1) / m_MeshletInfo->Meshlet_Size;
-		uint32_t num_workgroups_y = 1;
-		uint32_t num_workgroups_z = 1;
-		m_Camera->RecomputeProjView();
-		glm::mat4 view_proj_mat = m_Camera->GetProjViewMatrix();
-		//m_CameraUniform->m_MappedBuffers[image_index].Update(&view_proj_mat, 0, sizeof(glm::mat4));
-		m_CamBuffer->Update(&view_proj_mat, 0, sizeof(glm::mat4));
-		glm::vec4 v0 = view_proj_mat * glm::vec4(1., -1., 0, 1.f);
-		glm::vec4 v1 = view_proj_mat * glm::vec4(1., 1., 0, 1.f);
-		glm::vec4 v2 = view_proj_mat * glm::vec4(-1., -1., 0, 1.f);
-
-		vk::ArrayProxy<vk::DescriptorSet> arr{
-			m_CamDescriptor->GetDescriptorSet(),
-			m_MeshShaderInputDescriptor->GetDescriptorSet()
-		};
-
-		command_buffers[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-			m_MeshShaderPipeline->vk_PipelineLayout,
-			uint32_t(0),
-			arr, nullptr);
-
-		command_buffers[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
-
-		command_buffers[0].endRenderPass();
-		command_buffers.End();
-	}
 }
 
 void RenderLayer::OnRender(double const& deltaTime)
 {
+#ifndef NDEBUG
+		// the validation layer implementation expects the application to explicitly synchronize with the GPU
+		m_Device->GetPresentQueue().waitIdle();
+#endif
+
+	vk::ResultValue result = m_Device->GetDevice().acquireNextImageKHR(m_Swapchain->vk_Swapchain, std::numeric_limits<uint64_t>::max(), image_available_semaphore, nullptr);
+	if (result.result != vk::Result::eSuccess)
+	{
+		throw std::runtime_error("Fail to acquire next image KHR");
+	}
+
+	image_index = result.value;
 	// Submit Command Buffer
 	VK_CommandBuffer& command_buffers = *m_CommandBuffer;
-	std::array<vk::Semaphore, 1> wait_semaphore{ image_available_semaphore };
+	std::vector<vk::Semaphore> wait_semaphore{ image_available_semaphore };
 	std::array<vk::Semaphore, 1> signal_semaphores{ render_finished_semaphore };
 
 	std::array<vk::PipelineStageFlags, 1> wait_stages{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
@@ -364,19 +300,24 @@ void RenderLayer::OnRender(double const& deltaTime)
 		.pWaitSemaphores = wait_semaphore.data(),
 		.pWaitDstStageMask = wait_stages.data(),
 		.commandBufferCount = 1,
-		.pCommandBuffers = &command_buffers[0],
+		.pCommandBuffers = &command_buffers[image_index],
 		.signalSemaphoreCount = static_cast<uint32_t>(signal_semaphores.size()),
 		.pSignalSemaphores = signal_semaphores.data()
-		}, fence);
+	});
 
 	std::array<vk::SwapchainKHR, 1> swapchains{ m_Swapchain->vk_Swapchain };
-	m_Device->GetPresentQueue().presentKHR(vk::PresentInfoKHR{
+	vk::Result present_result = m_Device->GetPresentQueue().presentKHR(vk::PresentInfoKHR{
 		.waitSemaphoreCount = 1,
 		.pWaitSemaphores = signal_semaphores.data(),
 		.swapchainCount = static_cast<uint32_t>(swapchains.size()),
 		.pSwapchains = swapchains.data(),
 		.pImageIndices = &image_index
-		});
+	});
+
+	if (present_result != vk::Result::eSuccess)
+	{
+		throw std::runtime_error("Fail to present!");
+	}
 }
 
 void RenderLayer::OnImGui(double const& deltaTime)
@@ -397,13 +338,85 @@ void RenderLayer::OnEvent(SDL_Event const& e)
 			glm::vec2 offset = 0.001f * glm::vec2(mouse_cur - mouse_pre);
 			m_Camera->m_Transform.Translate({ -offset.x, offset.y, 0 });
 			m_Camera->RecomputeProjView();
+			glm::mat4 view_proj_mat = m_Camera->GetProjViewMatrix();
+
+			m_CamBuffer->Update(&view_proj_mat, 0, sizeof(glm::mat4));
 		}
 		if (mouseState & SDL_BUTTON(SDL_BUTTON_MIDDLE))
 		{
 			glm::vec2 offset = 0.01f * glm::vec2(mouse_cur - mouse_pre);
 			m_Camera->m_Transform.RotateAround(glm::vec3(0.f), { 0.1f * offset.y, -offset.x, 0 });
 			m_Camera->RecomputeProjView();
+			glm::mat4 view_proj_mat = m_Camera->GetProjViewMatrix();
+
+			m_CamBuffer->Update(&view_proj_mat, 0, sizeof(glm::mat4));
 		}
 		mouse_pre = mouse_cur;
+	}
+}
+
+void RenderLayer::RecordCmd()
+{
+	static std::array<vk::ClearValue, 3> clear_color{};
+	clear_color[0].setColor({ .float32 = {{0.0f, 0.0f, 0.0f, 1.0f}} });
+	clear_color[1].setDepthStencil({ .depth = 1.f, .stencil = 0 });
+	clear_color[2].setColor({ .float32 = {{0.0f, 0.0f, 0.0f, 1.0f}} });
+
+	m_CommandBuffer->Reset(0);
+	m_CommandBuffer->Reset(1);
+	m_CommandBuffer->Reset(2);
+	for(int i = 0; i < 3; ++i)
+	// Record Command Buffer
+	{
+		VK_CommandBuffer& command_buffers = *m_CommandBuffer;
+		command_buffers.Begin(vk::CommandBufferUsageFlagBits::eSimultaneousUse, i);
+
+		command_buffers[i].beginRenderPass(vk::RenderPassBeginInfo{
+			.renderPass = m_MeshShaderPipeline->vk_RenderPass,
+			.framebuffer = m_Swapchain->vk_Framebuffers[i],
+			.renderArea = vk::Rect2D{
+				.offset = {0, 0},
+				.extent = m_Swapchain->vk_ImageExtent
+			},
+			.clearValueCount = clear_color.size(),
+			.pClearValues = clear_color.data(),
+			}, vk::SubpassContents::eInline);
+
+		command_buffers[i].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderPipeline->vk_Pipeline);
+
+		// Viewport and scissors
+		command_buffers[i].setViewport(0, vk::Viewport{
+			.x = 0.f,
+			.y = 0.f,
+			.width = static_cast<float>(m_Swapchain->vk_ImageExtent.width),
+			.height = static_cast<float>(m_Swapchain->vk_ImageExtent.height),
+			.minDepth = 0.f,
+			.maxDepth = 1.f
+		});
+
+		command_buffers[i].setScissor(0, vk::Rect2D{
+			.offset = { 0, 0 },
+			.extent = m_Swapchain->vk_ImageExtent
+		});
+
+		// Draw call
+		uint32_t num_workgroups_x = (m_MeshletInfo->Triangle_Count + m_MeshletInfo->Meshlet_Size - 1) / m_MeshletInfo->Meshlet_Size;
+		uint32_t num_workgroups_y = 1;
+		uint32_t num_workgroups_z = 1;
+
+		vk::ArrayProxy<vk::DescriptorSet> arr{
+			m_CamDescriptor->GetDescriptorSet(),
+			m_MeshShaderInputDescriptor->GetDescriptorSet()
+		};
+
+		command_buffers[i].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+			m_MeshShaderPipeline->vk_PipelineLayout,
+			uint32_t(0),
+			arr, nullptr);
+
+		command_buffers[i].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
+
+		command_buffers[i].endRenderPass();
+		command_buffers.End(i);
 	}
 }

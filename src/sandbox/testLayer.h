@@ -38,6 +38,8 @@ public:
 
 	virtual void OnEvent(SDL_Event const&);
 
+	void RecordCmd();
+
 protected:
 	VK_Renderer::VK_Device* m_Device;
 	VK_Renderer::VK_Swapchain* m_Swapchain;
@@ -67,5 +69,4 @@ protected:
 	uint32_t image_index;
 	vk::Semaphore image_available_semaphore;
 	vk::Semaphore render_finished_semaphore;
-	vk::Fence fence;
 };

@@ -87,7 +87,7 @@ namespace VK_Renderer
 	void VK_Swapchain::CreateImageViews()
 	{
 		vk_SwapchainImageViews.resize(vk_SwapchainImages.size());
-		VkImageViewCreateInfo create_info;
+
 		for (size_t i = 0; i < vk_SwapchainImageViews.size(); ++i)
 		{
 			vk_SwapchainImageViews[i] = m_Device.GetDevice().createImageView(vk::ImageViewCreateInfo{

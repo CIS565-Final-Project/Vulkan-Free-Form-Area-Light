@@ -144,7 +144,7 @@ namespace VK_Renderer
 	{
 		// attachments
 		std::vector<vk::AttachmentDescription> attachments{
-			// Color Attachments resolve (Present to Screen)
+			// Resolve Attachments (Present to Screen)
 			{
 				.format = vk_SwapchainImageFormat,
 				.samples = vk::SampleCountFlagBits::e1,
