@@ -90,11 +90,11 @@ namespace MyCore
 		// Rendering
 		ImDrawData* main_draw_data = ImGui::GetDrawData();
 		const bool main_is_minimized = (main_draw_data->DisplaySize.x <= 0.0f || main_draw_data->DisplaySize.y <= 0.0f);
-		
+
 		VK_CommandBuffer& cmd = *m_Cmd;
-		//cmd.Reset(image_idx);
+		cmd.Reset(image_idx);
 		{
-			cmd.Begin({ .usage = vk::CommandBufferUsageFlagBits::eRenderPassContinue | vk::CommandBufferUsageFlagBits::eSimultaneousUse,
+			cmd.Begin({ .usage = vk::CommandBufferUsageFlagBits::eRenderPassContinue | vk::CommandBufferUsageFlagBits::eOneTimeSubmit,
 				.inheritInfo = {
 					.renderPass = m_RenderEngine.GetRenderPass()->GetRenderPass(),
 					.subpass = 0}

@@ -60,6 +60,8 @@ namespace VK_Renderer
 		}
 		inline void AddRenderFinishSemasphore(vk::Semaphore const& semaphore) { m_RenderFinishSemaphores.push_back(semaphore); }
 
+		void WaitForFence();
+
 		void BeforeRender();
 		void Render();
 
@@ -81,5 +83,7 @@ namespace VK_Renderer
 		std::vector<vk::CommandBuffer> m_PrimaryCommands;
 		std::vector<std::vector<vk::CommandBuffer>> m_SecondaryCommands;
 		std::vector<vk::Semaphore> m_RenderFinishSemaphores;
+
+		std::vector<vk::UniqueFence> m_Fences;
 	};
 }

@@ -93,12 +93,18 @@ namespace VK_Renderer
 		m_RenderFinishSemaphores.push_back(vk_UniqueRenderFinishedSemaphore.get());
 
 		m_SecondaryCommands.resize(m_CommandBuffer->Size());
+
+		// Create Fences
+		for (int i = 0; i < m_Swapchain->vk_Framebuffers.size(); ++i)
+		{
+			m_Fences.push_back(m_Device->GetDevice().createFenceUnique(vk::FenceCreateInfo{.flags = vk::FenceCreateFlagBits::eSignaled}));
+		}
 	}
 
 	void VK_RenderEngine::Reset()
 	{
 		WaitIdle();
-		
+		m_Fences.clear();
 		m_CommandBuffer.reset();
 
 		vk_UniqueRenderFinishedSemaphore.reset();
@@ -120,6 +126,12 @@ namespace VK_Renderer
 		m_Device->GetPresentQueue().waitIdle();
 	}
 
+	void VK_RenderEngine::WaitForFence() {
+		uint32_t const& image_idx = m_Swapchain->GetImageIdx();
+		m_Device->GetDevice().waitForFences(m_Fences[image_idx].get(), vk::True, std::numeric_limits<uint32_t>().max());
+		m_Device->GetDevice().resetFences(m_Fences[image_idx].get());
+	}
+
 	void VK_RenderEngine::RecordCommandBuffer()
 	{
 		static std::array<vk::ClearValue, 3> clear_color{};
@@ -129,8 +141,9 @@ namespace VK_Renderer
 
 		uint32_t const& image_idx = m_Swapchain->GetImageIdx();
 
+		//m_Device->GetGraphicsQueue().waitIdle();
 		m_CommandBuffer->Reset(image_idx);
-		m_CommandBuffer->Begin({ .usage = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue }, image_idx);
+		m_CommandBuffer->Begin({ .usage = vk::CommandBufferUsageFlagBits::eOneTimeSubmit }, image_idx);
 
 		(*m_CommandBuffer)[image_idx].beginRenderPass(vk::RenderPassBeginInfo{
 			.renderPass = m_RenderPass->GetRenderPass(),
@@ -150,6 +163,7 @@ namespace VK_Renderer
 
 		(*m_CommandBuffer)[image_idx].endRenderPass();
 		(*m_CommandBuffer).End(image_idx);
+
 	}
 
 	void VK_RenderEngine::BeforeRender()
@@ -175,8 +189,8 @@ namespace VK_Renderer
 			.commandBufferCount = static_cast<uint32_t>(cmds.size()),
 			.pCommandBuffers = cmds.data(),
 			.signalSemaphoreCount = static_cast<uint32_t>(signal_semaphores.size()),
-			.pSignalSemaphores = signal_semaphores.data()
-		});
+			.pSignalSemaphores = signal_semaphores.data(),
+		}, m_Fences[m_Swapchain->GetImageIdx()].get());
 
 		m_Swapchain->Present(m_RenderFinishSemaphores);
 	}

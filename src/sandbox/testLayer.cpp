@@ -4,6 +4,8 @@
 
 #include <SDL.h>
 
+#include "imgui.h"
+
 using namespace VK_Renderer;
 
 struct CameraUBO
@@ -246,6 +248,10 @@ void RenderLayer::OnRender(double const& deltaTime)
 
 void RenderLayer::OnImGui(double const& deltaTime)
 {
+	static float v = 0.f;
+	ImGui::Begin("Test Window");
+	ImGui::DragFloat("Test Value", &v, 0.1f, 0.f, 10.f);
+	ImGui::End();
 }
 
 void RenderLayer::OnEvent(SDL_Event const& e)

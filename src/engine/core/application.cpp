@@ -105,6 +105,9 @@ namespace MyCore
 
 				// OnRender
 				m_RenderEngine->BeforeRender();
+				m_RenderEngine->WaitForFence();
+
+				//printf("current frame: %d\n", m_RenderEngine->GetSwapchain()->GetImageIdx());
 				for (auto& layer : m_Layers)
 				{
 					layer->OnRender(delta_t);
