@@ -161,7 +161,7 @@ void RenderLayer::OnAttach()
 				.range = m_CamBuffer->GetSize()
 			}
 		}
-		});
+	});
 
 	m_MeshShaderInputDescriptor->Create({
 		VK_DescriptorBinding{
@@ -320,7 +320,7 @@ void RenderLayer::RecordCmd()
 		uint32_t num_workgroups_y = 1;
 		uint32_t num_workgroups_z = 1;
 
-		vk::ArrayProxy<vk::DescriptorSet> arr{
+		std::vector<vk::DescriptorSet> arr{
 			m_CamDescriptor->GetDescriptorSet(),
 			m_MeshShaderInputDescriptor->GetDescriptorSet()
 		};
