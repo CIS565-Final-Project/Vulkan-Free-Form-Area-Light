@@ -18,6 +18,12 @@ namespace MyCore
 		s_Instance = this;
 		// TODO: load app configuration from file
 
+		// Create folder to store Intermedia data
+		if (!std::filesystem::exists("caches"))
+		{
+			std::filesystem::create_directories("caches");
+		}
+
 		// Create Window
 		SDL_Init(SDL_INIT_VIDEO);
 

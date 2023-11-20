@@ -12,6 +12,7 @@
 #include <limits>
 #include <algorithm>
 #include <fstream>
+#include <filesystem>
 
 #include <glm.hpp>
 

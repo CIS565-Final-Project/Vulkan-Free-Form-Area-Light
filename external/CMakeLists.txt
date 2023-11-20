@@ -1,9 +1,9 @@
 find_package(Vulkan REQUIRED)
 
 add_subdirectory(SDL EXCLUDE_FROM_ALL)
-add_subdirectory(dds)
-add_subdirectory(glm)
-add_subdirectory(tinyobjloader)
+add_subdirectory(dds EXCLUDE_FROM_ALL)
+add_subdirectory(glm EXCLUDE_FROM_ALL)
+add_subdirectory(tinyobjloader EXCLUDE_FROM_ALL)
 
 #set(RES_ROOT_DIR "resources")
 set(EXT_ROOT_DIR "${CMAKE_SOURCE_DIR}/external")

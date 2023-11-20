@@ -32,6 +32,13 @@ namespace MyCore
 		imgui_IO = &io;
 
 		ImGui::StyleColorsDark();
+		
+		if (!std::filesystem::exists("caches/imgui"))
+		{
+			std::filesystem::create_directories("caches/imgui");
+		}
+
+		imgui_IO->IniFilename = "caches/imgui/imgui_cache.ini";
 
 		ImGuiStyle& style = ImGui::GetStyle();
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
