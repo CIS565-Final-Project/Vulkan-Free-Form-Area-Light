@@ -75,8 +75,10 @@ void CreateMeshPipeline(vk::Device vk_device,
 	vk_device.destroyShaderModule(frag_module);
 }
 
-RenderLayer::RenderLayer(std::string const& name)
-	: Layer(name)
+RenderLayer::RenderLayer(std::string const& name, 
+							std::string const&& meshFile,
+							std::string const&& textureFile)
+	: Layer(name), m_MeshFile(meshFile), m_TextureFile(textureFile)
 {
 }
 
@@ -95,8 +97,6 @@ void RenderLayer::OnAttach()
 
 	m_Cmd = mkU<VK_CommandBuffer>(m_Device->GetGraphicsCommandPool()->AllocateCommandBuffers({ .level = vk::CommandBufferLevel::eSecondary }));
 
-	m_Device->CreateDescriptiorPool(1, 10);
-
 	// Create Camera buffer
 	m_CamBuffer = mkU<VK_StagingBuffer>(*m_Device);
 	glm::mat4 vp = m_Camera->GetProjViewMatrix();
@@ -106,11 +106,11 @@ void RenderLayer::OnAttach()
 	//mesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
 	//mesh.LoadMeshFromFile("meshes/sphere.obj");
 	//mesh.LoadMeshFromFile("meshes/cube.obj");
-	mesh.LoadMeshFromFile("meshes/plane.obj");
+	mesh.LoadMeshFromFile(m_MeshFile);
 
 	m_Texture = mkU<VK_Texture2D>(*m_Device);
 
-	m_Texture->CreateFromFile("images/wall.jpg", { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
+	m_Texture->CreateFromFile(m_TextureFile, { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
 	//m_Texture->CreateFromFile("images/ltc.dds", {.format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
 
 	m_Texture->TransitionLayout(VK_ImageLayout{
@@ -228,7 +228,7 @@ void RenderLayer::OnAttach()
 	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderPipeline.get(), descriptor_set_layouts);
 
 	RecordCmd();
-	m_Engine->PushCommand((*m_Cmd)[0]);
+	m_Engine->PushSecondaryCommandAll((*m_Cmd)[0]);
 }
 
 void RenderLayer::OnDetech()
@@ -305,7 +305,7 @@ void RenderLayer::RecordCmd()
 		cmd[0].setScissor(0, vk::Rect2D{
 			.offset = { 0, 0 },
 			.extent = m_Swapchain->vk_ImageExtent
-			});
+		});
 
 		// Draw call
 		uint32_t num_workgroups_x = (m_MeshletInfo->Triangle_Count + m_MeshletInfo->Meshlet_Size - 1) / m_MeshletInfo->Meshlet_Size;

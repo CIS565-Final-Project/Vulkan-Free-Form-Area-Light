@@ -5,6 +5,8 @@
 
 #include "renderEngine/renderEngine.h"
 
+#include "layers/imguiLayer.h"
+
 namespace MyCore
 {
 	Application* Application::s_Instance = nullptr;
@@ -23,7 +25,7 @@ namespace MyCore
 
 		SDL_Window* window = SDL_CreateWindow(
 			"Vulkan Hello Triangle",
-			200, 200, 680, 680, window_flags
+			200, 200, 1000, 1000, window_flags
 		);
 		m_Window = window;
 		std::vector<char const*> extensions;
@@ -48,6 +50,10 @@ namespace MyCore
 															deviceEXTs,
 															ext_chain.get<vk::PhysicalDeviceFeatures2>(),
 															width, height);
+
+		// push build-in layers
+		PushLayer(mkU<ImGuiLayer>("ImGuiLayer", window, *m_RenderEngine));
+		m_ImGuiLayer = reinterpret_cast<ImGuiLayer*>(m_Layers.back().get());
 	}
 	
 	Application::~Application()
@@ -68,8 +74,6 @@ namespace MyCore
 
 	void Application::Run()
 	{
-		m_RenderEngine->RecordCommandBuffer();
-
 		b_IsRunning = true;
 		SDL_Event e;
 		while (b_IsRunning)
@@ -86,6 +90,13 @@ namespace MyCore
 					layer->OnEvent(e);
 				}
 
+				m_ImGuiLayer->BeginFrame();
+				for (auto& layer : m_Layers)
+				{
+					layer->OnImGui(delta_t);
+				}
+				m_ImGuiLayer->EndFrame();
+
 				// OnUpdate
 				for (auto& layer : m_Layers)
 				{
@@ -93,17 +104,13 @@ namespace MyCore
 				}
 
 				// OnRender
+				m_RenderEngine->BeforeRender();
 				for (auto& layer : m_Layers)
 				{
 					layer->OnRender(delta_t);
 				}
-				m_RenderEngine->OnRender(delta_t);
-
-				// TODO: OnImGui
-				for (auto& layer : m_Layers)
-				{
-					layer->OnImGui(delta_t);
-				}
+				m_RenderEngine->RecordCommandBuffer();
+				m_RenderEngine->Render();
 			}
 		}
 	}

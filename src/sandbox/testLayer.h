@@ -20,13 +20,16 @@ struct MeshletInfo;
 #include "renderEngine/descriptor.h"
 
 #include "scene/mesh.h"
+#include "scene/image.h"
 #include "scene/scene.h"
 #include "scene/perspectiveCamera.h"
 
 class RenderLayer : public Layer
 {
 public:
-	RenderLayer(std::string const& name);
+	RenderLayer(std::string const& name, 
+				std::string const&& meshFile, 
+				std::string const&& textureFile);
 
 public:
 	virtual void OnAttach() override;
@@ -39,12 +42,11 @@ public:
 	virtual void OnEvent(SDL_Event const&);
 
 	void RecordCmd();
-	void RecordSubcommand();
 
 protected:
 	VK_Renderer::VK_RenderEngine* m_Engine;
-	VK_Renderer::VK_Device* m_Device;
-	VK_Renderer::VK_Swapchain* m_Swapchain;
+	VK_Renderer::VK_Device const* m_Device;
+	VK_Renderer::VK_Swapchain const* m_Swapchain;
 
 	uPtr<VK_Renderer::PerspectiveCamera> m_Camera;
 	uPtr<VK_Renderer::VK_CommandBuffer> m_Cmd;
@@ -65,4 +67,7 @@ protected:
 	uPtr<VK_Renderer::VK_Descriptor> m_MeshShaderInputDescriptor;
 
 	uPtr<MeshletInfo> m_MeshletInfo;
+
+	std::string m_MeshFile;
+	std::string m_TextureFile;
 };

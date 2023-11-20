@@ -87,6 +87,7 @@ namespace VK_Renderer
 		};
 
 		vk_DescriptorPool = vk_Device.createDescriptorPool(vk::DescriptorPoolCreateInfo{
+			.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
 			.maxSets = maxSets,
 			.poolSizeCount = 1,
 			.pPoolSizes = &desc_pool_size,

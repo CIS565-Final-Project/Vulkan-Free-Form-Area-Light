@@ -41,7 +41,7 @@ namespace VK_Renderer
 								  deviceExtensions,
 								  phyDevFeature2,
 								  m_Instance->m_QueueFamilyIndices);
-
+		m_Device->CreateDescriptiorPool(1, 10);
 		
 		// Create Swapchain
 		m_Swapchain = mkU<VK_Swapchain>(*m_Device,
@@ -91,6 +91,8 @@ namespace VK_Renderer
 		// Create RenderFinish Semaphores
 		vk_UniqueRenderFinishedSemaphore = m_Device->GetDevice().createSemaphoreUnique(vk::SemaphoreCreateInfo{});
 		m_RenderFinishSemaphores.push_back(vk_UniqueRenderFinishedSemaphore.get());
+
+		m_SecondaryCommands.resize(m_CommandBuffer->Size());
 	}
 
 	void VK_RenderEngine::Reset()
@@ -125,44 +127,46 @@ namespace VK_Renderer
 		clear_color[1].setDepthStencil({ .depth = 1.f, .stencil = 0 });
 		clear_color[2].setColor(vk_ClearColor);
 
-		// Record Command Buffer
-		for (int i = 0; i < m_CommandBuffer->Size(); ++i)
-		{
-			m_CommandBuffer->Reset(i);
-			m_CommandBuffer->Begin({ .usage = vk::CommandBufferUsageFlagBits::eSimultaneousUse }, i);
+		uint32_t const& image_idx = m_Swapchain->GetImageIdx();
 
-			(*m_CommandBuffer)[i].beginRenderPass(vk::RenderPassBeginInfo{
-				.renderPass = m_RenderPass->GetRenderPass(),
-				.framebuffer = m_Swapchain->vk_Framebuffers[i],
-				.renderArea = vk::Rect2D{
-					.offset = {0, 0},
-					.extent = m_Swapchain->vk_ImageExtent
-				},
-				.clearValueCount = clear_color.size(),
-				.pClearValues = clear_color.data(),
-				}, vk::SubpassContents::eSecondaryCommandBuffers);
-			
-			if (m_Commands.size() > 0)
-			{
-				(*m_CommandBuffer)[i].executeCommands(static_cast<uint32_t>(m_Commands.size()), m_Commands.data());
-			}
-			
-			(*m_CommandBuffer)[i].endRenderPass();
-			(*m_CommandBuffer).End(i);
+		m_CommandBuffer->Reset(image_idx);
+		m_CommandBuffer->Begin({ .usage = vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue }, image_idx);
+
+		(*m_CommandBuffer)[image_idx].beginRenderPass(vk::RenderPassBeginInfo{
+			.renderPass = m_RenderPass->GetRenderPass(),
+			.framebuffer = m_Swapchain->vk_Framebuffers[image_idx],
+			.renderArea = vk::Rect2D{
+				.offset = {0, 0},
+				.extent = m_Swapchain->vk_ImageExtent
+			},
+			.clearValueCount = clear_color.size(),
+			.pClearValues = clear_color.data(),
+			}, vk::SubpassContents::eSecondaryCommandBuffers);
+
+		if (m_SecondaryCommands[image_idx].size() > 0)
+		{
+			(*m_CommandBuffer)[image_idx].executeCommands(static_cast<uint32_t>(m_SecondaryCommands[image_idx].size()), m_SecondaryCommands[image_idx].data());
 		}
+
+		(*m_CommandBuffer)[image_idx].endRenderPass();
+		(*m_CommandBuffer).End(image_idx);
 	}
 
-	void VK_RenderEngine::OnRender(double const& deltaTime)
+	void VK_RenderEngine::BeforeRender()
 	{
 		m_Swapchain->AcquireNextImage();
+	}
 
+	void VK_RenderEngine::Render()
+	{
 		VK_CommandBuffer& command_buffers = *m_CommandBuffer;
 		std::vector<vk::Semaphore> wait_semaphore{ m_Swapchain->GetImageAviableSemaphore()};
 		std::array<vk::Semaphore, 1> signal_semaphores{ vk_UniqueRenderFinishedSemaphore.get()};
 
 		std::array<vk::PipelineStageFlags, 1> wait_stages{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
 
-		std::vector<vk::CommandBuffer> cmds{ command_buffers[m_Swapchain->GetImageIdx()]};
+		std::vector<vk::CommandBuffer> cmds = m_PrimaryCommands;
+		cmds.push_back(command_buffers[m_Swapchain->GetImageIdx()]);
 
 		m_Device->GetGraphicsQueue().submit(vk::SubmitInfo{
 			.waitSemaphoreCount = static_cast<uint32_t>(wait_semaphore.size()),

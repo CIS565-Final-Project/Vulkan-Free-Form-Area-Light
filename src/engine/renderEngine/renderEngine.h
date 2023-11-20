@@ -44,16 +44,30 @@ namespace VK_Renderer
 
 		void RecordCommandBuffer();
 
-		inline void PushCommand(vk::CommandBuffer const& cmd) { m_Commands.push_back(cmd); }
+		inline void PushPrimaryCommand(vk::CommandBuffer const& cmd) { m_PrimaryCommands.push_back(cmd); }
+		
+		inline void PushSecondaryCommandAll(vk::CommandBuffer const& cmd)
+		{
+			for (auto& secondary_cmd_list : m_SecondaryCommands)
+			{
+				secondary_cmd_list.push_back(cmd);
+			}
+		}
+
+		inline void PushSecondaryCommand(vk::CommandBuffer const& cmd, uint32_t const& primaryIdx) 
+		{
+			m_SecondaryCommands[primaryIdx].push_back(cmd);
+		}
 		inline void AddRenderFinishSemasphore(vk::Semaphore const& semaphore) { m_RenderFinishSemaphores.push_back(semaphore); }
 
-		void OnRender(double const& deltaTime);
+		void BeforeRender();
+		void Render();
 
 	protected:
-		DeclarePtrWithGetFunc(protected, uPtr, VK_Instance, m, Instance);
-		DeclarePtrWithGetFunc(protected, uPtr, VK_Device, m, Device);
-		DeclarePtrWithGetFunc(protected, uPtr, VK_Swapchain, m, Swapchain);
-		DeclarePtrWithGetFunc(protected, uPtr, VK_RenderPass, m, RenderPass);
+		DeclarePtrWithGetFunc(protected, uPtr, VK_Instance, m, Instance, const);
+		DeclarePtrWithGetFunc(protected, uPtr, VK_Device, m, Device, const);
+		DeclarePtrWithGetFunc(protected, uPtr, VK_Swapchain, m, Swapchain, const);
+		DeclarePtrWithGetFunc(protected, uPtr, VK_RenderPass, m, RenderPass, const);
 
 		DeclarePtrWithGetFunc(protected, uPtr, VK_Texture2D, m, DepthTexture);
 		DeclarePtrWithGetFunc(protected, uPtr, VK_Texture2D, m, ColorTexture);
@@ -64,7 +78,8 @@ namespace VK_Renderer
 
 		vk::UniqueSemaphore vk_UniqueRenderFinishedSemaphore;
 
-		std::vector<vk::CommandBuffer> m_Commands;
+		std::vector<vk::CommandBuffer> m_PrimaryCommands;
+		std::vector<std::vector<vk::CommandBuffer>> m_SecondaryCommands;
 		std::vector<vk::Semaphore> m_RenderFinishSemaphores;
 	};
 }
