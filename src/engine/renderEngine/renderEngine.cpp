@@ -169,6 +169,7 @@ namespace VK_Renderer
 	void VK_RenderEngine::BeforeRender()
 	{
 		m_Swapchain->AcquireNextImage();
+		WaitForFence();
 	}
 
 	void VK_RenderEngine::Render()

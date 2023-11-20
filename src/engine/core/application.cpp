@@ -85,9 +85,13 @@ namespace MyCore
 
 				if (e.type == SDL_QUIT) b_IsRunning = false;
 				// OnEvent
-				for (auto& layer : m_Layers)
+				
+				if (!m_ImGuiLayer->HandleEvents(e))
 				{
-					layer->OnEvent(e);
+					for (auto& layer : m_Layers)
+					{
+						if (layer->OnEvent(e)) break;
+					}
 				}
 
 				m_ImGuiLayer->BeginFrame();
@@ -105,7 +109,6 @@ namespace MyCore
 
 				// OnRender
 				m_RenderEngine->BeforeRender();
-				m_RenderEngine->WaitForFence();
 
 				//printf("current frame: %d\n", m_RenderEngine->GetSwapchain()->GetImageIdx());
 				for (auto& layer : m_Layers)

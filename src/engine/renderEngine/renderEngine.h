@@ -44,8 +44,6 @@ namespace VK_Renderer
 
 		void RecordCommandBuffer();
 
-		inline void PushPrimaryCommand(vk::CommandBuffer const& cmd) { m_PrimaryCommands.push_back(cmd); }
-		
 		inline void PushSecondaryCommandAll(vk::CommandBuffer const& cmd)
 		{
 			for (auto& secondary_cmd_list : m_SecondaryCommands)
@@ -76,7 +74,7 @@ namespace VK_Renderer
 
 		DeclarePtrWithGetFunc(protected, uPtr, VK_CommandBuffer, m, CommandBuffer);
 
-		DeclareWithSetFunc(protected, vk::ClearColorValue, vk, ClearColor);
+		DeclareWithGetSetFunc(protected, vk::ClearColorValue, vk, ClearColor);
 
 		vk::UniqueSemaphore vk_UniqueRenderFinishedSemaphore;
 

@@ -27,9 +27,7 @@ namespace MyCore
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
-		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoTaskBarIcons;
-		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoMerge;
+		// Do not enable Multi-Viewport!
 		
 		imgui_IO = &io;
 
@@ -65,13 +63,13 @@ namespace MyCore
 			}
 		));
 	}
+
 	void ImGuiLayer::OnDetech()
 	{
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplSDL2_Shutdown();
 		ImGui::DestroyContext();
 	}
-	
 	void ImGuiLayer::OnUpdate(double const& deltaTime)
 	{
 		static bool pushed = false;
@@ -82,7 +80,6 @@ namespace MyCore
 			m_RenderEngine.PushSecondaryCommand((*m_Cmd)[idx], idx);
 		}
 	}
-	
 	void ImGuiLayer::OnRender(double const& deltaTime)
 	{
 		uint32_t const& image_idx = m_RenderEngine.GetSwapchain()->GetImageIdx();
@@ -105,15 +102,14 @@ namespace MyCore
 			cmd.End(image_idx);
 		}
 	}
-	
 	void ImGuiLayer::OnImGui(double const& deltaTime)
 	{
 		ImGui::ShowDemoWindow();
 	}
-
-	void ImGuiLayer::OnEvent(SDL_Event const& e)
+	bool ImGuiLayer::HandleEvents(SDL_Event const& e)
 	{
 		ImGui_ImplSDL2_ProcessEvent(&e);
+		return ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGui::IsAnyItemHovered();
 	}
 	void ImGuiLayer::BeginFrame()
 	{
@@ -121,7 +117,6 @@ namespace MyCore
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 	}
-
 	void ImGuiLayer::EndFrame()
 	{
 		ImGui::Render();

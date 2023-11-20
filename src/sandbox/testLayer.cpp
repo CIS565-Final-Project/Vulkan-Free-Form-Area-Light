@@ -254,7 +254,7 @@ void RenderLayer::OnImGui(double const& deltaTime)
 	ImGui::End();
 }
 
-void RenderLayer::OnEvent(SDL_Event const& e)
+bool RenderLayer::OnEvent(SDL_Event const& e)
 {
 	static glm::ivec2 mouse_pre;
 	if (e.type == SDL_MOUSEMOTION)
@@ -283,6 +283,8 @@ void RenderLayer::OnEvent(SDL_Event const& e)
 		}
 		mouse_pre = mouse_cur;
 	}
+
+	return false;
 }
 
 void RenderLayer::RecordCmd()
