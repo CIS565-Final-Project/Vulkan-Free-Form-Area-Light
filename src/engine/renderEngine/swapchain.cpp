@@ -168,7 +168,8 @@ namespace VK_Renderer
 	{
 		for (const auto& surface_format : availableFormats)
 		{
-			if (surface_format.format == vk::Format::eR8G8B8A8Srgb && 
+			if ((surface_format.format == vk::Format::eR8G8B8A8Unorm
+				|| surface_format.format == vk::Format::eB8G8R8A8Unorm) &&
 				surface_format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
 			{
 				return surface_format;
