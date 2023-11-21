@@ -14,8 +14,6 @@ layout(set = 1, binding = 5) uniform sampler2D u_Texture;
 
 void main()
 {
-	// fs_Color = texture(u_Texture, fragIn.uv).rgb;
+	fs_Color = texture(u_Texture, fragIn.uv).rgb;
 	//fs_Color = fragIn.color;
-
-	fs_Color = vec3(1.0, 1.0, 1.0);
 }

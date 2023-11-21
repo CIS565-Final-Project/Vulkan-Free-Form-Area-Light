@@ -24,6 +24,14 @@ struct MeshletInfo;
 #include "scene/scene.h"
 #include "scene/perspectiveCamera.h"
 
+struct MeshBufferSet {
+	uPtr<VK_Renderer::VK_DeviceBuffer> m_MeshletInfoBuffer;
+	uPtr<VK_Renderer::VK_DeviceBuffer> m_TriangleBuffer;
+	uPtr<VK_Renderer::VK_DeviceBuffer> m_PositionBuffer;
+	uPtr<VK_Renderer::VK_DeviceBuffer> m_NormalBuffer;
+	uPtr<VK_Renderer::VK_DeviceBuffer> m_UVBuffer;
+};
+
 class RenderLayer : public Layer
 {
 public:
@@ -54,19 +62,27 @@ protected:
 	uPtr<VK_Renderer::VK_Texture2D> m_Texture;
 
 	uPtr<VK_Renderer::VK_PipelineInput> m_PipelineInput;
-	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderPipeline;
+	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderLightPipeline;
+
+	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderLTCPipeline;
 
 	uPtr<VK_Renderer::VK_StagingBuffer> m_CamBuffer;
-	uPtr<VK_Renderer::VK_DeviceBuffer> m_MeshletInfoBuffer;
-	uPtr<VK_Renderer::VK_DeviceBuffer> m_TriangleBuffer;
-	uPtr<VK_Renderer::VK_DeviceBuffer> m_PositionBuffer;
-	uPtr<VK_Renderer::VK_DeviceBuffer> m_NormalBuffer;
-	uPtr<VK_Renderer::VK_DeviceBuffer> m_UVBuffer;
+
+	//uPtr<VK_Renderer::VK_DeviceBuffer> m_MeshletInfoBuffer;
+	//uPtr<VK_Renderer::VK_DeviceBuffer> m_TriangleBuffer;
+	//uPtr<VK_Renderer::VK_DeviceBuffer> m_PositionBuffer;
+	//uPtr<VK_Renderer::VK_DeviceBuffer> m_NormalBuffer;
+	//uPtr<VK_Renderer::VK_DeviceBuffer> m_UVBuffer;
+
+	MeshBufferSet m_LTCMeshBufferSet;
+	MeshBufferSet m_LightMeshBufferSet;
 
 	uPtr<VK_Renderer::VK_Descriptor> m_CamDescriptor;
-	uPtr<VK_Renderer::VK_Descriptor> m_MeshShaderInputDescriptor;
+	uPtr<VK_Renderer::VK_Descriptor> m_LTCMeshShaderInputDescriptor;
+	uPtr<VK_Renderer::VK_Descriptor> m_LightMeshShaderInputDescriptor;
 
-	uPtr<MeshletInfo> m_MeshletInfo;
+	uPtr<MeshletInfo> m_LTCMeshletInfo;
+	uPtr<MeshletInfo> m_LightMeshletInfo;
 
 	std::string m_MeshFile;
 	std::string m_TextureFile;

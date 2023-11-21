@@ -28,12 +28,15 @@ struct TriangleInfo
 
 void CreateMeshPipeline(vk::Device vk_device,
 	VK_GraphicsPipeline* pipeline,
-	std::vector<vk::DescriptorSetLayout> const& descripotrSetLayouts)
+	std::vector<vk::DescriptorSetLayout> const& descripotrSetLayouts,
+	const std::string& task_shader_path,
+	const std::string& mesh_shader_path,
+	const std::string& frag_shader_path)
 {
 	// Create required shader stages
-	auto task_shader = ReadFile("shaders/mesh_flat.task.spv");
-	auto mesh_shader = ReadFile("shaders/mesh_flat.mesh.spv");
-	auto frag_shader = ReadFile("shaders/mesh_flat.frag.spv");
+	auto task_shader = ReadFile(task_shader_path);
+	auto mesh_shader = ReadFile(mesh_shader_path);
+	auto frag_shader = ReadFile(frag_shader_path);
 
 	vk::ShaderModule task_module = vk_device.createShaderModule(vk::ShaderModuleCreateInfo{
 		.codeSize = task_shader.size(),
@@ -104,11 +107,14 @@ void RenderLayer::OnAttach()
 	glm::mat4 vp = m_Camera->GetProjViewMatrix();
 	m_CamBuffer->CreateFromData(&vp, sizeof(CameraUBO), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
-	Mesh mesh;
+	Mesh ltcMesh;
 	//mesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
 	//mesh.LoadMeshFromFile("meshes/sphere.obj");
 	//mesh.LoadMeshFromFile("meshes/cube.obj");
-	mesh.LoadMeshFromFile(m_MeshFile);
+	ltcMesh.LoadMeshFromFile(m_MeshFile);
+
+	Mesh lightMesh;
+	lightMesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
 
 	m_Texture = mkU<VK_Texture2D>(*m_Device);
 
@@ -121,35 +127,57 @@ void RenderLayer::OnAttach()
 			.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
 		});
 
-	std::vector<TriangleInfo> triangles;
+	std::vector<TriangleInfo> ltcTriangles;
 
-	for (Triangle const& tri : mesh.m_Triangles)
+	for (Triangle const& tri : ltcMesh.m_Triangles)
 	{
-		triangles.emplace_back(
+		ltcTriangles.emplace_back(
 			glm::ivec4(tri.pId, tri.materialId),
 			glm::ivec4(tri.nId, 0),
 			glm::ivec4(tri.uvId, 0)
 		);
 	}
 
-	m_MeshletInfo = mkU<MeshletInfo>(32, static_cast<uint32_t>(mesh.m_Triangles.size()));
+	std::vector<TriangleInfo> lightTriangles;
+
+	for (Triangle const& tri : lightMesh.m_Triangles)
+	{
+		lightTriangles.emplace_back(
+			glm::ivec4(tri.pId, tri.materialId),
+			glm::ivec4(tri.nId, 0),
+			glm::ivec4(tri.uvId, 0)
+		);
+	}
+
+	m_LTCMeshletInfo = mkU<MeshletInfo>(32, static_cast<uint32_t>(ltcMesh.m_Triangles.size()));
+	m_LightMeshletInfo = mkU<MeshletInfo>(32, static_cast<uint32_t>(lightMesh.m_Triangles.size()));
 
 	// Create Buffers
-	m_MeshletInfoBuffer = mkU<VK_DeviceBuffer>(*m_Device);
-	m_TriangleBuffer = mkU<VK_DeviceBuffer>(*m_Device);
-	m_PositionBuffer = mkU<VK_DeviceBuffer>(*m_Device);
-	m_NormalBuffer = mkU<VK_DeviceBuffer>(*m_Device);
-	m_UVBuffer = mkU<VK_DeviceBuffer>(*m_Device);
 
-	m_MeshletInfoBuffer->CreateFromData(m_MeshletInfo.get(), sizeof(MeshletInfo), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
-	m_TriangleBuffer->CreateFromData(triangles.data(), sizeof(TriangleInfo) * triangles.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
-	m_PositionBuffer->CreateFromData(mesh.m_Positions.data(), sizeof(Float) * mesh.m_Positions.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
-	m_NormalBuffer->CreateFromData(mesh.m_Normals.data(), sizeof(Float) * mesh.m_Normals.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
-	m_UVBuffer->CreateFromData(mesh.m_UVs.data(), sizeof(Float) * mesh.m_UVs.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	auto generateMeshBufferSet = [=](MeshBufferSet& bufferSet, std::vector<TriangleInfo>& tris, Mesh& mesh, uPtr<MeshletInfo>& meshletInfo) -> void {
+		bufferSet.m_MeshletInfoBuffer = mkU<VK_DeviceBuffer>(*m_Device);
+		bufferSet.m_TriangleBuffer = mkU<VK_DeviceBuffer>(*m_Device);
+		bufferSet.m_PositionBuffer = mkU<VK_DeviceBuffer>(*m_Device);
+		bufferSet.m_NormalBuffer = mkU<VK_DeviceBuffer>(*m_Device);
+		bufferSet.m_UVBuffer = mkU<VK_DeviceBuffer>(*m_Device);
+
+		bufferSet.m_MeshletInfoBuffer->CreateFromData(meshletInfo.get(), sizeof(MeshletInfo), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
+		bufferSet.m_TriangleBuffer->CreateFromData(tris.data(), sizeof(TriangleInfo) * tris.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+		bufferSet.m_PositionBuffer->CreateFromData(mesh.m_Positions.data(), sizeof(Float) * mesh.m_Positions.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+		bufferSet.m_NormalBuffer->CreateFromData(mesh.m_Normals.data(), sizeof(Float) * mesh.m_Normals.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+		bufferSet.m_UVBuffer->CreateFromData(mesh.m_UVs.data(), sizeof(Float) * mesh.m_UVs.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	};
+
+
+	generateMeshBufferSet(m_LTCMeshBufferSet, ltcTriangles, ltcMesh, m_LTCMeshletInfo);
+
+	generateMeshBufferSet(m_LightMeshBufferSet, lightTriangles, lightMesh, m_LightMeshletInfo);
+
 
 	// Create Descriptors
 	m_CamDescriptor = mkU<VK_Descriptor>(*m_Device);
-	m_MeshShaderInputDescriptor = mkU<VK_Descriptor>(*m_Device);
+	m_LTCMeshShaderInputDescriptor = mkU<VK_Descriptor>(*m_Device);
+	m_LightMeshShaderInputDescriptor = mkU<VK_Descriptor>(*m_Device);
 
 	m_CamDescriptor->Create({
 		VK_DescriptorBinding{
@@ -162,72 +190,102 @@ void RenderLayer::OnAttach()
 			}
 		}
 	});
-
-	m_MeshShaderInputDescriptor->Create({
-		VK_DescriptorBinding{
-			.type = vk::DescriptorType::eUniformBuffer,
-			.stage = vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT,
-			.bufferInfo = vk::DescriptorBufferInfo{
-				.buffer = m_MeshletInfoBuffer->GetBuffer(),
-				.offset = 0,
-				.range = m_MeshletInfoBuffer->GetSize()
-			}
-		},
-		VK_DescriptorBinding{
-			.type = vk::DescriptorType::eStorageBuffer,
-			.stage = vk::ShaderStageFlagBits::eMeshEXT,
-			.bufferInfo = vk::DescriptorBufferInfo{
-				.buffer = m_TriangleBuffer->GetBuffer(),
-				.offset = 0,
-				.range = m_TriangleBuffer->GetSize()
-			}
-		},
-		VK_DescriptorBinding{
-			.type = vk::DescriptorType::eStorageBuffer,
-			.stage = vk::ShaderStageFlagBits::eMeshEXT,
-			.bufferInfo = vk::DescriptorBufferInfo{
-				.buffer = m_PositionBuffer->GetBuffer(),
-				.offset = 0,
-				.range = m_PositionBuffer->GetSize()
-			}
-		},
-		VK_DescriptorBinding{
-			.type = vk::DescriptorType::eStorageBuffer,
-			.stage = vk::ShaderStageFlagBits::eMeshEXT,
-			.bufferInfo = vk::DescriptorBufferInfo{
-				.buffer = m_NormalBuffer->GetBuffer(),
-				.offset = 0,
-				.range = m_NormalBuffer->GetSize()
-			}
-		},
-		VK_DescriptorBinding{
-			.type = vk::DescriptorType::eStorageBuffer,
-			.stage = vk::ShaderStageFlagBits::eMeshEXT,
-			.bufferInfo = vk::DescriptorBufferInfo{
-				.buffer = m_UVBuffer->GetBuffer(),
-				.offset = 0,
-				.range = m_UVBuffer->GetSize()
-			}
-		},
-		VK_DescriptorBinding{
-			.type = vk::DescriptorType::eCombinedImageSampler,
-			.stage = vk::ShaderStageFlagBits::eFragment,
-			.imageInfo = vk::DescriptorImageInfo{
-				.sampler = m_Texture->GetSampler(),
-				.imageView = m_Texture->GetImageView(),
-				.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-			}
-		},
-		});
-
-	// Create Pipeline
-	m_MeshShaderPipeline = mkU<VK_GraphicsPipeline>(*m_Device);
-
-	std::vector<vk::DescriptorSetLayout> descriptor_set_layouts{
-		m_CamDescriptor->GetDescriptorSetLayout(),
-		m_MeshShaderInputDescriptor->GetDescriptorSetLayout(),
+	
+	auto generateDescriptorBinds = [](MeshBufferSet& bufferSet) -> std::vector<VK_DescriptorBinding> {
+		return {
+			VK_DescriptorBinding{
+				.type = vk::DescriptorType::eUniformBuffer,
+				.stage = vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = bufferSet.m_MeshletInfoBuffer->GetBuffer(),
+					.offset = 0,
+					.range = bufferSet.m_MeshletInfoBuffer->GetSize()
+				}
+			},
+			VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = bufferSet.m_TriangleBuffer->GetBuffer(),
+					.offset = 0,
+					.range = bufferSet.m_TriangleBuffer->GetSize()
+				}
+			},
+			VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = bufferSet.m_PositionBuffer->GetBuffer(),
+					.offset = 0,
+					.range = bufferSet.m_PositionBuffer->GetSize()
+				}
+			},
+			VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = bufferSet.m_NormalBuffer->GetBuffer(),
+					.offset = 0,
+					.range = bufferSet.m_NormalBuffer->GetSize()
+				}
+			},
+			VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = bufferSet.m_UVBuffer->GetBuffer(),
+					.offset = 0,
+					.range = bufferSet.m_UVBuffer->GetSize()
+				}
+			},
+		};
 	};
-	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderPipeline.get(), descriptor_set_layouts);
+
+	std::vector<VK_DescriptorBinding> ltcMeshShaderDescriptorSet = generateDescriptorBinds(m_LTCMeshBufferSet);
+
+	ltcMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
+		.type = vk::DescriptorType::eCombinedImageSampler,
+		.stage = vk::ShaderStageFlagBits::eFragment,
+		.imageInfo = vk::DescriptorImageInfo{
+			.sampler = m_Texture->GetSampler(),
+			.imageView = m_Texture->GetImageView(),
+			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+		}
+	});
+
+	m_LTCMeshShaderInputDescriptor->Create(ltcMeshShaderDescriptorSet);
+
+	std::vector<VK_DescriptorBinding> lightMeshShaderDescriptorSet = generateDescriptorBinds(m_LightMeshBufferSet);
+
+	lightMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
+		.type = vk::DescriptorType::eCombinedImageSampler,
+		.stage = vk::ShaderStageFlagBits::eFragment,
+		.imageInfo = vk::DescriptorImageInfo{
+			.sampler = m_Texture->GetSampler(),
+			.imageView = m_Texture->GetImageView(),
+			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+		}
+	});
+
+	m_LightMeshShaderInputDescriptor->Create(lightMeshShaderDescriptorSet);
+
+	// TEMP: Try two pipelines with same descriptor set
+	// Create Pipeline
+	m_MeshShaderLightPipeline = mkU<VK_GraphicsPipeline>(*m_Device);
+	m_MeshShaderLTCPipeline = mkU<VK_GraphicsPipeline>(*m_Device);
+
+	std::vector<vk::DescriptorSetLayout> ltc_descriptor_set_layouts{
+		m_CamDescriptor->GetDescriptorSetLayout(),
+		m_LTCMeshShaderInputDescriptor->GetDescriptorSetLayout(),
+	};
+	std::vector<vk::DescriptorSetLayout> light_descriptor_set_layouts{
+		m_CamDescriptor->GetDescriptorSetLayout(),
+		m_LightMeshShaderInputDescriptor->GetDescriptorSetLayout(),
+	};
+	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLightPipeline.get(), ltc_descriptor_set_layouts,
+		"shaders/mesh_flat.task.spv", "shaders/mesh_flat.mesh.spv", "shaders/mesh_flat.frag.spv");
+	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLTCPipeline.get(), light_descriptor_set_layouts,
+		"shaders/mesh_ltc.task.spv", "shaders/mesh_ltc.mesh.spv", "shaders/mesh_ltc.frag.spv");
 
 	RecordCmd();
 	m_Engine->PushSecondaryCommandAll((*m_Cmd)[0]);
@@ -298,7 +356,7 @@ void RenderLayer::RecordCmd()
 				.subpass = 0}
 			});
 
-		cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderPipeline->vk_Pipeline);
+
 
 		// Viewport and scissors
 		cmd[0].setViewport(0, vk::Viewport{
@@ -315,22 +373,52 @@ void RenderLayer::RecordCmd()
 			.extent = m_Swapchain->vk_ImageExtent
 		});
 
-		// Draw call
-		uint32_t num_workgroups_x = (m_MeshletInfo->Triangle_Count + m_MeshletInfo->Meshlet_Size - 1) / m_MeshletInfo->Meshlet_Size;
-		uint32_t num_workgroups_y = 1;
-		uint32_t num_workgroups_z = 1;
+		// draw LTC objects
+		{
+			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLTCPipeline->vk_Pipeline);
 
-		std::vector<vk::DescriptorSet> arr{
-			m_CamDescriptor->GetDescriptorSet(),
-			m_MeshShaderInputDescriptor->GetDescriptorSet()
-		};
+			// Draw call
+			uint32_t num_workgroups_x = (m_LTCMeshletInfo->Triangle_Count + m_LTCMeshletInfo->Meshlet_Size - 1) / m_LTCMeshletInfo->Meshlet_Size;
+			uint32_t num_workgroups_y = 1;
+			uint32_t num_workgroups_z = 1;
 
-		cmd[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-			m_MeshShaderPipeline->vk_PipelineLayout,
-			uint32_t(0),
-			arr, nullptr);
+			std::vector<vk::DescriptorSet> arr{
+				m_CamDescriptor->GetDescriptorSet(),
+				m_LTCMeshShaderInputDescriptor->GetDescriptorSet()
+			};
 
-		cmd[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
+
+			cmd[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+				m_MeshShaderLTCPipeline->vk_PipelineLayout,
+				uint32_t(0),
+				arr, nullptr);
+
+			cmd[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
+		}
+
+		// draw Light objects
+		{
+			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLightPipeline->vk_Pipeline);
+
+			// Draw call
+			uint32_t num_workgroups_x = (m_LightMeshletInfo->Triangle_Count + m_LightMeshletInfo->Meshlet_Size - 1) / m_LightMeshletInfo->Meshlet_Size;
+			uint32_t num_workgroups_y = 1;
+			uint32_t num_workgroups_z = 1;
+
+			std::vector<vk::DescriptorSet> arr{
+				m_CamDescriptor->GetDescriptorSet(),
+				m_LightMeshShaderInputDescriptor->GetDescriptorSet()
+			};
+
+
+			cmd[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+				m_MeshShaderLightPipeline->vk_PipelineLayout,
+				uint32_t(0),
+				arr, nullptr);
+
+			cmd[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
+		}
+
 
 		cmd.End();
 	}
