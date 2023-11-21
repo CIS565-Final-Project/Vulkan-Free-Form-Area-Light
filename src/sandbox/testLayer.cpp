@@ -275,7 +275,7 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 		if (mouseState & SDL_BUTTON(SDL_BUTTON_MIDDLE))
 		{
 			glm::vec2 offset = 0.01f * glm::vec2(mouse_cur - mouse_pre);
-			m_Camera->m_Transform.RotateAround(glm::vec3(0.f), { 0.1f * offset.y, -offset.x, 0 });
+			m_Camera->m_Transform.RotateAround(glm::vec3(0.f), { 0.4f * offset.y, -offset.x, 0 });
 			m_Camera->RecomputeProjView();
 			glm::mat4 view_proj_mat = m_Camera->GetProjViewMatrix();
 

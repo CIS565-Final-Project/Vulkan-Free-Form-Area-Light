@@ -18,7 +18,8 @@ namespace VK_Renderer
 		}
 		inline void RotateAround(glm::vec3 const& point, glm::vec3 const& eulerAngle)
 		{
-			rotation *= glm::quat(eulerAngle);
+			//rotation *= glm::quat(eulerAngle);
+			rotation = glm::quat(eulerAngle) * rotation; 
 
 			glm::vec3 l = position - point;
 			l = glm::quat(eulerAngle) * glm::vec4(l, 1.f);

@@ -1,18 +1,18 @@
 #include "perspectiveCamera.h"
 
 #include <gtc/matrix_transform.hpp>
-
+#include <iostream>
 namespace VK_Renderer
 {
 	void PerspectiveCamera::RecomputeProjView()
 	{
 		glm::mat3 R = glm::toMat3(m_Transform.rotation);
 		
-		glm::vec3 right = glm::normalize(glm::cross(R[2], { 0, glm::sign(R[1].y) * 1, 0 }));
-
+		glm::vec3 right = glm::normalize(glm::cross(R[2], { 0, glm::sign(R[1].y) * 1, 0}));
+		glm::vec3 up = glm::cross(right, -R[2]);
 		m_ViewMatrix = transpose(glm::mat4(
 			glm::vec4(right, 0.f),
-			glm::vec4(glm::cross(right, -R[2]), 0.f),
+			glm::vec4(up, 0.f),
 			glm::vec4( -R[2], 0.f),
 			glm::vec4(0.f, 0.f, 0.f, 1.f)
 		)) *
