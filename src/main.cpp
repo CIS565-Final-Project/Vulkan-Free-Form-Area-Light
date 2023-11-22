@@ -69,29 +69,29 @@ int main(int argc, char* argv[])
 	);
 
 	std::vector<Model*> lightModels;
-	const float halfWidth = 2.5f;
+	const float halfWidth = 1.5f;
 	lightModels.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
 		{
-			{ { -halfWidth, halfWidth + 1.5f, -5.0f }, { 1.0f, 0.0f, 0.0f },{ 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
-			{ { halfWidth, halfWidth + 1.5f, -5.0f }, { 0.0f, 1.0f, 0.0f },{ 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } },
-			{ { halfWidth, -halfWidth + 1.5f, -5.0f }, { 0.0f, 0.0f, 1.0f },{ 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } },
-			{ { -halfWidth, -halfWidth + 1.5f, -5.0f }, { 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f } }
+			{ { -halfWidth, halfWidth + 1.0f, 5.0f }, { 1.0f, 0.0f, 0.0f },{ 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
+			{ { halfWidth, halfWidth + 1.0f, 5.0f }, { 0.0f, 1.0f, 0.0f },{ 1.0f, 0.0f }, { 0.0f, 0.0f, -1.0f } },
+			{ { -halfWidth, -halfWidth + 1.0f, 5.0f }, { 0.0f, 0.0f, 1.0f },{ 0.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } },
+			{ { halfWidth, -halfWidth + 1.0f, 5.0f }, { 1.0f, 1.0f, 1.0f },{ 1.0f, 1.0f }, { 0.0f, 0.0f, -1.0f } }
 		},
-		{ 0, 1, 2, 2, 3, 0 }
+		{ 0, 2, 1, 1, 2, 3 }
 	));
 	
 	std::vector<Model*> shadingModels;
-	const float halfWidth_1 = 6.0f;
-	const float quadHeight = -1.0f;
+	const float halfWidth_1 = 10.0f;
+	const float quadHeight = -0.5f;
 	shadingModels.emplace_back(new Model(instance.get(), command_pool.get()->m_CommandPool,
 		{
-			{ { -halfWidth_1, quadHeight, halfWidth_1 - 2.0f}, { 1.0f, 1.0f, 0.0f },{ 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
-			{ { halfWidth_1, quadHeight, halfWidth_1 - 2.0f}, { 0.0f, 1.0f, 1.0f },{ 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
-			{ { halfWidth_1, quadHeight, -halfWidth_1 - 2.0f}, { 1.0f, 0.0f, 1.0f },{ 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
-			{ { -halfWidth_1, quadHeight,  -halfWidth_1 - 2.0f}, { 0.0f, 1.0f, 1.0f },{ 1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } }
+			{ { -halfWidth_1, quadHeight, halfWidth_1}, { 1.0f, 1.0f, 0.0f },{ 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+			{ { halfWidth_1, quadHeight, halfWidth_1}, { 0.0f, 1.0f, 1.0f },{ 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f } },
+			{ { -halfWidth_1, quadHeight, -halfWidth_1}, { 1.0f, 0.0f, 1.0f },{ 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } },
+			{ { halfWidth_1, quadHeight,  -halfWidth_1 }, { 0.0f, 1.0f, 1.0f },{ 1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } }
 		},
-		// { 0, 1, 2, 2, 3, 0 }
-		{ 0, 2, 1, 3, 2, 0 }
+		{ 0, 2, 1, 1, 2, 3 }
+		// { 0, 2, 1, 3, 2, 0 }
 	));
 
 	Camera* camera = new Camera(instance.get(), width / height);

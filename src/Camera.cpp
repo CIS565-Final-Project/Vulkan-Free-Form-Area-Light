@@ -8,11 +8,11 @@
 #include "Camera.h"
 #include "BufferUtils.h"
 
-Camera::Camera(VK_Renderer::VK_Instance* instance, float aspectRatio) : m_instance(instance), origin(glm::vec3(0.0f, 1.0f, 10.0f)) {
+Camera::Camera(VK_Renderer::VK_Instance* instance, float aspectRatio) : m_instance(instance), origin(glm::vec3(0.0f, 0.0f, -10.0f)) {
     r = 10.0f;
     theta = 0.0f;
     phi = 0.0f;
-    cameraBufferObject.viewMatrix = glm::lookAt(origin, glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    cameraBufferObject.viewMatrix = glm::lookAt(origin, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     cameraBufferObject.projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
     cameraBufferObject.projectionMatrix[1][1] *= -1; // y-coordinate is flipped
     cameraBufferObject.origin = origin;

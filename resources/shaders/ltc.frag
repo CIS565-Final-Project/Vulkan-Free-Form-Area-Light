@@ -108,26 +108,33 @@ float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MA
 	}
 	return res * 0.5 * INV_PI;
 }
-float halfWidth = 2.5f;
+float halfWidth = 1.5f;
 vec3 lights[5] = vec3[](
-	vec3(-halfWidth, halfWidth + 1.5f, -5.0f),
-	vec3(halfWidth, halfWidth + 1.5f, -5.0f ),
-	vec3(halfWidth, -halfWidth + 1.5f, -5.0f ),
-	vec3(-halfWidth, -halfWidth + 1.5f, -5.0f),
+
+	vec3(-halfWidth, -halfWidth + 1.0f, 5.0f),
+	
+	vec3(halfWidth, -halfWidth + 1.0f, 5.0f ),
+	vec3(halfWidth, halfWidth + 1.0f, 5.0f ),
+	vec3(-halfWidth, halfWidth + 1.0f, 5.0f),
+	
 	vec3(0.f)
 );
 
 void main()
 {
+ outColor = vec4((fs_Pos.x + 10.0f) / 20.0f, 0.0f, (fs_Pos.z + 10.0f) / 20.0f, 1.0f);
+
+ /*
 	//vec3 color = 1.f - vs_Color;
 	//outColor = vec4(color, 1.f);
-	vec3 cameraPos = vec3(0,1,10);
+	vec3 cameraPos = vec3(0,0,-10);
 	vec3 fs_norm = vec3(0,1,0);
 	vec3 V = normalize(cameraPos - fs_Pos);
 	vec3 N = normalize(fs_norm);
-	//float roughness = fs_roughness;
-	mat3 LTCMat = LTCMatrix(V, N, 0.75);
+	float roughness = 0.1f;
+	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	//outColor = vec3(IntegrateD(LTCMat,V,N,fs_Pos,lights.vertex,lights.size));
 	//outColor = texture(texSampler, fragTexCoord);
 	outColor = vec4(vec3(IntegrateD(LTCMat,V,N,fs_Pos,lights,4)),1);
+	*/
 }
