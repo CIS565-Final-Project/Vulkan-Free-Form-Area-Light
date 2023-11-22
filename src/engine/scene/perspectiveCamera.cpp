@@ -7,13 +7,16 @@ namespace VK_Renderer
 	void PerspectiveCamera::RecomputeProjView()
 	{
 		glm::mat3 R = glm::toMat3(m_Transform.rotation);
-		
-		glm::vec3 right = glm::normalize(glm::cross(R[2], { 0, glm::sign(R[1].y) * 1, 0}));
-		glm::vec3 up = glm::cross(right, -R[2]);
+		glm::vec3 const& forward = -R[2];
+
+		glm::vec3 up = glm::vec3(0.f, glm::abs(forward.x) < glm::epsilon<float>() ? glm::sign(R[1].y) : 1.f, 0.f);
+		glm::vec3 right = glm::normalize(glm::cross(-forward, up));
+		up = glm::cross(right, -R[2]);
+
 		m_ViewMatrix = transpose(glm::mat4(
 			glm::vec4(right, 0.f),
 			glm::vec4(up, 0.f),
-			glm::vec4( -R[2], 0.f),
+			glm::vec4(forward, 0.f),
 			glm::vec4(0.f, 0.f, 0.f, 1.f)
 		)) *
 		glm::mat4(

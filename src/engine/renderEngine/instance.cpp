@@ -4,7 +4,7 @@
 #include <vulkan/vulkan.hpp>
 
 #ifdef NDEBUG
-const bool ENABLE_VALIDATION = true;
+const bool ENABLE_VALIDATION = false;
 #else
 const bool ENABLE_VALIDATION = true;
 #endif
