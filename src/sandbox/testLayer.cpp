@@ -107,21 +107,24 @@ void RenderLayer::OnAttach()
 	glm::mat4 vp = m_Camera->GetProjViewMatrix();
 	m_CamBuffer->CreateFromData(&vp, sizeof(CameraUBO), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
-	Mesh ltcMesh;
+	
 	//mesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
 	//mesh.LoadMeshFromFile("meshes/sphere.obj");
 	//mesh.LoadMeshFromFile("meshes/cube.obj");
-	ltcMesh.LoadMeshFromFile(m_MeshFile);
+	// ltcMesh.LoadMeshFromFile("meshes/plane.obj");
 
 	Mesh lightMesh;
-	lightMesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
+	lightMesh.LoadMeshFromFile("meshes/lightQuad.obj");
 
-	m_Texture = mkU<VK_Texture2D>(*m_Device);
+	Mesh ltcMesh;
+	ltcMesh.LoadMeshFromFile("meshes/plane.obj");
 
-	m_Texture->CreateFromFile(m_TextureFile, { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
-	//m_Texture->CreateFromFile("images/ltc.dds", {.format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
+	m_LTCTexture = mkU<VK_Texture2D>(*m_Device);
 
-	m_Texture->TransitionLayout(VK_ImageLayout{
+	// m_Texture->CreateFromFile(m_TextureFile, { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
+	m_LTCTexture->CreateFromFile("images/ltc.dds", {.format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
+
+	m_LTCTexture->TransitionLayout(VK_ImageLayout{
 			.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
 			.accessFlag = vk::AccessFlagBits::eShaderRead,
 			.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
@@ -247,8 +250,8 @@ void RenderLayer::OnAttach()
 		.type = vk::DescriptorType::eCombinedImageSampler,
 		.stage = vk::ShaderStageFlagBits::eFragment,
 		.imageInfo = vk::DescriptorImageInfo{
-			.sampler = m_Texture->GetSampler(),
-			.imageView = m_Texture->GetImageView(),
+			.sampler = m_LTCTexture->GetSampler(),
+			.imageView = m_LTCTexture->GetImageView(),
 			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
 		}
 	});
@@ -257,15 +260,15 @@ void RenderLayer::OnAttach()
 
 	std::vector<VK_DescriptorBinding> lightMeshShaderDescriptorSet = generateDescriptorBinds(m_LightMeshBufferSet);
 
-	lightMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
-		.type = vk::DescriptorType::eCombinedImageSampler,
-		.stage = vk::ShaderStageFlagBits::eFragment,
-		.imageInfo = vk::DescriptorImageInfo{
-			.sampler = m_Texture->GetSampler(),
-			.imageView = m_Texture->GetImageView(),
-			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-		}
-	});
+	//lightMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
+	//	.type = vk::DescriptorType::eCombinedImageSampler,
+	//	.stage = vk::ShaderStageFlagBits::eFragment,
+	//	.imageInfo = vk::DescriptorImageInfo{
+	//		.sampler = m_Texture->GetSampler(),
+	//		.imageView = m_Texture->GetImageView(),
+	//		.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+	//	}
+	//});
 
 	m_LightMeshShaderInputDescriptor->Create(lightMeshShaderDescriptorSet);
 
@@ -278,15 +281,17 @@ void RenderLayer::OnAttach()
 		m_CamDescriptor->GetDescriptorSetLayout(),
 		m_LTCMeshShaderInputDescriptor->GetDescriptorSetLayout(),
 	};
+	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLTCPipeline.get(), ltc_descriptor_set_layouts,
+		"shaders/mesh_ltc.task.spv", "shaders/mesh_ltc.mesh.spv", "shaders/mesh_ltc.frag.spv");
+
+
 	std::vector<vk::DescriptorSetLayout> light_descriptor_set_layouts{
 		m_CamDescriptor->GetDescriptorSetLayout(),
 		m_LightMeshShaderInputDescriptor->GetDescriptorSetLayout(),
 	};
-	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLightPipeline.get(), ltc_descriptor_set_layouts,
+	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLightPipeline.get(), light_descriptor_set_layouts,
 		"shaders/mesh_flat.task.spv", "shaders/mesh_flat.mesh.spv", "shaders/mesh_flat.frag.spv");
-	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLTCPipeline.get(), light_descriptor_set_layouts,
-		"shaders/mesh_ltc.task.spv", "shaders/mesh_ltc.mesh.spv", "shaders/mesh_ltc.frag.spv");
-
+	
 	RecordCmd();
 	m_Engine->PushSecondaryCommandAll((*m_Cmd)[0]);
 }

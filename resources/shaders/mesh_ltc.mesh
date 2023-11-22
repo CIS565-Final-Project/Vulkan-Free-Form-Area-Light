@@ -51,6 +51,7 @@ layout(location = 0) out PerVertexData
 {
 	vec2 uv;
 	vec3 color;
+	vec3 pos; // worldPos
 } v_out[];
 
 float scale = 0.5f;
@@ -101,6 +102,7 @@ void main()
 		int uv_id = triangle[tri_id].uvId[i];
 		v_out[i].uv = vec2(uvs[2 * uv_id], uvs[2 * uv_id + 1]);
 		v_out[i].color = IN.color;
+		v_out[i].pos = pos.xyz;
 	}
 	
 	gl_PrimitiveTriangleIndicesEXT[0] =  uvec3(0, 1, 2);

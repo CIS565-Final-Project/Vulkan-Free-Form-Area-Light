@@ -5,7 +5,7 @@ namespace VK_Renderer
 
 	class Quad : public Mesh
 	{
-		Quad(const std::string& file) = delete;
+	public:
 		Quad();
 	};
 };

@@ -19,7 +19,8 @@ struct MeshletInfo;
 #include "renderEngine/texture.h"
 #include "renderEngine/descriptor.h"
 
-#include "scene/mesh.h"
+// #include "scene/mesh.h"
+#include "scene/quad.h"
 #include "scene/image.h"
 #include "scene/scene.h"
 #include "scene/perspectiveCamera.h"
@@ -59,7 +60,7 @@ protected:
 	uPtr<VK_Renderer::PerspectiveCamera> m_Camera;
 	uPtr<VK_Renderer::VK_CommandBuffer> m_Cmd;
 	
-	uPtr<VK_Renderer::VK_Texture2D> m_Texture;
+	uPtr<VK_Renderer::VK_Texture2D> m_LTCTexture;
 
 	uPtr<VK_Renderer::VK_PipelineInput> m_PipelineInput;
 	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderLightPipeline;
