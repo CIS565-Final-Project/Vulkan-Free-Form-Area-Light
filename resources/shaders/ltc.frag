@@ -122,7 +122,7 @@ vec3 lights[5] = vec3[](
 
 void main()
 {
- outColor = vec4((fs_Pos.x + 10.0f) / 20.0f, 0.0f, (fs_Pos.z + 10.0f) / 20.0f, 1.0f);
+ outColor = texture(texSampler, vec2((fs_Pos.x + 10.0f) / 20.0f, (fs_Pos.z + 10.0f) / 20.0f));
 
  /*
 	//vec3 color = 1.f - vs_Color;
