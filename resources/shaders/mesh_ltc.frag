@@ -107,10 +107,10 @@ float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MA
 }
 float halfWidth = 1.5f;
 vec3 lights[5] = vec3[](
-	vec3(-halfWidth, halfWidth + 1.0f, 5.0f),
+	vec3(-halfWidth, -halfWidth + 1.0f, 5.0f),
+	vec3(halfWidth, -halfWidth + 1.0f, 5.0f ),
 	vec3(halfWidth, halfWidth + 1.0f, 5.0f ),
-	vec3(-halfWidth, -halfWidth + 1.0f, 5.0f ),
-	vec3(halfWidth, -halfWidth + 1.0f, 5.0f),
+	vec3(-halfWidth, halfWidth + 1.0f, 5.0f),
 	vec3(0.f)
 );
 
@@ -120,10 +120,11 @@ void main()
 	// fs_Color = texture(texSampler, fragIn.uv).xyz;
 	// fs_Color = vec3((fragIn.pos.x + 10.0f) / 20.0f, 0.0f, (fragIn.pos.z + 10.0f) / 20.0f);
 
-	// vec3 pos = fragIn.pos;
+	vec3 pos = fragIn.pos;
 	// vec3 pos = vec3((fragIn.uv.x - 0.5f) * 20.0f, -0.5f, (0.5f - fragIn.uv.y) * 20.0f);
 
-	vec3 pos = vec3(0.0f, -0.5f, 2.0f);
+	// vec3 pos = vec3(0.0f, 0.0f, 2.0f);
+
 
 	vec3 cameraPos = vec3(0,0,-10);
 	vec3 fs_norm = vec3(0,1,0);
