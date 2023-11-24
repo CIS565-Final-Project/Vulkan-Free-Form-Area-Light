@@ -116,26 +116,26 @@ vec3 lights[5] = vec3[](
 
 void main()
 {
-	fs_Color = texture(texSampler, vec2(fragIn.pos.x / 20.0f + 0.5f, 1.0f - (fragIn.pos.z / 20.0f + 0.5f))).xyz;
+	// fs_Color = texture(texSampler, vec2(fragIn.pos.x / 20.0f + 0.5f, 1.0f - (fragIn.pos.z / 20.0f + 0.5f))).xyz;
 	// fs_Color = texture(texSampler, fragIn.uv).xyz;
 	// fs_Color = vec3((fragIn.pos.x + 10.0f) / 20.0f, 0.0f, (fragIn.pos.z + 10.0f) / 20.0f);
 
 	// vec3 pos = fragIn.pos;
+	// vec3 pos = vec3((fragIn.uv.x - 0.5f) * 20.0f, -0.5f, (0.5f - fragIn.uv.y) * 20.0f);
 
-	/*
-	vec3 pos = vec3((fragIn.uv.x - 0.5f) * 20.0f, 0.0f, (fragIn.uv.y - 0.5f) * 20.0f);
-	
+	vec3 pos = vec3(0.0f, -0.5f, 2.0f);
 
 	vec3 cameraPos = vec3(0,0,-10);
 	vec3 fs_norm = vec3(0,1,0);
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
 	//float roughness = fs_roughness;
+
 	float roughness = 0;
 
 
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	float d = IntegrateD(LTCMat,V,N,pos,lights,4);
 	fs_Color = vec3(d);
-	*/
+	
 }
