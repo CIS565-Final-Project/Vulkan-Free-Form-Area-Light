@@ -116,7 +116,8 @@ vec3 lights[5] = vec3[](
 
 void main()
 {
-	fs_Color = texture(texSampler, fragIn.uv).xyz;
+	fs_Color = texture(texSampler, vec2(fragIn.pos.x / 20.0f + 0.5f, 1.0f - (fragIn.pos.z / 20.0f + 0.5f))).xyz;
+	// fs_Color = texture(texSampler, fragIn.uv).xyz;
 	// fs_Color = vec3((fragIn.pos.x + 10.0f) / 20.0f, 0.0f, (fragIn.pos.z + 10.0f) / 20.0f);
 
 	// vec3 pos = fragIn.pos;
