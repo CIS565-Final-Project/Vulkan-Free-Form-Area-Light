@@ -12,6 +12,7 @@ layout(set = 0, binding = 0) uniform CameraUBO {
     mat4 viewProjMat;
 } u_CamUBO;
 layout(set = 1, binding = 5) uniform sampler2D texSampler;
+layout(set = 1, binding = 6) uniform sampler2DArray ltSampler;
 
 //in
 layout (location = 0) in PerVertexData

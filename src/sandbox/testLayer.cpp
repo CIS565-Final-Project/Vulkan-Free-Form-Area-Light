@@ -122,16 +122,43 @@ void RenderLayer::OnAttach()
 	ltcMesh.LoadMeshFromFile("meshes/plane.obj");
 
 	m_LTCTexture = mkU<VK_Texture2D>(*m_Device);
-
 	// m_Texture->CreateFromFile(m_TextureFile, { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
 	m_LTCTexture->CreateFromFile("images/ltc.dds", {.format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
 	// m_LTCTexture->CreateFromFile("images/wall.jpg", { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
-
 	m_LTCTexture->TransitionLayout(VK_ImageLayout{
+		.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+		.accessFlag = vk::AccessFlagBits::eShaderRead,
+		.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
+		});
+
+	m_LightTexture = mkU<VK_Texture2DArray>(*m_Device);
+	m_LightTexture->CreateFromFiles(
+		//image files
+		{
+			"images/0.png",
+			"images/1.png",
+			"images/2.png",
+			"images/3.png",
+			"images/4.png",
+			"images/5.png",
+			"images/6.png",
+			"images/7.png",
+			"images/8.png"
+		},
+		//createInfo
+		{ 
+			.format = vk::Format::eR8G8B8A8Unorm, 
+			.usage = vk::ImageUsageFlagBits::eSampled,
+			.arrayLayer = 9
+		}
+	);
+	m_LightTexture->TransitionLayout(
+		VK_ImageLayout{
 			.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
 			.accessFlag = vk::AccessFlagBits::eShaderRead,
 			.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
-		});
+		}
+	);
 
 	std::vector<TriangleInfo> ltcTriangles;
 
@@ -255,6 +282,16 @@ void RenderLayer::OnAttach()
 		.imageInfo = vk::DescriptorImageInfo{
 			.sampler = m_LTCTexture->GetSampler(),
 			.imageView = m_LTCTexture->GetImageView(),
+			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+		}
+	});
+
+	ltcMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
+		.type = vk::DescriptorType::eCombinedImageSampler,
+		.stage = vk::ShaderStageFlagBits::eFragment,
+		.imageInfo = vk::DescriptorImageInfo{
+			.sampler = m_LightTexture->GetSampler(),
+			.imageView = m_LightTexture->GetImageView(),
 			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
 		}
 	});
