@@ -8,6 +8,13 @@ namespace VK_Renderer
 {
 	class VK_CommandPool;
 
+	struct DeviceProperties
+	{
+		vk::PhysicalDeviceProperties properties;
+		vk::PhysicalDeviceMemoryProperties memoryProperties;
+		vk::SampleCountFlagBits maxSampleCount{ vk::SampleCountFlagBits::e1 };
+	};
+
 	// Custom feature handler
 	class VK_Device
 	{
@@ -28,6 +35,9 @@ namespace VK_Renderer
 		vk::DescriptorPool vk_DescriptorPool;
 
 	protected:
+		vk::SampleCountFlagBits GetMaxSampleCount() const;
+
+	protected:
 		DeclareWithGetFunc(protected, vk::Device, vk, Device, const);
 		DeclareWithGetFunc(protected, vk::PhysicalDevice, vk, PhysicalDevice, const);
 
@@ -41,6 +51,6 @@ namespace VK_Renderer
 		DeclarePtrWithGetFunc(protected, uPtr, VK_CommandPool, vk, ComputeCommandPool, const);
 		DeclarePtrWithGetFunc(protected, uPtr, VK_CommandPool, vk, TransferCommandPool, const);
 
-		vk::PhysicalDeviceMemoryProperties vk_DeviceMemoryProperties;
+		DeclareWithGetFunc(protected, DeviceProperties, m, DeviceProperties, const);
 	};
 }

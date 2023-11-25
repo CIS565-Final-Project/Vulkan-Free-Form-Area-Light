@@ -8,12 +8,15 @@ namespace VK_Renderer
 							vk::PhysicalDeviceFeatures2 physicalDeviceFeatures2,
 							const QueueFamilyIndices& queueFamilyIdx,
 							const uint32_t queue_count)
-		: vk_PhysicalDevice(physicalDevice)
+		: vk_PhysicalDevice(physicalDevice),
+		  m_DeviceProperties{
+			.properties = vk_PhysicalDevice.getProperties(),
+			.memoryProperties = vk_PhysicalDevice.getMemoryProperties(),
+			.maxSampleCount = GetMaxSampleCount()
+		  }
 	{
-		vk_DeviceMemoryProperties = vk_PhysicalDevice.getMemoryProperties();
-
 		std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
-		std::set<uint32_t> unique_queues = 
+		std::set<uint32_t> unique_queues
 		{ 
 			queueFamilyIdx.GraphicsIdx(),
 			queueFamilyIdx.PresentIdx(),
@@ -84,6 +87,7 @@ namespace VK_Renderer
 		};
 
 		vk_DescriptorPool = vk_Device.createDescriptorPool(vk::DescriptorPoolCreateInfo{
+			.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
 			.maxSets = maxSets,
 			.poolSizeCount = 1,
 			.pPoolSizes = &desc_pool_size,
@@ -93,14 +97,31 @@ namespace VK_Renderer
 	uint32_t VK_Device::GetMemoryTypeIndex(uint32_t typeBits, vk::MemoryPropertyFlags properties) const
 	{
 		// Iterate over all memory types available for the device used in this example
-		for (uint32_t i = 0; i < vk_DeviceMemoryProperties.memoryTypeCount; i++) {
+		for (uint32_t i = 0; i < m_DeviceProperties.memoryProperties.memoryTypeCount; i++) {
 			if ((typeBits & 1) == 1) {
-				if ((vk_DeviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+				if ((m_DeviceProperties.memoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
 					return i;
 				}
 			}
 			typeBits >>= 1;
 		}
 		throw std::runtime_error("Could not find a suitable memory type!");
+	}
+	
+	vk::SampleCountFlagBits VK_Device::GetMaxSampleCount() const
+	{
+		vk::SampleCountFlags flags = m_DeviceProperties.properties.limits.framebufferColorSampleCounts &
+									 m_DeviceProperties.properties.limits.framebufferDepthSampleCounts;
+
+#define ReturnBitIfExsist(flags, bit) if (flags & bit) { return bit; }
+
+		ReturnBitIfExsist(flags, vk::SampleCountFlagBits::e64);
+		ReturnBitIfExsist(flags, vk::SampleCountFlagBits::e32);
+		ReturnBitIfExsist(flags, vk::SampleCountFlagBits::e16);
+		ReturnBitIfExsist(flags, vk::SampleCountFlagBits::e8);
+		ReturnBitIfExsist(flags, vk::SampleCountFlagBits::e4);
+		ReturnBitIfExsist(flags, vk::SampleCountFlagBits::e2);
+
+		return vk::SampleCountFlagBits::e1;
 	}
 }

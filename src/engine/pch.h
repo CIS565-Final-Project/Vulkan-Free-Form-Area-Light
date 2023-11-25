@@ -12,6 +12,7 @@
 #include <limits>
 #include <algorithm>
 #include <fstream>
+#include <filesystem>
 
 #include <glm.hpp>
 
@@ -38,6 +39,12 @@
 																	ptrType<type> prefix##_##name;\
 																public: \
 																	inline type __VA_ARGS__ * Get##name##() __VA_ARGS__ { return prefix##_##name.get(); }\
+
+#define DeclareWithGetSetFunc(accessible, type, prefix, name, ...) accessible:\
+																	type prefix##_##name;\
+																public: \
+																	inline void Set##name##(type const&& value) { prefix##_##name = value; }\
+																	inline type __VA_ARGS__ & Get##name##() __VA_ARGS__ { return prefix##_##name; }\
 
 namespace VK_Renderer
 {

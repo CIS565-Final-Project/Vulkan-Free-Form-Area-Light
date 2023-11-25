@@ -7,15 +7,17 @@
 
 namespace VK_Renderer
 {
-	void VK_Buffer::FreeBuffer(vk::Device device, vk::Buffer buffer, vk::DeviceMemory deviceMemory)
+	void VK_Buffer::FreeBuffer(vk::Device device, vk::Buffer& buffer, vk::DeviceMemory& deviceMemory)
 	{
 		if (buffer)
 		{
 			device.destroyBuffer(buffer);
+			buffer = nullptr;
 		}
 		if (deviceMemory)
 		{
 			device.freeMemory(deviceMemory);
+			deviceMemory = nullptr;
 		}
 	}
 
@@ -65,10 +67,9 @@ namespace VK_Renderer
 		memcpy(mapped_data, data, size);
 		device.GetDevice().unmapMemory(staging_buffer_mem);
 
-		uPtr<VK_CommandBuffer> cmd_ptr = device.GetTransferCommandPool()->AllocateCommandBuffers();
-		VK_CommandBuffer& cmd = *cmd_ptr;
+		VK_CommandBuffer cmd = device.GetTransferCommandPool()->AllocateCommandBuffers();
 		{
-			cmd.Begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+			cmd.Begin({ .usage = vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
 			cmd[0].copyBuffer(staging_buffer, buffer, vk::BufferCopy{
 				.srcOffset = 0,
 				.dstOffset = offset,
@@ -81,7 +82,6 @@ namespace VK_Renderer
 			.pCommandBuffers = &cmd[0]
 		});
 		device.GetTransferQueue().waitIdle();
-		device.GetTransferCommandPool()->FreeCommandBuffer(cmd);
 
 		FreeBuffer(device.GetDevice(), staging_buffer, staging_buffer_mem);
 	}
@@ -91,7 +91,12 @@ namespace VK_Renderer
 	{
 	}
 
-	void VK_Buffer::Free() const
+	VK_Buffer::~VK_Buffer()
+	{
+		Free();
+	}
+
+	void VK_Buffer::Free()
 	{
 		FreeBuffer(m_Device.GetDevice(), vk_Buffer, vk_DeviceMemory);
 	}
@@ -127,7 +132,7 @@ namespace VK_Renderer
 		std::memcpy(reinterpret_cast<char*>(m_MappedMemory) + offset, data, size);
 	}
 
-	void VK_StagingBuffer::Free() const
+	void VK_StagingBuffer::Free()
 	{
 		m_Device.GetDevice().unmapMemory(vk_DeviceMemory);
 		FreeBuffer(m_Device.GetDevice(), vk_Buffer, vk_DeviceMemory);

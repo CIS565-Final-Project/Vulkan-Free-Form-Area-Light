@@ -4,9 +4,8 @@
 #include <SDL_vulkan.h>
 
 #include "renderEngine/renderEngine.h"
-#include "renderEngine/instance.h"
-#include "renderEngine/swapchain.h"
-#include "renderEngine/device.h"
+
+#include "layers/imguiLayer.h"
 
 namespace MyCore
 {
@@ -19,6 +18,12 @@ namespace MyCore
 		s_Instance = this;
 		// TODO: load app configuration from file
 
+		// Create folder to store Intermedia data
+		if (!std::filesystem::exists("caches"))
+		{
+			std::filesystem::create_directories("caches");
+		}
+
 		// Create Window
 		SDL_Init(SDL_INIT_VIDEO);
 
@@ -26,7 +31,7 @@ namespace MyCore
 
 		SDL_Window* window = SDL_CreateWindow(
 			"Vulkan Hello Triangle",
-			200, 200, 680, 680, window_flags
+			200, 200, 1000, 1000, window_flags
 		);
 		m_Window = window;
 		std::vector<char const*> extensions;
@@ -51,10 +56,16 @@ namespace MyCore
 															deviceEXTs,
 															ext_chain.get<vk::PhysicalDeviceFeatures2>(),
 															width, height);
+
+		// push build-in layers
+		PushLayer(mkU<ImGuiLayer>("ImGuiLayer", window, *m_RenderEngine));
+		m_ImGuiLayer = reinterpret_cast<ImGuiLayer*>(m_Layers.back().get());
 	}
 	
 	Application::~Application()
 	{
+		m_RenderEngine->WaitIdle();
+
 		for (auto& layer : m_Layers)
 		{
 			layer->OnDetech();
@@ -75,30 +86,43 @@ namespace MyCore
 		{
 			while (SDL_PollEvent(&e) != 0) 
 			{
+				// compute delta time
+				double delta_t = 0.f;
+
 				if (e.type == SDL_QUIT) b_IsRunning = false;
 				// OnEvent
+				
+				if (!m_ImGuiLayer->HandleEvents(e))
+				{
+					for (auto& layer : m_Layers)
+					{
+						if (layer->OnEvent(e)) break;
+					}
+				}
+
+				m_ImGuiLayer->BeginFrame();
 				for (auto& layer : m_Layers)
 				{
-					layer->OnEvent(e);
+					layer->OnImGui(delta_t);
 				}
+				m_ImGuiLayer->EndFrame();
 
 				// OnUpdate
 				for (auto& layer : m_Layers)
 				{
-					layer->OnUpdate(0.f);
+					layer->OnUpdate(delta_t);
 				}
 
 				// OnRender
-				for (auto& layer : m_Layers)
-				{
-					layer->OnRender(0.f);
-				}
+				m_RenderEngine->BeforeRender();
 
-				// TODO: OnImGui
+				//printf("current frame: %d\n", m_RenderEngine->GetSwapchain()->GetImageIdx());
 				for (auto& layer : m_Layers)
 				{
-					layer->OnImGui(0.f);
+					layer->OnRender(delta_t);
 				}
+				m_RenderEngine->RecordCommandBuffer();
+				m_RenderEngine->Render();
 			}
 		}
 	}

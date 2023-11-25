@@ -23,12 +23,8 @@ namespace VK_Renderer
 		}
 	}
 
-	uPtr<VK_CommandBuffer> VK_CommandPool::AllocateCommandBuffers(uint32_t const& count) const
+	VK_CommandBuffer VK_CommandPool::AllocateCommandBuffers(VK_CommandBuffer::AllocateInfo const& allocateInfo) const
 	{
-		return mkU<VK_CommandBuffer>(m_Device, vk_CommandPool, count);
-	}
-	void VK_CommandPool::FreeCommandBuffer(VK_CommandBuffer const & commandBuffer) const
-	{
-		m_Device.GetDevice().freeCommandBuffers(vk_CommandPool, commandBuffer.vk_CommandBuffers);
+		return { m_Device, *this, allocateInfo };
 	}
 }

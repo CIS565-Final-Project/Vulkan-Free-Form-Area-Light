@@ -11,8 +11,7 @@ namespace VK_Renderer
 		VK_CommandPool(VK_Device& device, uint32_t queueFamilyIdx);
 		~VK_CommandPool();
 
-		uPtr<VK_CommandBuffer> AllocateCommandBuffers(uint32_t const & count = 1) const;
-		void FreeCommandBuffer(VK_CommandBuffer const & commandBuffer) const;
+		VK_CommandBuffer AllocateCommandBuffers(VK_CommandBuffer::AllocateInfo const& allocateInfo = {}) const;
 
 	public:
 		vk::CommandPool vk_CommandPool;

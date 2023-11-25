@@ -17,7 +17,7 @@ namespace MyCore
 		virtual void OnRender(double const& deltaTime) {}
 		virtual void OnImGui(double const& deltaTime) {}
 
-		virtual void OnEvent(SDL_Event const&) {}
+		virtual bool OnEvent(SDL_Event const&) { return false; }
 
 	protected:
 		DeclareWithGetFunc(protected, std::string, m, Name, const);

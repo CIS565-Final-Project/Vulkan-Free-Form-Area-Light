@@ -10,6 +10,7 @@ namespace VK_Renderer
 namespace MyCore
 {
 	class Layer;
+	class ImGuiLayer;
 
 	class Application
 	{
@@ -36,6 +37,7 @@ namespace MyCore
 		DeclarePtrWithGetFunc(protected, uPtr, VK_Renderer::VK_RenderEngine, m, RenderEngine);
 		DeclareWithGetFunc(protected, bool, b, IsRunning, const);
 
+		ImGuiLayer* m_ImGuiLayer;
 		std::vector<uPtr<Layer>> m_Layers;
 	};
 

@@ -13,3 +13,10 @@
 	path = external/tinyobjloader
 	url = https://github.com/tinyobjloader/tinyobjloader.git
 	branch = release
+[submodule "external/dds/dds_image"]
+	path = external/dds/dds_image
+	url = https://github.com/spnda/dds_image.git
+[submodule "external/imgui"]
+	path = external/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = docking

@@ -11,6 +11,7 @@ file(GLOB IMAGES
 	"images/*.png"
 	"images/*.bmp"
 	"images/*.hdr"
+	"images/*.dds"
 )
 
 file(GLOB MESHES

@@ -68,6 +68,10 @@ namespace VK_Renderer
 		vk_SwapchainImages = m_Device.GetDevice().getSwapchainImagesKHR(vk_Swapchain);
 
 		CreateImageViews();
+
+		// Create Semaphores
+		vk_UniqueImageAviableSemaphore = m_Device.GetDevice().createSemaphoreUnique(vk::SemaphoreCreateInfo{});
+		vk_ImageAviableSemaphore = vk_UniqueImageAviableSemaphore.get();
 	}
 
 	VK_Swapchain::~VK_Swapchain()
@@ -87,7 +91,7 @@ namespace VK_Renderer
 	void VK_Swapchain::CreateImageViews()
 	{
 		vk_SwapchainImageViews.resize(vk_SwapchainImages.size());
-		VkImageViewCreateInfo create_info;
+
 		for (size_t i = 0; i < vk_SwapchainImageViews.size(); ++i)
 		{
 			vk_SwapchainImageViews[i] = m_Device.GetDevice().createImageView(vk::ImageViewCreateInfo{
@@ -106,28 +110,66 @@ namespace VK_Renderer
 		}
 	}
 
-	void VK_Swapchain::CreateFramebuffers(vk::RenderPass renderPass)
+	void VK_Swapchain::CreateFramebuffers(vk::RenderPass renderPass, 
+										std::vector<vk::ImageView> attachments)
 	{
 		vk_Framebuffers.resize(vk_SwapchainImageViews.size());
 
+		attachments.insert(attachments.begin(), vk::ImageView());
+
 		for (size_t i = 0; i < vk_Framebuffers.size(); ++i)
 		{
+			*attachments.begin() = vk_SwapchainImageViews[i];
+
 			vk_Framebuffers[i] = m_Device.GetDevice().createFramebuffer(vk::FramebufferCreateInfo{
 				.renderPass = renderPass,
-				.attachmentCount = 1,
-				.pAttachments = &vk_SwapchainImageViews[i],
+				.attachmentCount = static_cast<uint32_t>(attachments.size()),
+				.pAttachments = attachments.data(),
 				.width = vk_ImageExtent.width,
 				.height = vk_ImageExtent.height,
-				.layers = 1
+				.layers = 1,
 			});
 		}
+	}
+
+	bool VK_Swapchain::AcquireNextImage()
+	{
+		vk::ResultValue result = m_Device.GetDevice().acquireNextImageKHR(vk_Swapchain, std::numeric_limits<uint64_t>::max(), vk_ImageAviableSemaphore, nullptr);
+		if (result.result != vk::Result::eSuccess)
+		{
+			throw std::runtime_error("Fail to acquire next image KHR");
+		}
+
+		m_ImageIdx = result.value;
+
+		return true;
+	}
+
+	bool VK_Swapchain::Present(std::vector<vk::Semaphore> const& waitSemaphores)
+	{
+		std::array<vk::SwapchainKHR, 1> swapchains{ vk_Swapchain };
+		vk::Result present_result = m_Device.GetPresentQueue().presentKHR(vk::PresentInfoKHR{
+			.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size()),
+			.pWaitSemaphores = waitSemaphores.data(),
+			.swapchainCount = static_cast<uint32_t>(swapchains.size()),
+			.pSwapchains = swapchains.data(),
+			.pImageIndices = &m_ImageIdx
+		});
+
+		if (present_result != vk::Result::eSuccess)
+		{
+			throw std::runtime_error("Fail to present!");
+		}
+
+		return true;
 	}
 
 	vk::SurfaceFormatKHR VK_Swapchain::ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) const
 	{
 		for (const auto& surface_format : availableFormats)
 		{
-			if (surface_format.format == vk::Format::eR8G8B8A8Srgb && 
+			if ((surface_format.format == vk::Format::eR8G8B8A8Unorm
+				|| surface_format.format == vk::Format::eB8G8R8A8Unorm) &&
 				surface_format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
 			{
 				return surface_format;

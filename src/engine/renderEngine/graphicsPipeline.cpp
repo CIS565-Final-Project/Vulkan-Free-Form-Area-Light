@@ -6,25 +6,19 @@
 
 namespace VK_Renderer
 {
-	VK_GraphicsPipeline::VK_GraphicsPipeline(const VK_Device& device,
-											 const vk::Extent2D& extent,
-											 const vk::Format& imageFormat)
-		: m_Device(device),
-		  vk_Extent(extent),
-		  vk_SwapchainImageFormat(imageFormat)
+	VK_GraphicsPipeline::VK_GraphicsPipeline(const VK_Device& device)
+		: m_Device(device)
 	{
-		// create the Renderpass before creating pipeline
-		CreateRenderPass();
 	}
 
 	VK_GraphicsPipeline::~VK_GraphicsPipeline()
 	{
 		m_Device.GetDevice().destroyPipeline(vk_Pipeline);
 		m_Device.GetDevice().destroyPipelineLayout(vk_PipelineLayout);
-		m_Device.GetDevice().destroyRenderPass(vk_RenderPass);
 	}
 
-	void VK_GraphicsPipeline::CreatePipeline(const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo, 
+	void VK_GraphicsPipeline::CreatePipeline(GraphicspipelineCreateInfo const& createInfo, 
+											const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo,
 											const VK_PipelineInput& pipelineInput,
 											std::vector<vk::DescriptorSetLayout> const& descripotrSetLayouts)
 	{
@@ -66,13 +60,23 @@ namespace VK_Renderer
 		};
 		// Multisampling
 		vk::PipelineMultisampleStateCreateInfo multisample_create_info{
-			.rasterizationSamples = vk::SampleCountFlagBits::e1,
+			.rasterizationSamples = m_Device.GetDeviceProperties().maxSampleCount,
 			.sampleShadingEnable = vk::False,
 			.minSampleShading = 1.f,
 			.alphaToCoverageEnable = vk::False,
 			.alphaToOneEnable = vk::False
 		};
 
+		// Depth Stencil State
+		vk::PipelineDepthStencilStateCreateInfo depth_stencil_create_info{
+			.depthTestEnable = vk::True,
+			.depthWriteEnable = vk::True,
+			.depthCompareOp = vk::CompareOp::eLess,
+			.depthBoundsTestEnable = vk::False,
+			.stencilTestEnable = vk::False
+		};
+
+		// Color Blend State
 		vk::PipelineColorBlendAttachmentState color_blend_attachment{
 			.blendEnable = vk::False,
 
@@ -114,11 +118,12 @@ namespace VK_Renderer
 			.pViewportState = &viewport_state_create_info,
 			.pRasterizationState = &rasterization_create_info,
 			.pMultisampleState = &multisample_create_info,
+			.pDepthStencilState = &depth_stencil_create_info,
 			.pColorBlendState = &color_blend_create_info,
 			.pDynamicState = &dynamic_state_create_info,
 			.layout = vk_PipelineLayout,
-			.renderPass = vk_RenderPass,
-			.subpass = 0,
+			.renderPass = createInfo.renderPass,
+			.subpass = createInfo.subpassIdx
 		};
 
 		// Create Pipeline
@@ -127,52 +132,5 @@ namespace VK_Renderer
 			throw std::runtime_error("Failed to create graphics pipeline");
 		}
 		vk_Pipeline = result.value;
-	}
-
-	void VK_GraphicsPipeline::CreateRenderPass()
-	{
-		// color attachment 
-		vk::AttachmentDescription attachment_description{
-			.format = vk_SwapchainImageFormat,
-			.samples = vk::SampleCountFlagBits::e1,
-			.loadOp = vk::AttachmentLoadOp::eClear,
-			.storeOp = vk::AttachmentStoreOp::eStore,
-			.stencilLoadOp = vk::AttachmentLoadOp::eDontCare,
-			.stencilStoreOp = vk::AttachmentStoreOp::eDontCare,
-			.initialLayout = vk::ImageLayout::eUndefined,
-			.finalLayout = vk::ImageLayout::ePresentSrcKHR,
-		};
-
-		// attachment reference
-		vk::AttachmentReference attachment_ref{
-			.attachment = 0,
-			.layout = vk::ImageLayout::eColorAttachmentOptimal
-		};
-
-		// Subpass
-		vk::SubpassDescription subpass_description{
-			.pipelineBindPoint = vk::PipelineBindPoint::eGraphics,
-			.colorAttachmentCount = 1,
-			.pColorAttachments = &attachment_ref
-		};
-
-		vk::SubpassDependency dependency{
-			.srcSubpass = vk::SubpassExternal,
-			.dstSubpass = 0,
-			.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
-			.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput,
-			.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite,
-		};
-
-		// Create RenderPass
-		vk::RenderPassCreateInfo create_info{
-			.attachmentCount = 1,
-			.pAttachments = &attachment_description,
-			.subpassCount = 1,
-			.pSubpasses = &subpass_description,
-			.dependencyCount = 1,
-			.pDependencies = &dependency
-		};
-		vk_RenderPass = m_Device.GetDevice().createRenderPass(create_info);
 	}
 }

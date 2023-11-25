@@ -18,7 +18,11 @@ namespace VK_Renderer
 		~VK_Swapchain();
 
 		void CreateImageViews();
-		void CreateFramebuffers(vk::RenderPass renderPass);
+		void CreateFramebuffers(vk::RenderPass renderPass, 
+								std::vector<vk::ImageView> attachments);
+
+		bool AcquireNextImage();
+		bool Present(std::vector<vk::Semaphore> const& waitSemaphores);
 
 	protected:
 		vk::SurfaceFormatKHR ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) const;
@@ -27,6 +31,11 @@ namespace VK_Renderer
 	protected:
 		const VK_Device& m_Device;
 		vk::SurfaceKHR vk_Surface;
+
+		DeclareWithGetFunc(protected, uint32_t, m, ImageIdx, const);
+		DeclareWithGetFunc(protected, vk::Semaphore, vk, ImageAviableSemaphore, const);
+
+		vk::UniqueSemaphore vk_UniqueImageAviableSemaphore;
 
 	public:
 		vk::SwapchainKHR vk_Swapchain;
