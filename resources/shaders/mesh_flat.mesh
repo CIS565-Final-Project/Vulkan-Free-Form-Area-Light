@@ -2,6 +2,7 @@
 
 #extension GL_EXT_mesh_shader : require
 
+
 layout(local_size_x = 1) in;
 layout(triangles, max_vertices = 3, max_primitives = 1) out;
 
@@ -20,6 +21,7 @@ struct TriangleInfo
 
 
 layout(set = 0, binding = 0) uniform CameraUBO {
+	vec4 pos;
     mat4 viewProjMat;
 } u_CamUBO;
 

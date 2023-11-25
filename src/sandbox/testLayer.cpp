@@ -10,6 +10,7 @@ using namespace VK_Renderer;
 
 struct CameraUBO
 {
+	glm::vec4 pos;
 	glm::mat4 viewProjMat;
 };
 
@@ -104,9 +105,10 @@ void RenderLayer::OnAttach()
 
 	// Create Camera buffer
 	m_CamBuffer = mkU<VK_StagingBuffer>(*m_Device);
-	glm::mat4 vp = m_Camera->GetProjViewMatrix();
-	m_CamBuffer->CreateFromData(&vp, sizeof(CameraUBO), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
-
+	CameraUBO camera_ubo;
+	camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
+	camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+	m_CamBuffer->CreateFromData(&camera_ubo, sizeof(CameraUBO), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 	
 	//mesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
 	//mesh.LoadMeshFromFile("meshes/sphere.obj");
@@ -186,7 +188,7 @@ void RenderLayer::OnAttach()
 	m_CamDescriptor->Create({
 		VK_DescriptorBinding{
 			.type = vk::DescriptorType::eUniformBuffer,
-			.stage = vk::ShaderStageFlagBits::eMeshEXT,
+			.stage = vk::ShaderStageFlagBits::eMeshEXT | vk::ShaderStageFlagBits::eFragment,
 			.bufferInfo = vk::DescriptorBufferInfo{
 				.buffer = m_CamBuffer->GetBuffer(),
 				.offset = 0,
@@ -332,18 +334,22 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 			glm::vec2 offset = 0.001f * glm::vec2(mouse_cur - mouse_pre);
 			m_Camera->m_Transform.Translate({ -offset.x, offset.y, 0 });
 			m_Camera->RecomputeProjView();
-			glm::mat4 view_proj_mat = m_Camera->GetProjViewMatrix();
 
-			m_CamBuffer->Update(&view_proj_mat, 0, sizeof(glm::mat4));
+			CameraUBO camera_ubo;
+			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
+			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 		}
 		if (mouseState & SDL_BUTTON(SDL_BUTTON_MIDDLE))
 		{
 			glm::vec2 offset = 0.01f * glm::vec2(mouse_cur - mouse_pre);
 			m_Camera->m_Transform.RotateAround(glm::vec3(0.f), { 0.4f * offset.y, -offset.x, 0 });
 			m_Camera->RecomputeProjView();
-			glm::mat4 view_proj_mat = m_Camera->GetProjViewMatrix();
-
-			m_CamBuffer->Update(&view_proj_mat, 0, sizeof(glm::mat4));
+			
+			CameraUBO camera_ubo;
+			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
+			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 		}
 		mouse_pre = mouse_cur;
 	}

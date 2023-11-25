@@ -6,7 +6,14 @@
 #define LUT_SIZE 64.f
 #define MAX_LIGHT_VERTEX 5
 #define MAX_BEZIER_CURVE 5
+//uniform
+layout(set = 0, binding = 0) uniform CameraUBO {
+	vec4 pos;
+    mat4 viewProjMat;
+} u_CamUBO;
+layout(set = 1, binding = 5) uniform sampler2D texSampler;
 
+//in
 layout (location = 0) in PerVertexData
 {
 	vec2 uv;
@@ -14,10 +21,8 @@ layout (location = 0) in PerVertexData
 	vec3 pos; // worldPos
 } fragIn;
 
+//out
 layout (location = 0) out vec3 fs_Color;
-
-layout(set = 1, binding = 5) uniform sampler2D texSampler;
-
 
 mat3 LTCMatrix(vec3 V, vec3 N, float roughness){
 	float theta = acos(max(dot(V,N),0));
@@ -32,7 +37,7 @@ mat3 LTCMatrix(vec3 V, vec3 N, float roughness){
 		vec3(0,ltcVal.z,0),
 		vec3(ltcVal.y,0,ltcVal.x)
 	);
-	//ltc fit中的invM是转置的版本
+	//ltc
 	return transpose(res);
 }
 
@@ -126,7 +131,7 @@ void main()
 	// vec3 pos = vec3(0.0f, 0.0f, 2.0f);
 
 
-	vec3 cameraPos = vec3(0,0,-10);
+	vec3 cameraPos = u_CamUBO.pos.xyz;//vec3(0,0,-10);
 	vec3 fs_norm = vec3(0,1,0);
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
