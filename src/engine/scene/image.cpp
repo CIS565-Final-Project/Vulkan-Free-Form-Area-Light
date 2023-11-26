@@ -14,7 +14,7 @@ namespace VK_Renderer
         :m_Size(img.m_Size), m_Resolution(img.GetResolution())
     {
         m_RawData = malloc(m_Size);
-        std::memcpy(m_RawData, img.GetRawData(), m_Size);
+        if(img.GetRawData()!=nullptr)std::memcpy(m_RawData, img.GetRawData(), m_Size);
     }
 
     Image::Image(Image&& img)
