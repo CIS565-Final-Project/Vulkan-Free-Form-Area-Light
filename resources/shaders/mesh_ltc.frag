@@ -11,8 +11,8 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	vec4 pos;
     mat4 viewProjMat;
 } u_CamUBO;
-layout(set = 1, binding = 5) uniform sampler2D texSampler;
-layout(set = 1, binding = 6) uniform sampler2DArray ltSampler;
+layout(set = 1, binding = 4) uniform sampler2D texSampler;
+layout(set = 1, binding = 5) uniform sampler2DArray ltSampler;
 
 layout(set = 2, binding = 0) uniform Roughness{
 	float u_Roughness;
@@ -23,6 +23,7 @@ layout (location = 0) in PerVertexData{
 	vec2 uv;
 	vec3 color;
 	vec3 pos; // worldPos
+	vec3 normal;
 } fragIn;
 
 //out
@@ -156,7 +157,7 @@ float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MA
 		vec3 p_j = clipedPos[0]; 
 		lookup += IntegrateEdge(p_i,p_j);
 	}
-	float res = lookup.z;
+	float res = abs(lookup.z);
 	
 	//calculate fetch uv, lod
 	//******************
@@ -182,9 +183,12 @@ vec3 lights[5] = vec3[](
 );
 
 void main(){
+
+	vec3 albedo = vec3(1.f);//texture(texSampler, fragIn.uv).xyz;
+
 	vec3 pos = fragIn.pos;
 	vec3 cameraPos = u_CamUBO.pos.xyz;
-	vec3 fs_norm = vec3(0,1,0);
+	vec3 fs_norm = fragIn.normal;
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
 	float roughness = u_Roughness;
@@ -192,5 +196,7 @@ void main(){
 	float lod;
 	vec2 ltuv; 
 	float d = IntegrateD(LTCMat,V,N,pos,lights,4, ltuv, lod);
-	fs_Color =  d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+	fs_Color = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+	fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f));
+	fs_Color += 0.1f;
 }

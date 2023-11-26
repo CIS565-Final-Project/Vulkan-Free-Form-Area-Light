@@ -5,6 +5,8 @@ namespace VK_Renderer
 
 	Quad::Quad() {
 		Clear();
+		
+		m_Triangles.emplace_back();
 
 		m_Positions = {
 			-1, 0, 1,
@@ -32,7 +34,7 @@ namespace VK_Renderer
 		//tri_0.nId = glm::ivec3(0, 0, 0);
 		//tri_0.uvId = glm::ivec3(2, 1, 0);
 		tri_0.materialId = -1;
-		m_Triangles.push_back(std::move(tri_0));
+		m_Triangles[0].push_back(std::move(tri_0));
 
 		Triangle tri_1;
 		tri_1.pId = glm::ivec3(1, 3, 2);
@@ -42,6 +44,6 @@ namespace VK_Renderer
 		//tri_1.nId = glm::ivec3(0, 0, 0);
 		//tri_1.uvId = glm::ivec3(2, 3, 1);
 		tri_1.materialId = -1;
-		m_Triangles.push_back(std::move(tri_1));
+		m_Triangles[0].push_back(std::move(tri_1));
 	}
 };

@@ -94,7 +94,7 @@ void RenderLayer::OnAttach()
 	m_Camera = mkU<PerspectiveCamera>();
 	m_Camera->far = 500.f;
 	m_Camera->m_Transform = Transformation{
-		.position = {0, 0, 15},
+		.position = {0, 0, 10},
 	};
 	m_Camera->m_Transform.Rotate(glm::pi<float>(), { 0, 1, 0 });
 	m_Camera->resolution = { 680, 680 };
@@ -120,17 +120,14 @@ void RenderLayer::OnAttach()
 
 	m_Meshlets = mkU<Meshlets>(32, 255);
 
+	m_Meshlets->Append({ "meshes/plane.obj" });
 	m_Meshlets->Append({ "meshes/stanford_bunny.obj" });
-	m_Meshlets->Append({ "meshes/stanford_bunny2.obj" });
 
 	Mesh lightMesh;
 	lightMesh.LoadMeshFromFile("meshes/lightQuad.obj");
 
-	Mesh ltcMesh;
-	ltcMesh.LoadMeshFromFile("meshes/plane.obj");
-
 	m_LTCTexture = mkU<VK_Texture2D>(*m_Device);
-	// m_Texture->CreateFromFile(m_TextureFile, { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
+	//m_LTCTexture->CreateFromFile("images/wahoo.bmp", { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
 	m_LTCTexture->CreateFromFile("images/ltc.dds", {.format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
 	// m_LTCTexture->CreateFromFile("images/wall.jpg", { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
 	m_LTCTexture->TransitionLayout(VK_ImageLayout{
@@ -235,8 +232,8 @@ void RenderLayer::OnAttach()
 			.type = vk::DescriptorType::eCombinedImageSampler,
 			.stage = vk::ShaderStageFlagBits::eFragment,
 			.imageInfo = vk::DescriptorImageInfo{
-				.sampler = m_Texture->GetSampler(),
-				.imageView = m_Texture->GetImageView(),
+				.sampler = m_LTCTexture->GetSampler(),
+				.imageView = m_LTCTexture->GetImageView(),
 				.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
 			}
 		}
@@ -344,16 +341,6 @@ void RenderLayer::OnAttach()
 	};
 
 	//std::vector<VK_DescriptorBinding> ltcMeshShaderDescriptorSet = generateDescriptorBinds(m_LTCMeshBufferSet);
-
-	bindings.push_back(VK_DescriptorBinding{
-		.type = vk::DescriptorType::eCombinedImageSampler,
-		.stage = vk::ShaderStageFlagBits::eFragment,
-		.imageInfo = vk::DescriptorImageInfo{
-			.sampler = m_LTCTexture->GetSampler(),
-			.imageView = m_LTCTexture->GetImageView(),
-			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-		}
-	});
 
 	bindings.push_back(VK_DescriptorBinding{
 		.type = vk::DescriptorType::eCombinedImageSampler,
@@ -534,7 +521,7 @@ void RenderLayer::RecordCmd()
 		}
 
 		// draw Light objects
-		/*{
+		{
 			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLightPipeline->vk_Pipeline);
 
 			// Draw call
@@ -554,7 +541,7 @@ void RenderLayer::RecordCmd()
 				arr, nullptr);
 
 			cmd[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
-		}*/ 
+		}
 
 		cmd.End();
 	}
