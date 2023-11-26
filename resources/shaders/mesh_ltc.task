@@ -8,11 +8,18 @@ struct Task
 	vec3 color;
 };
 
+struct MeshletDescription
+{
+	uint vertexCount;
+	uint primCount;
+	uint vertexBegin;
+	uint primBegin;
+};
+
 taskPayloadSharedEXT Task OUT;
 
-layout(set = 1, binding = 0) uniform MeshletInfo {
-    uint Meshlet_Size;
-	uint Triangle_Count;
+layout(set = 1, binding = 0) buffer MeshletInfos {
+    MeshletDescription meshlets[];
 };
 
 // A simple hash function
@@ -36,7 +43,5 @@ void main()
 	OUT.task_id = int(gl_WorkGroupID.x);
 	OUT.color = randomColor(OUT.task_id);
 
-	uint remain = Triangle_Count - max(OUT.task_id * Meshlet_Size, 0);
-
-	EmitMeshTasksEXT(min(remain, Meshlet_Size), 1, 1);// use gl_WorkGroupID to index in mesh shader
+	EmitMeshTasksEXT(meshlets[gl_WorkGroupID.x].primCount, 1, 1);// use gl_WorkGroupID to index in mesh shader
 }
