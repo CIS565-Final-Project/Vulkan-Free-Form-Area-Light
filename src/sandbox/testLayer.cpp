@@ -110,6 +110,11 @@ void RenderLayer::OnAttach()
 	camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
 	m_CamBuffer->CreateFromData(&camera_ubo, sizeof(CameraUBO), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 	
+	// Create MaterialParam buffer
+	float roughness = 0.f;
+	m_MaterialParamBuffer = mkU<VK_StagingBuffer>(*m_Device);
+	m_MaterialParamBuffer->CreateFromData(&roughness, sizeof(float), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
+
 	//mesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
 	//mesh.LoadMeshFromFile("meshes/sphere.obj");
 	//mesh.LoadMeshFromFile("meshes/cube.obj");
@@ -208,6 +213,19 @@ void RenderLayer::OnAttach()
 
 
 	// Create Descriptors
+	m_MaterialParamDescriptor = mkU<VK_Descriptor>(*m_Device);
+	m_MaterialParamDescriptor->Create({ 
+		VK_DescriptorBinding{
+			.type = vk::DescriptorType::eUniformBuffer,
+			.stage = vk::ShaderStageFlagBits::eFragment,
+			.bufferInfo = vk::DescriptorBufferInfo{
+				.buffer = m_MaterialParamBuffer->GetBuffer(),
+				.offset = 0,
+				.range = m_MaterialParamBuffer->GetSize()
+			}
+		}
+	});
+
 	m_CamDescriptor = mkU<VK_Descriptor>(*m_Device);
 	m_LTCMeshShaderInputDescriptor = mkU<VK_Descriptor>(*m_Device);
 	m_LightMeshShaderInputDescriptor = mkU<VK_Descriptor>(*m_Device);
@@ -300,15 +318,15 @@ void RenderLayer::OnAttach()
 
 	std::vector<VK_DescriptorBinding> lightMeshShaderDescriptorSet = generateDescriptorBinds(m_LightMeshBufferSet);
 
-	//lightMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
-	//	.type = vk::DescriptorType::eCombinedImageSampler,
-	//	.stage = vk::ShaderStageFlagBits::eFragment,
-	//	.imageInfo = vk::DescriptorImageInfo{
-	//		.sampler = m_Texture->GetSampler(),
-	//		.imageView = m_Texture->GetImageView(),
-	//		.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-	//	}
-	//});
+	lightMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
+		.type = vk::DescriptorType::eCombinedImageSampler,
+		.stage = vk::ShaderStageFlagBits::eFragment,
+		.imageInfo = vk::DescriptorImageInfo{
+			.sampler = m_LightTexture->GetSampler(),
+			.imageView = m_LightTexture->GetImageView(),
+			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+		}
+	});
 
 	m_LightMeshShaderInputDescriptor->Create(lightMeshShaderDescriptorSet);
 
@@ -320,6 +338,7 @@ void RenderLayer::OnAttach()
 	std::vector<vk::DescriptorSetLayout> ltc_descriptor_set_layouts{
 		m_CamDescriptor->GetDescriptorSetLayout(),
 		m_LTCMeshShaderInputDescriptor->GetDescriptorSetLayout(),
+		m_MaterialParamDescriptor->GetDescriptorSetLayout(),
 	};
 	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLTCPipeline.get(), ltc_descriptor_set_layouts,
 		"shaders/mesh_ltc.task.spv", "shaders/mesh_ltc.mesh.spv", "shaders/mesh_ltc.frag.spv");
@@ -353,7 +372,10 @@ void RenderLayer::OnImGui(double const& deltaTime)
 {
 	static float v = 0.f;
 	ImGui::Begin("Test Window");
-	ImGui::DragFloat("Test Value", &v, 0.1f, 0.f, 10.f);
+	if (ImGui::DragFloat("Roughness", &v, 0.02f, 0.f, 1.f))
+	{
+		m_MaterialParamBuffer->Update(&v, 0, sizeof(float));
+	}
 	ImGui::End();
 }
 
@@ -433,7 +455,8 @@ void RenderLayer::RecordCmd()
 
 			std::vector<vk::DescriptorSet> arr{
 				m_CamDescriptor->GetDescriptorSet(),
-				m_LTCMeshShaderInputDescriptor->GetDescriptorSet()
+				m_LTCMeshShaderInputDescriptor->GetDescriptorSet(),
+				m_MaterialParamDescriptor->GetDescriptorSet(),
 			};
 
 

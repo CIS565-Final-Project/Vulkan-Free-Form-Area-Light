@@ -14,6 +14,10 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 layout(set = 1, binding = 5) uniform sampler2D texSampler;
 layout(set = 1, binding = 6) uniform sampler2DArray ltSampler;
 
+layout(set = 2, binding = 0) uniform Roughness{
+	float u_Roughness;
+};
+
 //in
 layout (location = 0) in PerVertexData{
 	vec2 uv;
@@ -111,7 +115,7 @@ void FetchLight(in vec3 v[4], vec3 lookup, out vec2 uv, out float lod){
 
 	//OUTPUT
 	lod = log(2048.0 * dist / pow(A, 0.5)) / log(3.0);//magic
-	uv = vec2(0) * barycentric.x + vec2(1,0) * barycentric.y + vec2(1,1) * barycentric.z + vec2(0,1) * barycentric.w;
+	uv = vec2(0, 1) * barycentric.x + vec2(1,1) * barycentric.y + vec2(1,0) * barycentric.z + vec2(0,0) * barycentric.w;
 }
 
 vec3 IntegrateEdge(vec3 p_i, vec3 p_j){
@@ -183,7 +187,7 @@ void main(){
 	vec3 fs_norm = vec3(0,1,0);
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
-	float roughness = 0.5;
+	float roughness = u_Roughness;
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	float lod;
 	vec2 ltuv; 

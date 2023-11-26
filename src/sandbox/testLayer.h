@@ -69,6 +69,7 @@ protected:
 	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderLTCPipeline;
 
 	uPtr<VK_Renderer::VK_StagingBuffer> m_CamBuffer;
+	uPtr<VK_Renderer::VK_StagingBuffer> m_MaterialParamBuffer;
 
 	//uPtr<VK_Renderer::VK_DeviceBuffer> m_MeshletInfoBuffer;
 	//uPtr<VK_Renderer::VK_DeviceBuffer> m_TriangleBuffer;
@@ -82,6 +83,7 @@ protected:
 	uPtr<VK_Renderer::VK_Descriptor> m_CamDescriptor;
 	uPtr<VK_Renderer::VK_Descriptor> m_LTCMeshShaderInputDescriptor;
 	uPtr<VK_Renderer::VK_Descriptor> m_LightMeshShaderInputDescriptor;
+	uPtr<VK_Renderer::VK_Descriptor> m_MaterialParamDescriptor;
 
 	uPtr<MeshletInfo> m_LTCMeshletInfo;
 	uPtr<MeshletInfo> m_LightMeshletInfo;
