@@ -33,6 +33,8 @@ namespace VK_Renderer
 		auto& attrib = reader.GetAttrib();
 		auto& shapes = reader.GetShapes();
 		auto& materials = reader.GetMaterials();
+		
+		m_MaterialCounts = materials.size();
 
 		m_Positions.resize(attrib.vertices.size());
 		m_Normals.resize(attrib.normals.size());
@@ -42,25 +44,27 @@ namespace VK_Renderer
 		std::memcpy(m_Normals.data(), attrib.normals.data(), attrib.normals.size() * sizeof(tinyobj::real_t));
 		std::memcpy(m_UVs.data(), attrib.texcoords.data(), attrib.texcoords.size() * sizeof(tinyobj::real_t));
 
-		int index_offset = 0;
-		for (const auto& shape : shapes)
+		m_Triangles.resize(shapes.size());
+
+		for (size_t i = 0; i < shapes.size(); ++i)
 		{
-			for (size_t f = 0; f < shape.mesh.num_face_vertices.size(); f++) 
+			int index_offset = 0;
+			m_Triangles[i].resize(shapes[i].mesh.num_face_vertices.size());
+			m_TriangleCounts += shapes[i].mesh.num_face_vertices.size();
+			for (size_t f = 0; f < shapes[i].mesh.num_face_vertices.size(); f++)
 			{
-				int fv = shape.mesh.num_face_vertices[f];
+				int fv = shapes[i].mesh.num_face_vertices[f];
 
 				// Loop over vertices in the face.
-				Triangle triangle;
 				for (size_t v = 0; v < fv; v++) 
 				{
 					// access to vertex
-					tinyobj::index_t idx = shape.mesh.indices[index_offset + v];
-					triangle.pId[v] = idx.vertex_index;
-					triangle.nId[v] = idx.normal_index;
-					triangle.uvId[v] = idx.texcoord_index;
+					tinyobj::index_t idx = shapes[i].mesh.indices[index_offset + v];
+					m_Triangles[i][f].pId[v] = idx.vertex_index;
+					m_Triangles[i][f].nId[v] = idx.normal_index;
+					m_Triangles[i][f].uvId[v] = idx.texcoord_index;
 				}
-				triangle.materialId = shape.mesh.material_ids[f];
-				m_Triangles.push_back(std::move(triangle));
+				m_Triangles[i][f].materialId = shapes[i].mesh.material_ids[f];
 
 				index_offset += fv;
 			}

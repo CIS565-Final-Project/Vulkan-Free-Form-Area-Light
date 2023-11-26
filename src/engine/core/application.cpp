@@ -46,7 +46,10 @@ namespace MyCore
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			VK_EXT_MESH_SHADER_EXTENSION_NAME
 		};
-		vk::StructureChain<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceMeshShaderFeaturesEXT> ext_chain;
+		vk::StructureChain<vk::PhysicalDeviceFeatures2, 
+							vk::PhysicalDeviceMeshShaderFeaturesEXT,
+							vk::PhysicalDevice16BitStorageFeatures,
+							vk::PhysicalDevice8BitStorageFeatures> ext_chain;
 		
 		int width, height;
 		SDL_GetWindowSize(window, &width, &height);

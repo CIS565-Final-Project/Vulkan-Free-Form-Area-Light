@@ -18,6 +18,8 @@ namespace VK_Renderer
 
 		void Clear()
 		{
+			m_MaterialCounts = 0;
+			m_TriangleCounts = 0;
 			m_Positions.clear();
 			m_Normals.clear();
 			m_UVs.clear();
@@ -26,10 +28,13 @@ namespace VK_Renderer
 		void LoadMeshFromFile(const std::string& file);
 
 	public:
+		DeclareWithGetFunc(protected, uint32_t, m, MaterialCounts, const);
+		DeclareWithGetFunc(protected, uint32_t, m, TriangleCounts, const);
+
 		std::vector<Float> m_Positions;
 		std::vector<Float> m_Normals;
 		std::vector<Float> m_UVs;
 
-		std::vector<Triangle> m_Triangles;
+		std::vector<std::vector<Triangle>> m_Triangles;
 	};
 };

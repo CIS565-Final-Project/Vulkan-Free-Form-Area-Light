@@ -9,6 +9,8 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <unordered_set>
+#include <unordered_map>
 #include <limits>
 #include <algorithm>
 #include <fstream>
@@ -64,5 +66,19 @@ namespace VK_Renderer
 		in.read(buffer.data(), file_size);
 
 		return buffer;
+	}
+
+	template <typename T>
+	std::vector<T> RemoveDuplicates(std::vector<T> const& datas) {
+		std::unordered_set<T> seen;
+		std::vector<T> result;
+		result.reserve(datas.size());
+		for (const auto& value : datas) {
+			if (seen.insert(value).second) {
+				result.push_back(value);
+			}
+		}
+
+		return result;
 	}
 }

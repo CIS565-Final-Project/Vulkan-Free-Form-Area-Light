@@ -6,6 +6,7 @@
 
 #include "imgui.h"
 
+
 using namespace VK_Renderer;
 
 struct CameraUBO
@@ -90,9 +91,11 @@ RenderLayer::RenderLayer(std::string const& name,
 void RenderLayer::OnAttach()
 {
 	m_Camera = mkU<PerspectiveCamera>();
+	m_Camera->far = 500.f;
 	m_Camera->m_Transform = Transformation{
-		.position = {0, 0, -10}
+		.position = {0, 0, 15},
 	};
+	m_Camera->m_Transform.Rotate(glm::pi<float>(), { 0, 1, 0 });
 	m_Camera->resolution = { 680, 680 };
 	m_Camera->RecomputeProjView();
 
@@ -107,11 +110,10 @@ void RenderLayer::OnAttach()
 	glm::mat4 vp = m_Camera->GetProjViewMatrix();
 	m_CamBuffer->CreateFromData(&vp, sizeof(CameraUBO), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
-	Mesh ltcMesh;
-	//mesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
-	//mesh.LoadMeshFromFile("meshes/sphere.obj");
-	//mesh.LoadMeshFromFile("meshes/cube.obj");
-	ltcMesh.LoadMeshFromFile(m_MeshFile);
+	m_Meshlets = mkU<Meshlets>(32, 255);
+
+	m_Meshlets->Append({ "meshes/stanford_bunny.obj" });
+	m_Meshlets->Append({ "meshes/stanford_bunny2.obj" });
 
 	Mesh lightMesh;
 	lightMesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
@@ -125,32 +127,82 @@ void RenderLayer::OnAttach()
 			.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
 			.accessFlag = vk::AccessFlagBits::eShaderRead,
 			.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
-		});
-
-	std::vector<TriangleInfo> ltcTriangles;
-
-	for (Triangle const& tri : ltcMesh.m_Triangles)
-	{
-		ltcTriangles.emplace_back(
-			glm::ivec4(tri.pId, tri.materialId),
-			glm::ivec4(tri.nId, 0),
-			glm::ivec4(tri.uvId, 0)
-		);
-	}
+	});
 
 	std::vector<TriangleInfo> lightTriangles;
-
-	for (Triangle const& tri : lightMesh.m_Triangles)
+	for (auto& const tris : lightMesh.m_Triangles)
 	{
-		lightTriangles.emplace_back(
-			glm::ivec4(tri.pId, tri.materialId),
-			glm::ivec4(tri.nId, 0),
-			glm::ivec4(tri.uvId, 0)
-		);
+		for (Triangle const& tri : tris)
+		{
+			lightTriangles.emplace_back(
+				glm::ivec4(tri.pId, tri.materialId),
+				glm::ivec4(tri.nId, 0),
+				glm::ivec4(tri.uvId, 0)
+			);
+		}
 	}
 
-	m_LTCMeshletInfo = mkU<MeshletInfo>(32, static_cast<uint32_t>(ltcMesh.m_Triangles.size()));
-	m_LightMeshletInfo = mkU<MeshletInfo>(32, static_cast<uint32_t>(lightMesh.m_Triangles.size()));
+	//m_LTCMeshletInfo = mkU<MeshletInfo>(32, static_cast<uint32_t>(ltcMesh.GetTriangleCounts()));
+	m_LightMeshletInfo = mkU<MeshletInfo>(32, static_cast<uint32_t>(lightMesh.GetTriangleCounts()));
+
+	// Create Buffers from meshlets
+	m_MeshletInfoBuffer = mkU<VK_DeviceBuffer>(*m_Device);
+	m_VertexIndicesBuffer = mkU<VK_DeviceBuffer>(*m_Device);
+	m_PrimitiveIndicesBuffer = mkU<VK_DeviceBuffer>(*m_Device);
+	m_VertexBuffer = mkU<VK_DeviceBuffer>(*m_Device);
+
+	m_MeshletInfoBuffer->CreateFromData(m_Meshlets->GetMeshletInfos().data(), sizeof(MeshletDescription) * m_Meshlets->GetMeshletInfos().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_VertexIndicesBuffer->CreateFromData(m_Meshlets->GetVertexIndices().data(), sizeof(uint32_t) * m_Meshlets->GetVertexIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_PrimitiveIndicesBuffer->CreateFromData(m_Meshlets->GetPrimitiveIndices().data(), sizeof(uint8_t) * m_Meshlets->GetPrimitiveIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_VertexBuffer->CreateFromData(m_Meshlets->GetVertices().data(), sizeof(Vertex) * m_Meshlets->GetVertices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+
+	std::vector<VK_DescriptorBinding> bindings{
+		VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = m_MeshletInfoBuffer->GetBuffer(),
+					.offset = 0,
+					.range = m_MeshletInfoBuffer->GetSize()
+				}
+		},
+		VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = m_VertexIndicesBuffer->GetBuffer(),
+					.offset = 0,
+					.range = m_VertexIndicesBuffer->GetSize()
+				}
+		},
+		VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = m_PrimitiveIndicesBuffer->GetBuffer(),
+					.offset = 0,
+					.range = m_PrimitiveIndicesBuffer->GetSize()
+				}
+		},
+		VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = m_VertexBuffer->GetBuffer(),
+					.offset = 0,
+					.range = m_VertexBuffer->GetSize()
+				}
+		},
+		VK_DescriptorBinding{
+			.type = vk::DescriptorType::eCombinedImageSampler,
+			.stage = vk::ShaderStageFlagBits::eFragment,
+			.imageInfo = vk::DescriptorImageInfo{
+				.sampler = m_Texture->GetSampler(),
+				.imageView = m_Texture->GetImageView(),
+				.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+			}
+		}
+	};
 
 	// Create Buffers
 
@@ -168,8 +220,7 @@ void RenderLayer::OnAttach()
 		bufferSet.m_UVBuffer->CreateFromData(mesh.m_UVs.data(), sizeof(Float) * mesh.m_UVs.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
 	};
 
-
-	generateMeshBufferSet(m_LTCMeshBufferSet, ltcTriangles, ltcMesh, m_LTCMeshletInfo);
+	//generateMeshBufferSet(m_LTCMeshBufferSet, ltcTriangles, ltcMesh, m_LTCMeshletInfo);
 
 	generateMeshBufferSet(m_LightMeshBufferSet, lightTriangles, lightMesh, m_LightMeshletInfo);
 
@@ -190,7 +241,7 @@ void RenderLayer::OnAttach()
 			}
 		}
 	});
-	
+
 	auto generateDescriptorBinds = [](MeshBufferSet& bufferSet) -> std::vector<VK_DescriptorBinding> {
 		return {
 			VK_DescriptorBinding{
@@ -241,22 +292,23 @@ void RenderLayer::OnAttach()
 		};
 	};
 
-	std::vector<VK_DescriptorBinding> ltcMeshShaderDescriptorSet = generateDescriptorBinds(m_LTCMeshBufferSet);
+	//std::vector<VK_DescriptorBinding> ltcMeshShaderDescriptorSet = generateDescriptorBinds(m_LTCMeshBufferSet);
 
-	ltcMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
-		.type = vk::DescriptorType::eCombinedImageSampler,
-		.stage = vk::ShaderStageFlagBits::eFragment,
-		.imageInfo = vk::DescriptorImageInfo{
-			.sampler = m_Texture->GetSampler(),
-			.imageView = m_Texture->GetImageView(),
-			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-		}
-	});
-
-	m_LTCMeshShaderInputDescriptor->Create(ltcMeshShaderDescriptorSet);
+	//ltcMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
+	//	.type = vk::DescriptorType::eCombinedImageSampler,
+	//	.stage = vk::ShaderStageFlagBits::eFragment,
+	//	.imageInfo = vk::DescriptorImageInfo{
+	//		.sampler = m_Texture->GetSampler(),
+	//		.imageView = m_Texture->GetImageView(),
+	//		.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+	//	}
+	//});
+	
+	//m_LTCMeshShaderInputDescriptor->Create(ltcMeshShaderDescriptorSet);
+	m_LTCMeshShaderInputDescriptor->Create(bindings);
 
 	std::vector<VK_DescriptorBinding> lightMeshShaderDescriptorSet = generateDescriptorBinds(m_LightMeshBufferSet);
-
+	
 	lightMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
 		.type = vk::DescriptorType::eCombinedImageSampler,
 		.stage = vk::ShaderStageFlagBits::eFragment,
@@ -282,9 +334,9 @@ void RenderLayer::OnAttach()
 		m_CamDescriptor->GetDescriptorSetLayout(),
 		m_LightMeshShaderInputDescriptor->GetDescriptorSetLayout(),
 	};
-	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLightPipeline.get(), ltc_descriptor_set_layouts,
+	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLightPipeline.get(), light_descriptor_set_layouts,
 		"shaders/mesh_flat.task.spv", "shaders/mesh_flat.mesh.spv", "shaders/mesh_flat.frag.spv");
-	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLTCPipeline.get(), light_descriptor_set_layouts,
+	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLTCPipeline.get(), ltc_descriptor_set_layouts,
 		"shaders/mesh_ltc.task.spv", "shaders/mesh_ltc.mesh.spv", "shaders/mesh_ltc.frag.spv");
 
 	RecordCmd();
@@ -333,7 +385,7 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 		if (mouseState & SDL_BUTTON(SDL_BUTTON_MIDDLE))
 		{
 			glm::vec2 offset = 0.01f * glm::vec2(mouse_cur - mouse_pre);
-			m_Camera->m_Transform.RotateAround(glm::vec3(0.f), { 0.4f * offset.y, -offset.x, 0 });
+			m_Camera->m_Transform.RotateAround(glm::vec3(0.f), { -offset.y, -offset.x, 0 });
 			m_Camera->RecomputeProjView();
 			glm::mat4 view_proj_mat = m_Camera->GetProjViewMatrix();
 
@@ -378,7 +430,7 @@ void RenderLayer::RecordCmd()
 			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLTCPipeline->vk_Pipeline);
 
 			// Draw call
-			uint32_t num_workgroups_x = (m_LTCMeshletInfo->Triangle_Count + m_LTCMeshletInfo->Meshlet_Size - 1) / m_LTCMeshletInfo->Meshlet_Size;
+			uint32_t num_workgroups_x = m_Meshlets->GetMeshletInfos().size();
 			uint32_t num_workgroups_y = 1;
 			uint32_t num_workgroups_z = 1;
 
@@ -397,7 +449,7 @@ void RenderLayer::RecordCmd()
 		}
 
 		// draw Light objects
-		{
+		/*{
 			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLightPipeline->vk_Pipeline);
 
 			// Draw call
@@ -417,8 +469,7 @@ void RenderLayer::RecordCmd()
 				arr, nullptr);
 
 			cmd[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
-		}
-
+		}*/ 
 
 		cmd.End();
 	}
