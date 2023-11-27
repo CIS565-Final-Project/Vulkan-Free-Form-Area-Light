@@ -336,6 +336,8 @@ float IntegrateBezierEdge(vec3 p_i, vec3 p_j){
 
 vec2 tStack[MAX_STACK_SIZE];
 
+
+
 float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold){
 	
 	// vec3 v01 = ctrlPts[1] - ctrlPts[0];
@@ -349,6 +351,7 @@ float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold
 	float res = 0.0;
 	int stackTop = 0;
 	tStack[stackTop++] = vec2(tStart,tEnd);
+	float maxStk = 0;
 	while(stackTop!=0){
 		vec2 tmp = tStack[--stackTop];
 		float tMin = tmp.x;
@@ -375,6 +378,7 @@ float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold
 		if(!isLine || (abs(I01 + I12 + I20) >= threshold && stackTop<(MAX_STACK_SIZE -2))){
 			tStack[stackTop++] = vec2(tMin, tMid);
 			tStack[stackTop++] = vec2(tMid, tMax);
+			maxStk = max(maxStk,stackTop);
 		}else{
 			res += (I01 + I12);
 		}
