@@ -138,6 +138,7 @@ void RenderLayer::OnAttach()
 
 	m_LightTexture = mkU<VK_Texture2DArray>(*m_Device);
 	
+	/*
 	m_LightTexture->CreateFromFiles(
 		//image files
 		{
@@ -158,7 +159,8 @@ void RenderLayer::OnAttach()
 			.arrayLayer = 9
 		}
 	);
-	/*
+	*/
+	
 	m_LightTexture->CreateFromFiles(
 		//image files
 		{
@@ -171,7 +173,7 @@ void RenderLayer::OnAttach()
 			.arrayLayer = 1
 		}
 	);
-	*/
+	
 	m_LightTexture->TransitionLayout(
 		VK_ImageLayout{
 			.layout = vk::ImageLayout::eShaderReadOnlyOptimal,

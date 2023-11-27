@@ -341,7 +341,8 @@ float IntegrateOnHemisphere(vec3 p_i,vec3 p_j){
 	return theta * proj;
 }
 float IntegrateBezierEdge(vec3 p_i, vec3 p_j){
-	return IntegrateOnHemisphere(normalize(p_i),normalize(p_j));
+	return IntegrateEdge(p_i, p_j).z;
+	// return IntegrateOnHemisphere(normalize(p_i),normalize(p_j));
 }
 
 vec2 tStack[12];
@@ -385,29 +386,21 @@ float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold
 
 
 vec3 allCtrlPts[8] = vec3[](
-
-
-
-		vec3(-1.5, -0.5f, 5.0f),
-		vec3(1.5f, -0.5f, 5.0f),
-		vec3(2.5f, -0.5f, 5.0f),
-		vec3(1.5f, 2.5f, 5.0f),
+	vec3(-1.5, -0.5f, 5.0f),
+	vec3(1.5f, -0.5f, 5.0f),
+	vec3(10.5f, -0.5f, 5.0f),
+	vec3(1.5f, 2.5f, 5.0f),
 		
 		
-		vec3(1.5f, 2.5f, 5.0f),
-		vec3(-1.5f, 3.5f, 5.0f),
-		vec3(-2.5f, 2.5f, 5.0f),
-		vec3(-1.5f, -0.5f, 5.0f)
+	vec3(1.5f, 2.5f, 5.0f),
+	vec3(-1.5f, 3.5f, 5.0f),
+	vec3(-2.5f, 2.5f, 5.0f),
+	vec3(-1.5f, -0.5f, 5.0f)
 		
-	);
+);
 
 float IntegrateBezierD(vec3 V, vec3 N, vec3 shadePos, float roughness
 	,  int bezierNum, mat3 LTCMat){
-
-
-	
-
-
 
 	// to LTC Space
 	vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
@@ -582,7 +575,7 @@ void main(){
 	vec3 fs_norm = fragIn.normal;
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
-	float roughness = 0.5f;// u_Roughness;
+	float roughness = 0.15f;// u_Roughness;
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	float lod;
 	vec2 ltuv;
