@@ -345,6 +345,7 @@ float IntegrateBezierEdge(vec3 p_i, vec3 p_j){
 	// return IntegrateOnHemisphere(normalize(p_i),normalize(p_j));
 }
 
+// TODO: FIX STACK MAXIMUM
 vec2 tStack[12];
 float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold){
 	
@@ -360,6 +361,7 @@ float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold
 	float res = 0.0;
 	int stackTop = 0;
 	tStack[stackTop++] = vec2(tStart,tEnd);
+	
 	while(stackTop!=0){
 		vec2 tmp = tStack[--stackTop];
 		float tMin = tmp.x;
@@ -575,7 +577,7 @@ void main(){
 	vec3 fs_norm = fragIn.normal;
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
-	float roughness = 0.15f;// u_Roughness;
+	float roughness = 0.35f;// u_Roughness;
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	float lod;
 	vec2 ltuv;
