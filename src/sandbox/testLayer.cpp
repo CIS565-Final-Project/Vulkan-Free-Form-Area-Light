@@ -114,7 +114,7 @@ void RenderLayer::OnAttach()
 	m_CamBuffer->CreateFromData(&camera_ubo, sizeof(CameraUBO), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 	
 	// Create MaterialParam buffer
-	float roughness = 0.f;
+	float roughness = 1.f;
 	m_MaterialParamBuffer = mkU<VK_StagingBuffer>(*m_Device);
 	m_MaterialParamBuffer->CreateFromData(&roughness, sizeof(float), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
@@ -195,7 +195,9 @@ void RenderLayer::OnAttach()
 	}
 
 	//m_LTCMeshletInfo = mkU<MeshletInfo>(32, static_cast<uint32_t>(ltcMesh.GetTriangleCounts()));
-	m_LightMeshletInfo = mkU<MeshletInfo>(32, static_cast<uint32_t>(lightMesh.GetTriangleCounts()));
+	// m_LightMeshletInfo = mkU<MeshletInfo>(32, static_cast<uint32_t>(lightMesh.GetTriangleCounts()));
+	// TEMP hardcode for beier curve
+	m_LightMeshletInfo = mkU<MeshletInfo>(32, 100);
 
 	// Create Buffers from meshlets
 	m_MeshletInfoBuffer = mkU<VK_DeviceBuffer>(*m_Device);
@@ -415,8 +417,10 @@ void RenderLayer::OnAttach()
 		m_CamDescriptor->GetDescriptorSetLayout(),
 		m_LightMeshShaderInputDescriptor->GetDescriptorSetLayout(),
 	};
+	//CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLightPipeline.get(), light_descriptor_set_layouts,
+	//	"shaders/mesh_flat.task.spv", "shaders/mesh_flat.mesh.spv", "shaders/mesh_flat.frag.spv");
 	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLightPipeline.get(), light_descriptor_set_layouts,
-		"shaders/mesh_flat.task.spv", "shaders/mesh_flat.mesh.spv", "shaders/mesh_flat.frag.spv");
+		"shaders/mesh_light.task.spv", "shaders/mesh_light.mesh.spv", "shaders/mesh_light.frag.spv");
 	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLTCPipeline.get(), ltc_descriptor_set_layouts,
 		"shaders/mesh_ltc.task.spv", "shaders/mesh_ltc.mesh.spv", "shaders/mesh_ltc.frag.spv");
 
@@ -439,7 +443,7 @@ void RenderLayer::OnRender(double const& deltaTime)
 
 void RenderLayer::OnImGui(double const& deltaTime)
 {
-	static float v = 0.f;
+	static float v = 1.f;
 	ImGui::Begin("Test Window");
 	if (ImGui::DragFloat("Roughness", &v, 0.02f, 0.f, 1.f))
 	{
@@ -542,7 +546,8 @@ void RenderLayer::RecordCmd()
 			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLightPipeline->vk_Pipeline);
 
 			// Draw call
-			uint32_t num_workgroups_x = (m_LightMeshletInfo->Triangle_Count + m_LightMeshletInfo->Meshlet_Size - 1) / m_LightMeshletInfo->Meshlet_Size;
+			// uint32_t num_workgroups_x = (m_LightMeshletInfo->Triangle_Count + m_LightMeshletInfo->Meshlet_Size - 1) / m_LightMeshletInfo->Meshlet_Size;
+			uint32_t num_workgroups_x = 2;
 			uint32_t num_workgroups_y = 1;
 			uint32_t num_workgroups_z = 1;
 
