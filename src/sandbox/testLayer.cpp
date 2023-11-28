@@ -121,7 +121,7 @@ void RenderLayer::OnAttach()
 	m_Meshlets = mkU<Meshlets>(32, 255);
 
 	m_Meshlets->Append({ "meshes/plane.obj" });
-	m_Meshlets->Append({ "meshes/stanford_bunny.obj" });
+	//m_Meshlets->Append({ "meshes/stanford_bunny.obj" });
 
 	Mesh lightMesh;
 	lightMesh.LoadMeshFromFile("meshes/lightQuad.obj");

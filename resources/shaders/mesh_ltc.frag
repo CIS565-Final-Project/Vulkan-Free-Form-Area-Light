@@ -7,8 +7,9 @@
 #define MAX_LIGHT_VERTEX 5
 #define MAX_BEZIER_CURVE 5
 #define MAX_STACK_SIZE 12
-#define EPS 0.002
+#define EPS 0.01
 #define MIN_THRESHOLD 0.01
+#define CLIP 0
 //uniform
 layout(set = 0, binding = 0) uniform CameraUBO {
 	vec4 pos;
@@ -185,17 +186,14 @@ vec3 lights[5] = vec3[](
 	vec3(0.f)
 );
 
-
-
-//https://github.com/Paul180297/BezierLightLTC/blob/master/shaders/floorLTC.frag
-//sort so v.x < v.y < v.z
-
 mat3 BitMatrix(vec3 V, vec3 N){
 	vec3 tangent = normalize(V - N * dot(V,N));
 	vec3 bitangent = cross(N,tangent);
 	return transpose(mat3(tangent,bitangent,N));
 }
 
+//https://github.com/Paul180297/BezierLightLTC/blob/master/shaders/floorLTC.frag
+//sort so v.x < v.y < v.z
 vec3 sort3(vec3 v){
 	if(v.x > v.y){
 		float tmp = v.y;
@@ -217,8 +215,31 @@ vec3 sort3(vec3 v){
 bool between01(const float t){
 	return 0.0 <= t && t <= 1.0;
 }
-void SolveCubic(const float a, const float b, const float c, const float d
-, out int realSolCnt, out float sol[3]){
+void SolveLinear(const float a, const float b, out int realSolCnt, out float sol[3]){
+	float sol0 = -b/a;
+	realSolCnt = 0;
+	if(between01(sol0))sol[realSolCnt++] = sol0;
+}
+void SolveQuadratic(const float a, const float b, const float c, out int realSolCnt, out float sol[3]){
+	float delta = b*b - 4 *a*c;
+	realSolCnt = 0;
+	if(delta == 0){
+		float sol0 = -b/(2*a);
+		if(between01(sol0))sol[realSolCnt++] = sol0;
+	}else if(delta > 0){
+		float sqrt_delta = sqrt(delta);
+		float sol0 = (-b - sqrt_delta) / (2 * a);
+		float sol1 = (-b + sqrt_delta) / (2 * a);
+		if(sol0 < sol1){
+			float tmp = sol0;
+			sol0 = sol1;
+			sol1 = tmp;
+		}
+		if(between01(sol0))sol[realSolCnt++] = sol0;
+		if(between01(sol1))sol[realSolCnt++] = sol1;
+	}
+}
+void SolveCubic(const float a, const float b, const float c, const float d, out int realSolCnt, out float sol[3]){
 	vec4 Coefficient = vec4(d,c,b,a);
 	Coefficient.xyz /= Coefficient.w;
 	Coefficient.yz /= 3.f;
@@ -252,7 +273,15 @@ void SolveCubic(const float a, const float b, const float c, const float d
 		if(between01(t0)){sol[realSolCnt++] = t0;}
 	}
 }
-
+void SolveEquation(const float a, const float b, const float c, const float d, out int realSolCnt, out float sol[3]){
+	if(a!=0){
+		SolveCubic(a,b,c,d,realSolCnt, sol);
+	}else if(b!=0){
+		SolveQuadratic(b,c,d,realSolCnt,sol);
+	}else{
+		SolveLinear(c,d,realSolCnt,sol);
+	}
+}
 vec3 BezierCurve(const vec3 ctrlPts[4], float t){
 	vec3 u01 = mix(ctrlPts[0], ctrlPts[1], t);
 	vec3 u12 = mix(ctrlPts[1], ctrlPts[2], t);
@@ -261,14 +290,13 @@ vec3 BezierCurve(const vec3 ctrlPts[4], float t){
 	u12 = mix(u12, u23, t);
 	return mix(u01, u12, t);
 }
-
 //@return need integrate
 bool ClipBezier(vec3 controlPts[4], out int intersectCnt, out float intersectTs[3]){
 	int numCtrlUnder = 0;
-	for(int i = 0; i<4;++i){
-		numCtrlUnder += controlPts[i].z < 0.0? 1 : 0;
-	}
 	intersectCnt = 0;
+	for(int i = 0; i<4;++i){
+		numCtrlUnder += controlPts[i].z < 0.0 ? 1 : 0;
+	}
 	if(numCtrlUnder == 0)return true;
 	if(numCtrlUnder == 4)return false;//all control points under plane
 
@@ -277,14 +305,14 @@ bool ClipBezier(vec3 controlPts[4], out int intersectCnt, out float intersectTs[
 	const float p2z = controlPts[2].z;
 	const float p3z = controlPts[3].z;
 
-	const float a = -p0z + 3 * p1z - 3 * p2z + p3z;
+	const float a = -p0z + 3 * p1z - 3 * p2z + p3z;//could be 0!!!
 	const float b = 3 * (p0z - 2 * p1z + p2z);
 	const float c = 3 * (-p0z + p1z);
 	const float d = p0z;
 
-	SolveCubic(a,b,c,d, intersectCnt, intersectTs);
+	SolveEquation(a,b,c,d, intersectCnt, intersectTs);
 	if(intersectCnt>0)return true;
-	if(BezierCurve(controlPts,0.5).z > 0){
+	if(BezierCurve(controlPts,0.5).z > 0.0){
 		return true;
 	}
 	return false;
@@ -351,7 +379,6 @@ float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold
 	float res = 0.0;
 	int stackTop = 0;
 	tStack[stackTop++] = vec2(tStart,tEnd);
-	float maxStk = 0;
 	while(stackTop!=0){
 		vec2 tmp = tStack[--stackTop];
 		float tMin = tmp.x;
@@ -378,7 +405,6 @@ float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold
 		if(!isLine || (abs(I01 + I12 + I20) >= threshold && stackTop<(MAX_STACK_SIZE -2))){
 			tStack[stackTop++] = vec2(tMin, tMid);
 			tStack[stackTop++] = vec2(tMid, tMax);
-			maxStk = max(maxStk,stackTop);
 		}else{
 			res += (I01 + I12);
 		}
@@ -408,7 +434,7 @@ float IntegrateBezierD(vec3 V, vec3 N, vec3 shadePos, float roughness
 	vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
 	vec3 tangent = normalize(V - N * dot(V,N));
 	vec3 bitangent = cross(N,tangent);
-	mat3 worldToLTC = LTCMat * transpose(mat3(tangent,bitangent,N)); //inverse rotation matrix
+	mat3 worldToLTC = LTCMat * BitMatrix(V,N);//transpose(mat3(tangent,bitangent,N)); //inverse rotation matrix
 
 	for(int i = 0;i<bezierNum;++i){
 		int offset = i << 2;
@@ -433,139 +459,136 @@ float IntegrateBezierD(vec3 V, vec3 N, vec3 shadePos, float roughness
 			allCtrlPts[offset + 2],
 			allCtrlPts[offset + 3]
 		);
-
-		res += IntegrateBezier(tmpCtrlPts,0,1,threshold);
-		// res += 0.1f;
-
+		// float ts[3];
+		// int tCnt = 0;
+		// if(ClipBezier(tmpCtrlPts, tCnt, ts)){
+		// 	res += IntegrateBezier(tmpCtrlPts,0,1,threshold);
+		// }
 		
+		//res += 0.1f;
+#if CLIP
 		float ts[3];
 		int tCnt = 0;
 		//Clip
-		// if(ClipBezier(tmpCtrlPts, tCnt, ts)){
-		// 	//Integrate
-		// 	if(tCnt==0){
-		// 		res += IntegrateBezier(tmpCtrlPts,0,1,threshold);
-		// 	}else{
-		// 		float t0,t1,t2;
-		// 		switch(tCnt){
-		// 			case 1:
-		// 			{	
-		// 				t0 = ts[0];
-		// 				if(BezierCurve(tmpCtrlPts,0.5 * t0).z > 0){
-		// 					//start point above plane
-		// 					res += IntegrateBezier(tmpCtrlPts,0,t0,threshold);
-		// 					hasEnd = true;
-		// 					vEnd = BezierCurve(tmpCtrlPts,t0);
-		// 				}else{
-		// 					//start point below plane
-		// 					res += IntegrateBezier(tmpCtrlPts,t0,1,threshold);
-		// 					if(hasEnd){
-		// 						vec3 v0 = BezierCurve(tmpCtrlPts,t0);
-		// 						hasEnd = false;
-		// 						res += IntegrateEdge(normalize(vEnd),normalize(v0)).z;
-		// 					}else{
-		// 						vBegin = BezierCurve(tmpCtrlPts,t0);
-		// 						hasBegin = true;									
-		// 					}
-		// 				}
-		// 				break;
-		// 			}
-		// 			case 2:
-		// 			{
-		// 				t0 = ts[1];
-		// 				t1 = ts[0];
-		// 				if(BezierCurve(tmpCtrlPts,(t0+t1)/2.f).z > 0){
-		// 					//mid point above plane
-		// 					//0->t0
-		// 					if(hasEnd){
-		// 						vec3 v0 = BezierCurve(tmpCtrlPts,t0);
-		// 						res += IntegrateEdge(normalize(vEnd),normalize(v0)).z;
-		// 						hasEnd = false;
-		// 					}else{
-		// 						hasBegin = true;
-		// 						vBegin = BezierCurve(tmpCtrlPts,t0);
-		// 					}
-		// 					//t0->t1
-		// 					res += IntegrateBezier(tmpCtrlPts,t0,t1,threshold);
-		// 					//t1->1
-		// 					hasEnd = true;
-		// 					vEnd = BezierCurve(tmpCtrlPts,t1);
-		// 				}else{
-		// 					//mid point below plane
-		// 					//0->t0
-		// 					res += IntegrateBezier(tmpCtrlPts,0,t0,threshold);
-		// 					//t0->t1
-		// 					vec3 v0 = BezierCurve(tmpCtrlPts,t0);
-		// 					vec3 v1 = BezierCurve(tmpCtrlPts,t1);
-		// 					res += IntegrateEdge(normalize(v0),normalize(v1)).z;
-		// 					//t1->1
-		// 					res += IntegrateBezier(tmpCtrlPts,t1,1,threshold);
-		// 				}
-		// 				break;
-		// 			}
-		// 			case 3:
-		// 			{
-		// 				t0 = ts[2];
-		// 				t1 = ts[1];
-		// 				t2 = ts[0];
-		// 				if(BezierCurve(tmpCtrlPts,(t0 + t1)/2.f).z > 0.f){
-		// 					//0->t0
-		// 					if(hasEnd){
-		// 						vec3 v0 = BezierCurve(tmpCtrlPts,t0);
-		// 						res += IntegrateEdge(normalize(vEnd),normalize(v0)).z;
-		// 						hasEnd = false;
-		// 					}else{
-		// 						hasBegin = true;
-		// 						vBegin = BezierCurve(tmpCtrlPts,t0);
-		// 					}
-		// 					//t0->t1
-		// 					res += IntegrateBezier(tmpCtrlPts,t0,t1,threshold);
-		// 					//t1->t2
-		// 					vec3 v1 = BezierCurve(tmpCtrlPts,t1);
-		// 					vec3 v2 = BezierCurve(tmpCtrlPts,t2);
-		// 					res += IntegrateEdge(normalize(v1),normalize(v2)).z;
-		// 					//t2->1
-		// 					res += IntegrateBezier(tmpCtrlPts,t2,1,threshold);
-		// 				}else{
-		// 					//0->t0
-		// 					res += IntegrateBezier(tmpCtrlPts,0,t1,threshold);
-		// 					//t0->t1
-		// 					vec3 v0 = BezierCurve(tmpCtrlPts,t0);
-		// 					vec3 v1 = BezierCurve(tmpCtrlPts,t1);
-		// 					res += IntegrateEdge(normalize(v0),normalize(v1)).z;
-		// 					//t1->t2
-		// 					res += IntegrateBezier(tmpCtrlPts,t1,t2,threshold);
-		// 					//t2->1
-		// 					hasEnd = true;
-		// 					vEnd = BezierCurve(tmpCtrlPts,t2);
-		// 				}
-		// 				break;
-		// 			}
-		// 			default:
-		// 			{
-		// 				break;
-		// 			}
-		// 		}
-		// 	}
-		// }else{
-		// 	//entire curve below plane, do nothing
-		// }
-		
+		if(ClipBezier(tmpCtrlPts, tCnt, ts)){
+			//Integrate
+			float t0,t1,t2;
+			switch(tCnt){
+				case 0:
+				{
+					res += IntegrateBezier(tmpCtrlPts,0,1,threshold);
+					break;
+				}
+				case 1:
+				{	
+					t0 = ts[0];
+					if(BezierCurve(tmpCtrlPts,0.5 * t0).z > 0){
+						//start point above plane
+						res += IntegrateBezier(tmpCtrlPts,0,t0,threshold);
+						hasEnd = true;
+						vEnd = BezierCurve(tmpCtrlPts,t0);
+					}else{
+						//start point below plane
+						res += IntegrateBezier(tmpCtrlPts,t0,1,threshold);
+						if(hasEnd){
+							vec3 v0 = BezierCurve(tmpCtrlPts,t0);
+							hasEnd = false;
+							res += IntegrateEdge(normalize(vEnd),normalize(v0)).z;
+						}else{
+							vBegin = BezierCurve(tmpCtrlPts,t0);
+							hasBegin = true;									
+						}
+					}
+					break;
+				}
+				case 2:
+				{
+					t0 = ts[1];
+					t1 = ts[0];
+					if(BezierCurve(tmpCtrlPts,(t0+t1)/2.f).z > 0){
+						//mid point above plane
+						//0->t0
+						if(hasEnd){
+							vec3 v0 = BezierCurve(tmpCtrlPts,t0);
+							res += IntegrateEdge(normalize(vEnd),normalize(v0)).z;
+							hasEnd = false;
+						}else{
+							hasBegin = true;
+							vBegin = BezierCurve(tmpCtrlPts,t0);
+						}
+						//t0->t1
+						res += IntegrateBezier(tmpCtrlPts,t0,t1,threshold);
+						//t1->1
+						hasEnd = true;
+						vEnd = BezierCurve(tmpCtrlPts,t1);
+					}else{
+						//mid point below plane
+						//0->t0
+						res += IntegrateBezier(tmpCtrlPts,0,t0,threshold);
+						//t0->t1
+						vec3 v0 = BezierCurve(tmpCtrlPts,t0);
+						vec3 v1 = BezierCurve(tmpCtrlPts,t1);
+						res += IntegrateEdge(normalize(v0),normalize(v1)).z;
+						//t1->1
+						res += IntegrateBezier(tmpCtrlPts,t1,1,threshold);
+					}
+					break;
+				}
+				case 3:
+				{
+					t0 = ts[2];
+					t1 = ts[1];
+					t2 = ts[0];
+					if(BezierCurve(tmpCtrlPts,(t0 + t1)/2.f).z > 0.f){
+						//0->t0
+						if(hasEnd){
+							vec3 v0 = BezierCurve(tmpCtrlPts,t0);
+							res += IntegrateEdge(normalize(vEnd),normalize(v0)).z;
+							hasEnd = false;
+						}else{
+							hasBegin = true;
+							vBegin = BezierCurve(tmpCtrlPts,t0);
+						}
+						//t0->t1
+						res += IntegrateBezier(tmpCtrlPts,t0,t1,threshold);
+						//t1->t2
+						vec3 v1 = BezierCurve(tmpCtrlPts,t1);
+						vec3 v2 = BezierCurve(tmpCtrlPts,t2);
+						res += IntegrateEdge(normalize(v1),normalize(v2)).z;
+						//t2->1
+						res += IntegrateBezier(tmpCtrlPts,t2,1,threshold);
+					}else{
+						//0->t0
+						res += IntegrateBezier(tmpCtrlPts,0,t0,threshold);
+						//t0->t1
+						vec3 v0 = BezierCurve(tmpCtrlPts,t0);
+						vec3 v1 = BezierCurve(tmpCtrlPts,t1);
+						res += IntegrateEdge(normalize(v0),normalize(v1)).z;
+						//t1->t2
+						res += IntegrateBezier(tmpCtrlPts,t1,t2,threshold);
+						//t2->1
+						hasEnd = true;
+						vEnd = BezierCurve(tmpCtrlPts,t2);
+					}
+					break;
+				}
+				default:
+				{
+					break;
+				}
+			}
+		}else{
+			//entire curve below plane, do nothing
+		}
+#else
+		res += IntegrateBezier(tmpCtrlPts,0,1,threshold);
+#endif
 	}
 	if(hasBegin && hasEnd){
 		res += IntegrateEdge(normalize(vEnd),normalize(vBegin)).z;
 	}
 	return max(0.0,res);
 }
-
-
-
-
-
-
-
-
-
 
 
 void main(){
