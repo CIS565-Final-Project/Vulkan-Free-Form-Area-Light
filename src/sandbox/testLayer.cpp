@@ -405,9 +405,6 @@ void RenderLayer::OnAttach()
 		m_LTCMeshShaderInputDescriptor->GetDescriptorSetLayout(),
 		m_MaterialParamDescriptor->GetDescriptorSetLayout(),
 	};
-	CreateMeshPipeline(m_Device->GetDevice(), m_MeshShaderLTCPipeline.get(), ltc_descriptor_set_layouts,
-		"shaders/mesh_ltc.task.spv", "shaders/mesh_ltc.mesh.spv", "shaders/mesh_ltc.frag.spv");
-
 
 	std::vector<vk::DescriptorSetLayout> light_descriptor_set_layouts{
 		m_CamDescriptor->GetDescriptorSetLayout(),
@@ -513,7 +510,7 @@ void RenderLayer::RecordCmd()
 
 		// draw LTC objects
 		{
-			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLTCPipeline->vk_Pipeline);
+			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLTCPipeline->GetPipeline());
 
 			// Draw call
 			uint32_t num_workgroups_x = m_Meshlets->GetMeshletInfos().size();
@@ -528,7 +525,7 @@ void RenderLayer::RecordCmd()
 
 
 			cmd[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-				m_MeshShaderLTCPipeline->vk_PipelineLayout,
+				m_MeshShaderLTCPipeline->GetLayout(),
 				uint32_t(0),
 				arr, nullptr);
 
@@ -537,7 +534,7 @@ void RenderLayer::RecordCmd()
 
 		// draw Light objects
 		{
-			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLightPipeline->vk_Pipeline);
+			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLightPipeline->GetPipeline());
 
 			// Draw call
 			uint32_t num_workgroups_x = (m_LightMeshletInfo->Triangle_Count + m_LightMeshletInfo->Meshlet_Size - 1) / m_LightMeshletInfo->Meshlet_Size;
@@ -551,7 +548,7 @@ void RenderLayer::RecordCmd()
 
 
 			cmd[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-				m_MeshShaderLightPipeline->vk_PipelineLayout,
+				m_MeshShaderLightPipeline->GetLayout(),
 				uint32_t(0),
 				arr, nullptr);
 

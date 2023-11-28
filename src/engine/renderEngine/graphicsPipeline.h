@@ -21,16 +21,20 @@ namespace VK_Renderer
 
 		~VK_GraphicsPipeline();
 
+		void Free();
+
 		virtual void CreatePipeline(GraphicspipelineCreateInfo const& createInfo,
 									const std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStagesCreateInfo,
 									const VK_PipelineInput& pipelineInput, 
 									std::vector<vk::DescriptorSetLayout> const& descripotrSetLayouts);
 
-	public:
-		vk::PipelineLayout vk_PipelineLayout;
-		vk::Pipeline vk_Pipeline;
-
 	protected:
 		const VK_Device& m_Device;
+
+		vk::UniquePipelineLayout vk_UniqueLayout;
+		vk::UniquePipeline vk_UniquePipeline;
+
+		DeclareWithGetFunc(protected, vk::PipelineLayout, vk, Layout, const);
+		DeclareWithGetFunc(protected, vk::Pipeline, vk, Pipeline, const);
 	};
 }
