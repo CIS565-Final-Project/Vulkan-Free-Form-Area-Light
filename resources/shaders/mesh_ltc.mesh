@@ -31,6 +31,7 @@ struct MeshletDescription
 
 
 layout(set = 0, binding = 0) uniform CameraUBO {
+	vec4 pos;
     mat4 viewProjMat;
 } u_CamUBO;
 
@@ -57,6 +58,8 @@ layout(location = 0) out PerVertexData
 {
 	vec2 uv;
 	vec3 color;
+	vec3 pos; // worldPos
+	vec3 normal;
 } v_out[];
 
 float scale = 0.5f;
@@ -106,9 +109,11 @@ void main()
 	);
 	for(int v = 0; v < 3; ++v)
 	{
+		v_out[v].pos = vertices[real_id[v]].position.xyz;
 		gl_MeshVerticesEXT[v].gl_Position = u_CamUBO.viewProjMat * vec4(vertices[real_id[v]].position.xyz, 1.f);
 		v_out[v].uv = vertices[real_id[v]].uv.xy;
 		v_out[v].color = IN.color;
+		v_out[v].normal = vertices[real_id[v]].normal.xyz;
 	}
 	
 	gl_PrimitiveTriangleIndicesEXT[0] =  uvec3(0, 1, 2);

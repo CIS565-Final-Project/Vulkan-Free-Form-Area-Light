@@ -7,6 +7,11 @@ namespace VK_Renderer
 	public:
 		Image() {}
 		Image(std::string const& file);
+		Image(const Image& img);
+		Image(Image&& img);
+		
+		Image& operator=(const Image& img) = delete;
+
 		virtual ~Image();
 
 		virtual void Free();

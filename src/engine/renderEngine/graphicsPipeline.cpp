@@ -13,8 +13,13 @@ namespace VK_Renderer
 
 	VK_GraphicsPipeline::~VK_GraphicsPipeline()
 	{
-		m_Device.GetDevice().destroyPipeline(vk_Pipeline);
-		m_Device.GetDevice().destroyPipelineLayout(vk_PipelineLayout);
+		Free();
+	}
+
+	void VK_GraphicsPipeline::Free()
+	{
+		vk_UniqueLayout.reset();
+		vk_UniquePipeline.reset();
 	}
 
 	void VK_GraphicsPipeline::CreatePipeline(GraphicspipelineCreateInfo const& createInfo, 
@@ -22,6 +27,9 @@ namespace VK_Renderer
 											const VK_PipelineInput& pipelineInput,
 											std::vector<vk::DescriptorSetLayout> const& descripotrSetLayouts)
 	{
+		// Delete exisit layout and pipeline 
+		Free();
+
 		// Input Assembly
 		vk::PipelineInputAssemblyStateCreateInfo input_assembly_create_info{
 			.topology = vk::PrimitiveTopology::eTriangleList,
@@ -108,7 +116,8 @@ namespace VK_Renderer
 			.pSetLayouts = descripotrSetLayouts.data()
 		};
 
-		vk_PipelineLayout = m_Device.GetDevice().createPipelineLayout(pipeline_layout_create_info);
+		vk_UniqueLayout = m_Device.GetDevice().createPipelineLayoutUnique(pipeline_layout_create_info);
+		vk_Layout = vk_UniqueLayout.get();
 
 		vk::GraphicsPipelineCreateInfo pipeline_create_info{
 			.stageCount = static_cast<uint32_t>(pipelineShaderStagesCreateInfo.size()),
@@ -121,16 +130,19 @@ namespace VK_Renderer
 			.pDepthStencilState = &depth_stencil_create_info,
 			.pColorBlendState = &color_blend_create_info,
 			.pDynamicState = &dynamic_state_create_info,
-			.layout = vk_PipelineLayout,
+			.layout = vk_Layout,
 			.renderPass = createInfo.renderPass,
 			.subpass = createInfo.subpassIdx
 		};
 
 		// Create Pipeline
-		vk::ResultValue<vk::Pipeline> result = m_Device.GetDevice().createGraphicsPipeline(vk::PipelineCache(), pipeline_create_info);
+		vk::ResultValue<vk::UniquePipeline> result = m_Device.GetDevice().createGraphicsPipelineUnique(vk::PipelineCache(), pipeline_create_info);
 		if (result.result != vk::Result::eSuccess) {
 			throw std::runtime_error("Failed to create graphics pipeline");
 		}
-		vk_Pipeline = result.value;
+		vk_UniquePipeline = std::move(result.value);
+		vk_Pipeline = vk_UniquePipeline.get();
+
+		printf("Create Pipeline %d\n", vk_Pipeline);
 	}
 }

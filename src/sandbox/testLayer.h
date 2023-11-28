@@ -19,7 +19,8 @@ struct MeshletInfo;
 #include "renderEngine/texture.h"
 #include "renderEngine/descriptor.h"
 
-#include "scene/mesh.h"
+// #include "scene/mesh.h"
+#include "scene/quad.h"
 #include "scene/image.h"
 #include "scene/scene.h"
 #include "scene/perspectiveCamera.h"
@@ -61,7 +62,8 @@ protected:
 	uPtr<VK_Renderer::PerspectiveCamera> m_Camera;
 	uPtr<VK_Renderer::VK_CommandBuffer> m_Cmd;
 	
-	uPtr<VK_Renderer::VK_Texture2D> m_Texture;
+	uPtr<VK_Renderer::VK_Texture2D> m_LTCTexture;
+	uPtr<VK_Renderer::VK_Texture2DArray> m_LightTexture;
 
 	uPtr<VK_Renderer::VK_PipelineInput> m_PipelineInput;
 	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderLightPipeline;
@@ -69,6 +71,7 @@ protected:
 	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderLTCPipeline;
 
 	uPtr<VK_Renderer::VK_StagingBuffer> m_CamBuffer;
+	uPtr<VK_Renderer::VK_StagingBuffer> m_MaterialParamBuffer;
 
 	uPtr<VK_Renderer::Meshlets> m_Meshlets;
 
@@ -89,6 +92,7 @@ protected:
 	uPtr<VK_Renderer::VK_Descriptor> m_CamDescriptor;
 	uPtr<VK_Renderer::VK_Descriptor> m_LTCMeshShaderInputDescriptor;
 	uPtr<VK_Renderer::VK_Descriptor> m_LightMeshShaderInputDescriptor;
+	uPtr<VK_Renderer::VK_Descriptor> m_MaterialParamDescriptor;
 
 	uPtr<MeshletInfo> m_LTCMeshletInfo;
 	uPtr<MeshletInfo> m_LightMeshletInfo;

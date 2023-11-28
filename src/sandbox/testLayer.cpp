@@ -11,6 +11,7 @@ using namespace VK_Renderer;
 
 struct CameraUBO
 {
+	glm::vec4 pos;
 	glm::mat4 viewProjMat;
 };
 
@@ -93,7 +94,7 @@ void RenderLayer::OnAttach()
 	m_Camera = mkU<PerspectiveCamera>();
 	m_Camera->far = 500.f;
 	m_Camera->m_Transform = Transformation{
-		.position = {0, 0, 15},
+		.position = {0, 0, 10},
 	};
 	m_Camera->m_Transform.Rotate(glm::pi<float>(), { 0, 1, 0 });
 	m_Camera->resolution = { 680, 680 };
@@ -107,23 +108,72 @@ void RenderLayer::OnAttach()
 
 	// Create Camera buffer
 	m_CamBuffer = mkU<VK_StagingBuffer>(*m_Device);
-	glm::mat4 vp = m_Camera->GetProjViewMatrix();
-	m_CamBuffer->CreateFromData(&vp, sizeof(CameraUBO), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
+	CameraUBO camera_ubo;
+	camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
+	camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+	m_CamBuffer->CreateFromData(&camera_ubo, sizeof(CameraUBO), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
+	
+	// Create MaterialParam buffer
+	float roughness = 0.f;
+	m_MaterialParamBuffer = mkU<VK_StagingBuffer>(*m_Device);
+	m_MaterialParamBuffer->CreateFromData(&roughness, sizeof(float), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
 	m_Meshlets = mkU<Meshlets>(32, 255);
 
+	m_Meshlets->Append({ "meshes/plane.obj" });
 	m_Meshlets->Append({ "meshes/stanford_bunny.obj" });
-	m_Meshlets->Append({ "meshes/stanford_bunny2.obj" });
 
 	Mesh lightMesh;
-	lightMesh.LoadMeshFromFile("meshes/stanford_bunny.obj");
+	lightMesh.LoadMeshFromFile("meshes/lightQuad.obj");
 
-	m_Texture = mkU<VK_Texture2D>(*m_Device);
+	m_LTCTexture = mkU<VK_Texture2D>(*m_Device);
+	//m_LTCTexture->CreateFromFile("images/wahoo.bmp", { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
+	m_LTCTexture->CreateFromFile("images/ltc.dds", {.format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
+	// m_LTCTexture->CreateFromFile("images/wall.jpg", { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
+	m_LTCTexture->TransitionLayout(VK_ImageLayout{
+		.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+		.accessFlag = vk::AccessFlagBits::eShaderRead,
+		.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
+		});
 
-	m_Texture->CreateFromFile(m_TextureFile, { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
-	//m_Texture->CreateFromFile("images/ltc.dds", {.format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
-
-	m_Texture->TransitionLayout(VK_ImageLayout{
+	m_LightTexture = mkU<VK_Texture2DArray>(*m_Device);
+	
+	m_LightTexture->CreateFromFiles(
+		//image files
+		{
+			"images/0.png",
+			"images/1.png",
+			"images/2.png",
+			"images/3.png",
+			"images/4.png",
+			"images/5.png",
+			"images/6.png",
+			"images/7.png",
+			"images/8.png"
+		},
+		//createInfo
+		{ 
+			.format = vk::Format::eR8G8B8A8Unorm, 
+			.usage = vk::ImageUsageFlagBits::eSampled,
+			.arrayLayer = 9
+		}
+	);
+	/*
+	m_LightTexture->CreateFromFiles(
+		//image files
+		{
+			"images/white.png",
+		},
+		//createInfo
+		{
+			.format = vk::Format::eR8G8B8A8Unorm,
+			.usage = vk::ImageUsageFlagBits::eSampled,
+			.arrayLayer = 1
+		}
+	);
+	*/
+	m_LightTexture->TransitionLayout(
+		VK_ImageLayout{
 			.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
 			.accessFlag = vk::AccessFlagBits::eShaderRead,
 			.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
@@ -197,8 +247,8 @@ void RenderLayer::OnAttach()
 			.type = vk::DescriptorType::eCombinedImageSampler,
 			.stage = vk::ShaderStageFlagBits::eFragment,
 			.imageInfo = vk::DescriptorImageInfo{
-				.sampler = m_Texture->GetSampler(),
-				.imageView = m_Texture->GetImageView(),
+				.sampler = m_LTCTexture->GetSampler(),
+				.imageView = m_LTCTexture->GetImageView(),
 				.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
 			}
 		}
@@ -226,6 +276,19 @@ void RenderLayer::OnAttach()
 
 
 	// Create Descriptors
+	m_MaterialParamDescriptor = mkU<VK_Descriptor>(*m_Device);
+	m_MaterialParamDescriptor->Create({ 
+		VK_DescriptorBinding{
+			.type = vk::DescriptorType::eUniformBuffer,
+			.stage = vk::ShaderStageFlagBits::eFragment,
+			.bufferInfo = vk::DescriptorBufferInfo{
+				.buffer = m_MaterialParamBuffer->GetBuffer(),
+				.offset = 0,
+				.range = m_MaterialParamBuffer->GetSize()
+			}
+		}
+	});
+
 	m_CamDescriptor = mkU<VK_Descriptor>(*m_Device);
 	m_LTCMeshShaderInputDescriptor = mkU<VK_Descriptor>(*m_Device);
 	m_LightMeshShaderInputDescriptor = mkU<VK_Descriptor>(*m_Device);
@@ -233,7 +296,7 @@ void RenderLayer::OnAttach()
 	m_CamDescriptor->Create({
 		VK_DescriptorBinding{
 			.type = vk::DescriptorType::eUniformBuffer,
-			.stage = vk::ShaderStageFlagBits::eMeshEXT,
+			.stage = vk::ShaderStageFlagBits::eMeshEXT | vk::ShaderStageFlagBits::eFragment,
 			.bufferInfo = vk::DescriptorBufferInfo{
 				.buffer = m_CamBuffer->GetBuffer(),
 				.offset = 0,
@@ -294,6 +357,17 @@ void RenderLayer::OnAttach()
 
 	//std::vector<VK_DescriptorBinding> ltcMeshShaderDescriptorSet = generateDescriptorBinds(m_LTCMeshBufferSet);
 
+	bindings.push_back(VK_DescriptorBinding{
+		.type = vk::DescriptorType::eCombinedImageSampler,
+		.stage = vk::ShaderStageFlagBits::eFragment,
+		.imageInfo = vk::DescriptorImageInfo{
+			.sampler = m_LightTexture->GetSampler(),
+			.imageView = m_LightTexture->GetImageView(),
+			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+		}
+	});
+
+	//m_LTCMeshShaderInputDescriptor->Create(ltcMeshShaderDescriptorSet);
 	//ltcMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
 	//	.type = vk::DescriptorType::eCombinedImageSampler,
 	//	.stage = vk::ShaderStageFlagBits::eFragment,
@@ -313,8 +387,8 @@ void RenderLayer::OnAttach()
 		.type = vk::DescriptorType::eCombinedImageSampler,
 		.stage = vk::ShaderStageFlagBits::eFragment,
 		.imageInfo = vk::DescriptorImageInfo{
-			.sampler = m_Texture->GetSampler(),
-			.imageView = m_Texture->GetImageView(),
+			.sampler = m_LightTexture->GetSampler(),
+			.imageView = m_LightTexture->GetImageView(),
 			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
 		}
 	});
@@ -329,7 +403,9 @@ void RenderLayer::OnAttach()
 	std::vector<vk::DescriptorSetLayout> ltc_descriptor_set_layouts{
 		m_CamDescriptor->GetDescriptorSetLayout(),
 		m_LTCMeshShaderInputDescriptor->GetDescriptorSetLayout(),
+		m_MaterialParamDescriptor->GetDescriptorSetLayout(),
 	};
+
 	std::vector<vk::DescriptorSetLayout> light_descriptor_set_layouts{
 		m_CamDescriptor->GetDescriptorSetLayout(),
 		m_LightMeshShaderInputDescriptor->GetDescriptorSetLayout(),
@@ -360,7 +436,10 @@ void RenderLayer::OnImGui(double const& deltaTime)
 {
 	static float v = 0.f;
 	ImGui::Begin("Test Window");
-	ImGui::DragFloat("Test Value", &v, 0.1f, 0.f, 10.f);
+	if (ImGui::DragFloat("Roughness", &v, 0.02f, 0.f, 1.f))
+	{
+		m_MaterialParamBuffer->Update(&v, 0, sizeof(float));
+	}
 	ImGui::End();
 }
 
@@ -378,18 +457,22 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 			glm::vec2 offset = 0.001f * glm::vec2(mouse_cur - mouse_pre);
 			m_Camera->m_Transform.Translate({ -offset.x, offset.y, 0 });
 			m_Camera->RecomputeProjView();
-			glm::mat4 view_proj_mat = m_Camera->GetProjViewMatrix();
 
-			m_CamBuffer->Update(&view_proj_mat, 0, sizeof(glm::mat4));
+			CameraUBO camera_ubo;
+			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
+			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 		}
 		if (mouseState & SDL_BUTTON(SDL_BUTTON_MIDDLE))
 		{
 			glm::vec2 offset = 0.01f * glm::vec2(mouse_cur - mouse_pre);
 			m_Camera->m_Transform.RotateAround(glm::vec3(0.f), { -offset.y, -offset.x, 0 });
 			m_Camera->RecomputeProjView();
-			glm::mat4 view_proj_mat = m_Camera->GetProjViewMatrix();
-
-			m_CamBuffer->Update(&view_proj_mat, 0, sizeof(glm::mat4));
+			
+			CameraUBO camera_ubo;
+			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
+			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 		}
 		mouse_pre = mouse_cur;
 	}
@@ -427,7 +510,7 @@ void RenderLayer::RecordCmd()
 
 		// draw LTC objects
 		{
-			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLTCPipeline->vk_Pipeline);
+			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLTCPipeline->GetPipeline());
 
 			// Draw call
 			uint32_t num_workgroups_x = m_Meshlets->GetMeshletInfos().size();
@@ -436,12 +519,13 @@ void RenderLayer::RecordCmd()
 
 			std::vector<vk::DescriptorSet> arr{
 				m_CamDescriptor->GetDescriptorSet(),
-				m_LTCMeshShaderInputDescriptor->GetDescriptorSet()
+				m_LTCMeshShaderInputDescriptor->GetDescriptorSet(),
+				m_MaterialParamDescriptor->GetDescriptorSet(),
 			};
 
 
 			cmd[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-				m_MeshShaderLTCPipeline->vk_PipelineLayout,
+				m_MeshShaderLTCPipeline->GetLayout(),
 				uint32_t(0),
 				arr, nullptr);
 
@@ -449,8 +533,8 @@ void RenderLayer::RecordCmd()
 		}
 
 		// draw Light objects
-		/*{
-			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLightPipeline->vk_Pipeline);
+		{
+			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLightPipeline->GetPipeline());
 
 			// Draw call
 			uint32_t num_workgroups_x = (m_LightMeshletInfo->Triangle_Count + m_LightMeshletInfo->Meshlet_Size - 1) / m_LightMeshletInfo->Meshlet_Size;
@@ -464,12 +548,12 @@ void RenderLayer::RecordCmd()
 
 
 			cmd[0].bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-				m_MeshShaderLightPipeline->vk_PipelineLayout,
+				m_MeshShaderLightPipeline->GetLayout(),
 				uint32_t(0),
 				arr, nullptr);
 
 			cmd[0].drawMeshTasksEXT(num_workgroups_x, num_workgroups_y, num_workgroups_z);
-		}*/ 
+		}
 
 		cmd.End();
 	}

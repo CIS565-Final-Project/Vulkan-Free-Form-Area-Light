@@ -10,6 +10,19 @@ namespace VK_Renderer
         LoadFromFile(file);
     }
 
+    Image::Image(const Image& img)
+        :m_Size(img.m_Size), m_Resolution(img.GetResolution())
+    {
+        m_RawData = malloc(m_Size);
+        if(img.GetRawData()!=nullptr)std::memcpy(m_RawData, img.GetRawData(), m_Size);
+    }
+
+    Image::Image(Image&& img)
+        :m_Size(img.m_Size),m_Resolution(img.m_Resolution),m_RawData(img.m_RawData)
+    {
+        img.m_RawData = nullptr;
+    }
+
     Image::~Image()
 	{
         Free();
@@ -35,9 +48,9 @@ namespace VK_Renderer
             m_Resolution.x = dds_image.width;
             m_Resolution.y = dds_image.height;
             m_Resolution.z = 1;
-            m_Size = dds_image.data.size();
-            m_RawData = malloc(m_Size * sizeof(uint8_t));
-            std::memcpy(m_RawData, dds_image.data.data(), m_Size * sizeof(uint8_t));
+            m_Size = dds_image.data.size() * sizeof(uint8_t);
+            m_RawData = malloc(m_Size);
+            std::memcpy(m_RawData, dds_image.data.data(), m_Size );
         }
         else {
             stbi_set_flip_vertically_on_load(true);
