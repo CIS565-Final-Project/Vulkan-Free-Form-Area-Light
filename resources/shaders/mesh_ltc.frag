@@ -7,9 +7,9 @@
 #define MAX_LIGHT_VERTEX 5
 #define MAX_BEZIER_CURVE 5
 #define MAX_STACK_SIZE 12
-#define EPS 0.01
+#define EPS 1.0e-5
 #define MIN_THRESHOLD 0.01
-#define CLIP 0
+#define CLIP 1
 //uniform
 layout(set = 0, binding = 0) uniform CameraUBO {
 	vec4 pos;
@@ -17,7 +17,6 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 } u_CamUBO;
 layout(set = 1, binding = 4) uniform sampler2D texSampler;
 layout(set = 1, binding = 5) uniform sampler2DArray ltSampler;
-
 layout(set = 2, binding = 0) uniform Roughness{
 	float u_Roughness;
 };
@@ -33,6 +32,30 @@ layout (location = 0) in PerVertexData{
 //out
 layout (location = 0) out vec3 fs_Color;
 
+//lights
+float halfWidth = 1.5f;
+vec3 lights[5] = vec3[](
+	vec3(-halfWidth, -halfWidth + 1.0f, 5.0f),
+	vec3(halfWidth, -halfWidth + 1.0f, 5.0f ),
+	vec3(halfWidth, halfWidth + 1.0f, 5.0f ),
+	vec3(-halfWidth, halfWidth + 1.0f, 5.0f),
+	vec3(0.f)
+);
+vec3 allCtrlPts[8] = vec3[](
+	vec3(-1.5, -0.5f, 5.0f),
+	vec3(1.5f, -0.5f, 5.0f),
+	vec3(10.5f, -0.5f, 5.0f),
+	vec3(1.5f, 2.5f, 5.0f),
+		
+		
+	vec3(1.5f, 2.5f, 5.0f),
+	vec3(-1.5f, 3.5f, 5.0f),
+	vec3(-2.5f, 2.5f, 5.0f),
+	vec3(-1.5f, -0.5f, 5.0f)
+		
+);
+
+
 mat3 LTCMatrix(vec3 V, vec3 N, float roughness){
 	float theta = acos(max(dot(V,N),0));
 	vec2 uv = vec2(roughness, 2 * theta * INV_PI);
@@ -42,48 +65,18 @@ mat3 LTCMatrix(vec3 V, vec3 N, float roughness){
 	//vec4 ltcVal = vec4(1.f);	
 	
 	mat3 res = mat3(
-		vec3(1,0,ltcVal.w),
+		vec3(1,0,ltcVal.y),
 		vec3(0,ltcVal.z,0),
-		vec3(ltcVal.y,0,ltcVal.x)
+		vec3(ltcVal.w,0,ltcVal.x)
 	);
 	//ltc
-	return transpose(res);
+	return res;
 }
-
-void ClipVertex(in vec3 lightVertex[MAX_LIGHT_VERTEX],int arrSize, 
-				out vec3 clipedPos[MAX_LIGHT_VERTEX], out int clipedSize){
-	int readIdx = 0;
-	clipedSize = 0;//= writeIdx;
-	for(;readIdx<arrSize;++readIdx){
-		if(readIdx>0 && (lightVertex[readIdx - 1].z * lightVertex[readIdx].z) < 0){
-			//current node is above plane and previous node is below plane
-			//or current node is below plane and previous node is above plane
-			vec3 prevPos = lightVertex[readIdx - 1];
-			vec3 curPos = lightVertex[readIdx];
-			//the actual result: 
-			// note that we can also just use prevPos.z * curPos - curPos.z * prevPos because the clipedPos will be nomalized anyway
-			float u = prevPos.z / (prevPos.z - curPos.z);
-			clipedPos[clipedSize] = mix(prevPos,curPos,u);
-			++clipedSize;
-		}
-		if(lightVertex[readIdx].z >= 0){
-			//current node is above plane
-			clipedPos[clipedSize] = lightVertex[readIdx];
-			++clipedSize;
-		}
-	}
-	//handle last edge
-	if(readIdx>0 && lightVertex[readIdx - 1].z * lightVertex[0].z < 0){
-		//current node is above plane and previous node is below plane
-		//or current node is below plane and previous node is above plane
-		vec3 prevPos = lightVertex[readIdx - 1];
-		vec3 curPos = lightVertex[0];
-		float u = prevPos.z / (prevPos.z - curPos.z);
-		clipedPos[clipedSize] = mix(prevPos,curPos,u);
-		++clipedSize;
-	}
+mat3 BitMatrix(vec3 V, vec3 N){
+	vec3 tangent = normalize(V - N * dot(V,N));
+	vec3 bitangent = cross(N,tangent);
+	return transpose(mat3(tangent,bitangent,N));
 }
-
 //v: bounding quad of the light vertices in LTC space (not normalized, i.e. not on hemisphere yet)
 void FetchLight(in vec3 v[4], vec3 lookup, out vec2 uv, out float lod){
 	//project shading point onto light plane
@@ -123,75 +116,42 @@ void FetchLight(in vec3 v[4], vec3 lookup, out vec2 uv, out float lod){
 	uv = vec2(0, 1) * barycentric.x + vec2(1,1) * barycentric.y + vec2(1,0) * barycentric.z + vec2(0,0) * barycentric.w;
 }
 
-vec3 IntegrateEdge(vec3 p_i, vec3 p_j){
-	float theta = acos(dot(p_i,p_j));
-	vec3 res = normalize(cross(p_i,p_j));
-	//float res = dot(normalize(cross(p_i,p_j)), vec3(0,0,1))
-	return res * theta;
+
+// ----------------------------------------------
+// Clipping
+// ----------------------------------------------
+void ClipVertex(in vec3 lightVertex[MAX_LIGHT_VERTEX],int arrSize, out vec3 clipedPos[MAX_LIGHT_VERTEX], out int clipedSize){
+	int readIdx = 0;
+	clipedSize = 0;//= writeIdx;
+	for(;readIdx<arrSize;++readIdx){
+		if(readIdx>0 && (lightVertex[readIdx - 1].z * lightVertex[readIdx].z) < 0){
+			//current node is above plane and previous node is below plane
+			//or current node is below plane and previous node is above plane
+			vec3 prevPos = lightVertex[readIdx - 1];
+			vec3 curPos = lightVertex[readIdx];
+			//the actual result: 
+			// note that we can also just use prevPos.z * curPos - curPos.z * prevPos because the clipedPos will be nomalized anyway
+			float u = prevPos.z / (prevPos.z - curPos.z);
+			clipedPos[clipedSize] = mix(prevPos,curPos,u);
+			++clipedSize;
+		}
+		if(lightVertex[readIdx].z >= 0){
+			//current node is above plane
+			clipedPos[clipedSize] = lightVertex[readIdx];
+			++clipedSize;
+		}
+	}
+	//handle last edge
+	if(readIdx>0 && lightVertex[readIdx - 1].z * lightVertex[0].z < 0){
+		//current node is above plane and previous node is below plane
+		//or current node is below plane and previous node is above plane
+		vec3 prevPos = lightVertex[readIdx - 1];
+		vec3 curPos = lightVertex[0];
+		float u = prevPos.z / (prevPos.z - curPos.z);
+		clipedPos[clipedSize] = mix(prevPos,curPos,u);
+		++clipedSize;
+	}
 }
-
-float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MAX_LIGHT_VERTEX], int arrSize, out vec2 uv, out float lod){
-	//to tangent space
-	vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-	vec3 tangent = normalize(V - N * dot(V,N));
-	vec3 bitangent = cross(N,tangent);
-	LTCMat = LTCMat * transpose(mat3(tangent,bitangent,N)); //inverse rotation matrix
-	for(int i = 0;i<arrSize;++i){
-		lightVertex[i] = LTCMat * (lightVertex[i] - shadePos);
-	}
-	
-	//clip lightVertex
-	vec3 clipedPos[MAX_LIGHT_VERTEX];
-	ClipVertex(lightVertex,arrSize,clipedPos,arrSize);
-	
-	//reproject light onto hemisphere
-	for(int i = 0;i<arrSize;++i){
-		clipedPos[i] = normalize(clipedPos[i]);
-	}
-	
-	//integrate diffuse light
-	vec3 lookup = vec3(0);
-	for(int i = 1;i<arrSize;++i){
-		vec3 p_i = clipedPos[i-1];
-		vec3 p_j = clipedPos[i]; 
-		lookup += IntegrateEdge(p_i,p_j);
-	}
-	if(arrSize>0){
-		vec3 p_i = clipedPos[arrSize-1];
-		vec3 p_j = clipedPos[0]; 
-		lookup += IntegrateEdge(p_i,p_j);
-	}
-	float res = abs(lookup.z);
-	
-	//calculate fetch uv, lod
-	//******************
-	//Assuming it's a quad light!!!!!
-	vec3 lightBounds[4] = vec3[](
-		lightVertex[0],
-		lightVertex[1],
-		lightVertex[2],
-		lightVertex[3]
-	);
-	FetchLight(lightBounds,normalize(lookup),uv,lod);
-	//****************************
-	return res * 0.5 * INV_PI;
-}
-
-float halfWidth = 1.5f;
-vec3 lights[5] = vec3[](
-	vec3(-halfWidth, -halfWidth + 1.0f, 5.0f),
-	vec3(halfWidth, -halfWidth + 1.0f, 5.0f ),
-	vec3(halfWidth, halfWidth + 1.0f, 5.0f ),
-	vec3(-halfWidth, halfWidth + 1.0f, 5.0f),
-	vec3(0.f)
-);
-
-mat3 BitMatrix(vec3 V, vec3 N){
-	vec3 tangent = normalize(V - N * dot(V,N));
-	vec3 bitangent = cross(N,tangent);
-	return transpose(mat3(tangent,bitangent,N));
-}
-
 //https://github.com/Paul180297/BezierLightLTC/blob/master/shaders/floorLTC.frag
 //sort so v.x < v.y < v.z
 vec3 sort3(vec3 v){
@@ -242,19 +202,19 @@ void SolveQuadratic(const float a, const float b, const float c, out int realSol
 void SolveCubic(const float a, const float b, const float c, const float d, out int realSolCnt, out float sol[3]){
 	vec4 Coefficient = vec4(d,c,b,a);
 	Coefficient.xyz /= Coefficient.w;
-	Coefficient.yz /= 3.f;
+	Coefficient.yz /= 3.0;
 	vec3 Delta = vec3(
 		(Coefficient.z * (-Coefficient.z) + Coefficient.y),
 		(Coefficient.z * (-Coefficient.y) + Coefficient.x),
 		dot(vec2(Coefficient.z, -Coefficient.y),Coefficient.xy)
 	);
-	float Discriminant = dot(vec2(4.f * Delta.x,-Delta.y),Delta.zy);
+	float Discriminant = dot(vec2(4.0f * Delta.x,-Delta.y),Delta.zy);
 	vec2 Depressed = vec2(
-		(Delta.x * (-2.f * Coefficient.z) + Delta.y),
+		(Delta.x * (-2.0 * Coefficient.z) + Delta.y),
 		Delta.x
 	);
 	realSolCnt = 0;
-	if(Discriminant > 0.f){
+	if(Discriminant > 0.0){
 		float Theta = atan(sqrt(Discriminant),-Depressed.x)/3.f;
 		vec2 CubicRoot = vec2(cos(Theta),sin(Theta));
 		vec3 Root = vec3(
@@ -262,23 +222,25 @@ void SolveCubic(const float a, const float b, const float c, const float d, out 
 			dot(vec2(-0.5, -0.5 * sqrt(3.f)), CubicRoot),
 			dot(vec2(-0.5,  0.5 * sqrt(3.f)), CubicRoot)
 		);
-		vec3 tt = sort3(Root * 2.f * sqrt(-Depressed.y) - Coefficient.z);
+		vec3 tt = sort3(Root * 2.0 * sqrt(-Depressed.y) - Coefficient.z);
 		if(between01(tt.z)){sol[realSolCnt++] = tt.z;}
 		if(between01(tt.y)){sol[realSolCnt++] = tt.y;}
 		if(between01(tt.x)){sol[realSolCnt++] = tt.x;}
 	}else{
 		vec2 tmp = 0.5 * (-Depressed.x + vec2(-1.0,1.0) * sqrt(-Discriminant));
-		vec2 pq = sign(tmp) * pow(abs(tmp),vec2(0.33333));
+		vec2 pq = sign(tmp) * pow(abs(tmp),vec2(0.3333));
 		float t0 = pq.x + pq.y - Coefficient.z;
 		if(between01(t0)){sol[realSolCnt++] = t0;}
 	}
 }
 void SolveEquation(const float a, const float b, const float c, const float d, out int realSolCnt, out float sol[3]){
-	if(a!=0){
-		SolveCubic(a,b,c,d,realSolCnt, sol);
-	}else if(b!=0){
+	if(abs(a)>EPS){
+		SolveCubic(a,b,c,d,realSolCnt,sol);
+	}
+	else if(abs(b)>EPS){
 		SolveQuadratic(b,c,d,realSolCnt,sol);
-	}else{
+	}
+	else{
 		SolveLinear(c,d,realSolCnt,sol);
 	}
 }
@@ -299,7 +261,7 @@ bool ClipBezier(vec3 controlPts[4], out int intersectCnt, out float intersectTs[
 	}
 	if(numCtrlUnder == 0)return true;
 	if(numCtrlUnder == 4)return false;//all control points under plane
-
+	//return true;
 	const float p0z = controlPts[0].z;
 	const float p1z = controlPts[1].z;
 	const float p2z = controlPts[2].z;
@@ -311,71 +273,74 @@ bool ClipBezier(vec3 controlPts[4], out int intersectCnt, out float intersectTs[
 	const float d = p0z;
 
 	SolveEquation(a,b,c,d, intersectCnt, intersectTs);
+	
 	if(intersectCnt>0)return true;
-	if(BezierCurve(controlPts,0.5).z > 0.0){
+	if(
+		BezierCurve(controlPts,1.0).z > 0.0  // fix clip bug
+		//&& BezierCurve(controlPts,0.0).z > 0.0 
+		//&& BezierCurve(controlPts,0.5).z > 0.0
+	){
 		return true;
 	}
 	return false;
 }
-/*
-void ClipVertex(in vec3 lightVertex[MAX_LIGHT_VERTEX],int arrSize, 
-				out vec3 clipedPos[MAX_LIGHT_VERTEX], out int clipedSize){
-	int readIdx = 0;
-	clipedSize = 0;//= writeIdx;
-	for(;readIdx<arrSize;++readIdx){
-		if(readIdx>0 && (lightVertex[readIdx - 1].z * lightVertex[readIdx].z) < 0){
-			//current node is above plane and previous node is below plane
-			//or current node is below plane and previous node is above plane
-			vec3 prevPos = lightVertex[readIdx - 1];
-			vec3 curPos = lightVertex[readIdx];
-			//the actual result: 
-			// note that we can also just use prevPos.z * curPos - curPos.z * prevPos because the clipedPos will be nomalized anyway
-			float u = prevPos.z / (prevPos.z - curPos.z);
-			clipedPos[clipedSize] = mix(prevPos,curPos,u);
-			++clipedSize;
-		}
-		if(lightVertex[readIdx].z >= 0){
-			//current node is above plane
-			clipedPos[clipedSize] = lightVertex[readIdx];
-			++clipedSize;
-		}
-	}
-	//handle last edge
-	if(readIdx>0 && lightVertex[readIdx - 1].z * lightVertex[0].z < 0){
-		//current node is above plane and previous node is below plane
-		//or current node is below plane and previous node is above plane
-		vec3 prevPos = lightVertex[readIdx - 1];
-		vec3 curPos = lightVertex[0];
-		float u = prevPos.z / (prevPos.z - curPos.z);
-		clipedPos[clipedSize] = mix(prevPos,curPos,u);
-		++clipedSize;
-	}
-}
-*/
-float IntegrateOnHemisphere(vec3 p_i,vec3 p_j){
+
+
+vec3 IntegrateEdge(vec3 p_i, vec3 p_j){
 	float theta = acos(dot(p_i,p_j));
-	float proj = normalize(cross(p_i,p_j)).z;
-	return theta * proj;
+	vec3 res = normalize(cross(p_i,p_j));
+	//float res = dot(normalize(cross(p_i,p_j)), vec3(0,0,1))
+	return res * theta;
 }
-float IntegrateBezierEdge(vec3 p_i, vec3 p_j){
-	return IntegrateEdge(p_i, p_j).z;
-	// return IntegrateOnHemisphere(normalize(p_i),normalize(p_j));
+float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MAX_LIGHT_VERTEX], int arrSize, out vec2 uv, out float lod){
+	//to tangent space
+	vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+	vec3 tangent = normalize(V - N * dot(V,N));
+	vec3 bitangent = cross(N,tangent);
+	LTCMat = LTCMat * transpose(mat3(tangent,bitangent,N)); //inverse rotation matrix
+	for(int i = 0;i<arrSize;++i){
+		lightVertex[i] = LTCMat * (lightVertex[i] - shadePos);
+	}
+	
+	//clip lightVertex
+	vec3 clipedPos[MAX_LIGHT_VERTEX];
+	ClipVertex(lightVertex,arrSize,clipedPos,arrSize);
+	
+	//reproject light onto hemisphere
+	for(int i = 0;i<arrSize;++i){
+		clipedPos[i] = normalize(clipedPos[i]);
+	}
+	
+	//integrate diffuse light
+	vec3 lookup = vec3(0);
+	for(int i = 1;i<arrSize;++i){
+		vec3 p_i = clipedPos[i-1];
+		vec3 p_j = clipedPos[i]; 
+		lookup += IntegrateEdge(p_i,p_j);
+	}
+	if(arrSize>0){
+		vec3 p_i = clipedPos[arrSize-1];
+		vec3 p_j = clipedPos[0]; 
+		lookup += IntegrateEdge(p_i,p_j);
+	}
+	float res = abs(lookup.z);
+	
+	//calculate fetch uv, lod
+	//******************
+	//Assuming it's a quad light!!!!!
+	vec3 lightBounds[4] = vec3[](
+		lightVertex[0],
+		lightVertex[1],
+		lightVertex[2],
+		lightVertex[3]
+	);
+	FetchLight(lightBounds,normalize(lookup),uv,lod);
+	//****************************
+	return res * 0.5 * INV_PI;
 }
 
 vec2 tStack[MAX_STACK_SIZE];
-
-
-
 float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold){
-	
-	// vec3 v01 = ctrlPts[1] - ctrlPts[0];
-	// vec3 v02 = ctrlPts[2] - ctrlPts[0];
-	// vec3 v03 = ctrlPts[3] - ctrlPts[0];
-	// if(abs(dot(v01,v02)) < EPS && abs(dot(v01,v03)) < EPS){
-	// 	vec3 v0 = normalize(BezierCurve(ctrlPts, tStart));
-	// 	vec3 v1 = normalize(BezierCurve(ctrlPts, tEnd));
-	// 	return IntegrateOnHemisphere(v0,v1);
-	// }
 	float res = 0.0;
 	int stackTop = 0;
 	tStack[stackTop++] = vec2(tStart,tEnd);
@@ -391,16 +356,16 @@ float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold
 		
 		//if curve is nearly a segment
 		bool isLine = false;
-		if(dot(cross(v0-v1,v0-v2),cross(v0-v1,v0-v2)) < EPS){
+		if(dot(cross(v0-v1,v0-v2),cross(v0-v1,v0-v2)) < 0.01){
 			isLine = true;
 		}
 		v0 = normalize(v0);
 		v1 = normalize(v1);
 		v2 = normalize(v2);
 
-		float I01 = IntegrateBezierEdge(v0,v1);
-		float I12 = IntegrateBezierEdge(v1,v2);
-		float I20 = IntegrateBezierEdge(v2,v0);
+		float I01 = IntegrateEdge(v0,v1).z;
+		float I12 = IntegrateEdge(v1,v2).z;
+		float I20 = IntegrateEdge(v2,v0).z;
 
 		if(!isLine || (abs(I01 + I12 + I20) >= threshold && stackTop<(MAX_STACK_SIZE -2))){
 			tStack[stackTop++] = vec2(tMin, tMid);
@@ -412,28 +377,10 @@ float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold
 	return res;
 }
 
-
-vec3 allCtrlPts[8] = vec3[](
-	vec3(-1.5, -0.5f, 5.0f),
-	vec3(1.5f, -0.5f, 5.0f),
-	vec3(10.5f, -0.5f, 5.0f),
-	vec3(1.5f, 2.5f, 5.0f),
-		
-		
-	vec3(1.5f, 2.5f, 5.0f),
-	vec3(-1.5f, 3.5f, 5.0f),
-	vec3(-2.5f, 2.5f, 5.0f),
-	vec3(-1.5f, -0.5f, 5.0f)
-		
-);
-
 float IntegrateBezierD(vec3 V, vec3 N, vec3 shadePos, float roughness
 	,  int bezierNum, mat3 LTCMat){
 
 	// to LTC Space
-	vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-	vec3 tangent = normalize(V - N * dot(V,N));
-	vec3 bitangent = cross(N,tangent);
 	mat3 worldToLTC = LTCMat * BitMatrix(V,N);//transpose(mat3(tangent,bitangent,N)); //inverse rotation matrix
 
 	for(int i = 0;i<bezierNum;++i){
@@ -459,19 +406,14 @@ float IntegrateBezierD(vec3 V, vec3 N, vec3 shadePos, float roughness
 			allCtrlPts[offset + 2],
 			allCtrlPts[offset + 3]
 		);
-		// float ts[3];
-		// int tCnt = 0;
-		// if(ClipBezier(tmpCtrlPts, tCnt, ts)){
-		// 	res += IntegrateBezier(tmpCtrlPts,0,1,threshold);
-		// }
-		
-		//res += 0.1f;
 #if CLIP
 		float ts[3];
 		int tCnt = 0;
 		//Clip
 		if(ClipBezier(tmpCtrlPts, tCnt, ts)){
 			//Integrate
+			// res += tCnt/6.0;
+			// continue;
 			float t0,t1,t2;
 			switch(tCnt){
 				case 0:
