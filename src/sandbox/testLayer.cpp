@@ -119,13 +119,21 @@ void RenderLayer::OnAttach()
 	m_MaterialParamBuffer->CreateFromData(&roughness, sizeof(float), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
 	m_Scene = mkU<Scene>(); ;
-	m_Scene->AddMesh("meshes/plane.obj");
-	m_Scene->AddMesh("meshes/wahoo.obj");
+	m_Scene->AddMesh("meshes/plane.obj", "Plane");
+	m_Scene->AddMesh("meshes/wahoo.obj", "Wahoo", 
+	Transformation{
+		.position = {0, 2, 7},
+		.scale = {.5f, .5f, .5f}
+	});
+	//m_Scene->AddMesh("meshes/wahoo.obj");
 
 	m_Scene->ComputeRenderData({
 		.MeshletMaxPrimCount = 32, 
 		.MeshletMaxVertexCount = 255
 	});
+
+	m_ModelMatrixBuffer = mkU<VK_StagingBuffer>(*m_Device);
+	m_ModelMatrixBuffer->CreateFromData(m_Scene->GetModelMatries().data(), m_Scene->GetModelMatries().size() * sizeof(ModelMatrix), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
 
 	Mesh lightMesh;
 	lightMesh.LoadMeshFromFile("meshes/lightQuad.obj");
@@ -245,6 +253,15 @@ void RenderLayer::OnAttach()
 					.buffer = m_MeshletInfoBuffer->GetBuffer(),
 					.offset = 0,
 					.range = m_MeshletInfoBuffer->GetSize()
+				}
+		},
+		VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = m_ModelMatrixBuffer->GetBuffer(),
+					.offset = 0,
+					.range = m_ModelMatrixBuffer->GetSize()
 				}
 		},
 		VK_DescriptorBinding{
@@ -478,6 +495,43 @@ void RenderLayer::OnImGui(double const& deltaTime)
 	if (ImGui::DragFloat("Roughness", &v, 0.02f, 0.f, 1.f))
 	{
 		m_MaterialParamBuffer->Update(&v, 0, sizeof(float));
+	}
+	ImGui::End();
+
+	ImGui::Begin("Model Window");
+	{
+		static uint32_t current_id = 1;
+
+		std::vector<MeshProxy>& meshes = m_Scene->GetMeshProxies();
+
+		if (ImGui::BeginCombo("##combo", meshes[current_id].name.c_str()))
+		{
+			for (int i = 0; i < meshes.size(); ++i)
+			{
+				bool is_selected = (current_id == i);
+				if (ImGui::Selectable(meshes[i].name.c_str(), is_selected))
+				{
+					current_id = i;
+				}
+			}
+			ImGui::EndCombo();
+		}
+
+		bool modified = false;
+		
+		MeshProxy& mesh = meshes[current_id];
+		glm::vec3 euler = glm::eulerAngles(mesh.transform.rotation);
+
+		modified |= ImGui::DragFloat3("Position", &mesh.transform.position[0], 0.1f, -200.f, 200.f);
+		modified |= ImGui::DragFloat3("Rotation", &euler[0], 0.1f, -2.f * glm::pi<float>(), 2.f * glm::pi<float>());
+		modified |= ImGui::DragFloat3("Scale", &mesh.transform.scale[0], 0.01f, 0.01f, 1.f);
+		
+		if (modified)
+		{
+			mesh.transform.rotation = glm::quat(euler);
+			m_Scene->UpdateModelMatrix(current_id);
+			m_ModelMatrixBuffer->Update(&m_Scene->GetModelMatries()[mesh.id], sizeof(ModelMatrix) * mesh.id, sizeof(ModelMatrix));
+		}
 	}
 	ImGui::End();
 }

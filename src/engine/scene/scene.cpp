@@ -19,9 +19,24 @@ namespace VK_Renderer
 		m_AtlasTex2D.reset();
 	}
 
-	void Scene::AddMesh(const std::string& file)
+	void Scene::AddMesh(std::string const& file, 
+						std::string const& name, 
+						Transformation const& trans)
 	{
 		m_MeshFiles.emplace_back(file);
+
+		m_MeshProxies.push_back(MeshProxy{
+			.id = static_cast<uint32_t>(m_MeshFiles.size() - 1),
+			.name = name,
+			.transform = trans
+		});
+
+		glm::mat4 model = trans.GetTransformation();
+
+		m_ModelMatries.push_back(ModelMatrix{
+			.model =  model,
+			.invModel = glm::inverse(model)
+		});
 	}
 	
 	void Scene::ComputeRenderData(ComputeRenderDataInfo const& info)
@@ -30,16 +45,24 @@ namespace VK_Renderer
 		ComputeAtlasTexture();
 	}
 
+	void Scene::UpdateModelMatrix(uint32_t const& id)
+	{
+		MeshProxy const& mesh = m_MeshProxies[id];
+		glm::mat4 model = mesh.transform.GetTransformation();
+		m_ModelMatries[mesh.id].model = model;
+		m_ModelMatries[mesh.id].invModel = glm::inverse(model);
+	}
+
 	void Scene::ComputeMeshlet(uint16_t const& maxPrimitiveCount, uint16_t const& maxVertexCount)
 	{
 		m_Meshlets.reset();
 		m_Meshlets = mkU<Meshlets>(maxPrimitiveCount, maxVertexCount);
 
 		uint32_t matertial_count = 0;
-		for (auto const& file : m_MeshFiles)
+		for (size_t i = 0; i < m_MeshFiles.size(); ++i)
 		{
-			uPtr<Mesh> mesh = mkU<Mesh>(file);
-			m_Meshlets->Append(*mesh);
+			uPtr<Mesh> mesh = mkU<Mesh>(m_MeshFiles[i]);
+			m_Meshlets->Append(*mesh, i);
 
 			for (auto const& mat_info : mesh->m_MaterialInfos)
 			{

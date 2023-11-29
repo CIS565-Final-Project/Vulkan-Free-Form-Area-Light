@@ -20,7 +20,7 @@ namespace VK_Renderer
 		  m_MaxVertexCount(maxVertexCount)
 	{}
 
-	void Meshlets::Append(Mesh const& mesh)
+	void Meshlets::Append(Mesh const& mesh, uint32_t const& modelId)
 	{
 		if (mesh.GetTriangleCounts() < 1) return;
 		// Step 1 - Clustering Vertices and Triangles
@@ -77,7 +77,8 @@ namespace VK_Renderer
 
 		// Step 2 - Assemble meshlets
 		MeshletDescription meshlet{.vertexBegin = static_cast<uint32_t>(m_VertexIndices.size()),
-									.primBegin  = static_cast<uint32_t>(m_PrimitiveIndices.size()), };
+									.primBegin  = static_cast<uint32_t>(m_PrimitiveIndices.size()), 
+									.modelId = modelId};
 		std::unordered_map<uint32_t, uint8_t> meshlet_vertices;
 
 		for (size_t i = 0; i < triangles.size(); ++i)
@@ -119,7 +120,8 @@ namespace VK_Renderer
 					meshlet.Reset();
 					meshlet.primBegin = m_PrimitiveIndices.size();
 					meshlet.vertexBegin = m_VertexIndices.size();
-					
+					meshlet.modelId = modelId;
+
 					meshlet_vertices.clear();
 				}
 			}

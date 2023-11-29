@@ -14,6 +14,7 @@ struct MeshletDescription
 	uint primCount;
 	uint vertexBegin;
 	uint primBegin;
+	uint modelId;
 };
 
 taskPayloadSharedEXT Task OUT;

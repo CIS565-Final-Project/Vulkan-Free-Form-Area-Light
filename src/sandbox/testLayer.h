@@ -75,6 +75,7 @@ protected:
 
 	uPtr<VK_Renderer::VK_StagingBuffer> m_CamBuffer;
 	uPtr<VK_Renderer::VK_StagingBuffer> m_MaterialParamBuffer;
+	uPtr<VK_Renderer::VK_StagingBuffer> m_ModelMatrixBuffer;
 
 	uPtr<VK_Renderer::Scene> m_Scene;
 

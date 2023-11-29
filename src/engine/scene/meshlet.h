@@ -25,7 +25,7 @@ namespace VK_Renderer
 		uint32_t primCount{ 0 };
 		uint32_t vertexBegin{ 0 };
 		uint32_t primBegin{ 0 };
-
+		uint32_t modelId;
 		void Reset()
 		{
 			vertexCount = 0;
@@ -44,7 +44,7 @@ namespace VK_Renderer
 		Meshlets(uint16_t const& maxPrimitiveCount, 
 				  uint16_t const& maxVertexCount);
 
-		void Append(Mesh const& mesh);
+		void Append(Mesh const& mesh, uint32_t const& modelId);
 
 		inline std::vector<Vertex>& GetVertices() { return m_Vertices; }
 

@@ -27,8 +27,14 @@ struct MeshletDescription
 	uint primCount;
 	uint vertexBegin;
 	uint primBegin;
+	uint modelId;
 };
 
+struct ModelMatrix
+{
+	mat4 model;
+	mat4 invModel;
+};
 
 layout(set = 0, binding = 0) uniform CameraUBO {
 	vec4 pos;
@@ -39,15 +45,19 @@ layout(set = 1, binding = 0) buffer MeshletInfos {
     MeshletDescription meshlets[];
 };
 
-layout(set = 1, binding = 1) buffer VertexIndices {
+layout(set = 1, binding = 1) buffer ModelMatries {
+    ModelMatrix modelMatrix[];
+};
+
+layout(set = 1, binding = 2) buffer VertexIndices {
    uint vertexIndices[];
 };
 
-layout(set = 1, binding = 2) buffer PrimitiveIndices {
+layout(set = 1, binding = 3) buffer PrimitiveIndices {
     uint8_t primitiveIndices[];
 };
 
-layout(set = 1, std430, binding = 3) buffer Vertices {
+layout(set = 1, std430, binding = 4) buffer Vertices {
     Vertex vertices[];
 };
 
@@ -109,11 +119,13 @@ void main()
 	);
 	for(int v = 0; v < 3; ++v)
 	{
-		v_out[v].pos = vertices[real_id[v]].position.xyz;
-		gl_MeshVerticesEXT[v].gl_Position = u_CamUBO.viewProjMat * vec4(vertices[real_id[v]].position.xyz, 1.f);
+		//v_out[v].pos = vertices[real_id[v]].position.xyz;
+		v_out[v].pos = (modelMatrix[meshlet.modelId].model * vec4(vertices[real_id[v]].position.xyz, 1.f)).xyz;
+
+		gl_MeshVerticesEXT[v].gl_Position = u_CamUBO.viewProjMat * vec4(v_out[v].pos, 1.f);
 		v_out[v].uv = vertices[real_id[v]].uv.xy;
 		v_out[v].color = IN.color;
-		v_out[v].normal = vertices[real_id[v]].normal.xyz;
+		v_out[v].normal = (modelMatrix[meshlet.modelId].invModel * vec4(vertices[real_id[v]].normal.xyz, 0.f)).xyz;
 	}
 	
 	gl_PrimitiveTriangleIndicesEXT[0] =  uvec3(0, 1, 2);
