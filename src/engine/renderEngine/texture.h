@@ -41,7 +41,7 @@ namespace VK_Renderer
 		void CreateFromImage(Image const& image, 
 							TextureCreateInfo const& createInfo);
 
-		void CreateFromData(void* data,
+		void CreateFromData(void const* data,
 							uint32_t const& size,
 							vk::Extent3D const& extent,
 							TextureCreateInfo const& createInfo);
@@ -81,6 +81,11 @@ namespace VK_Renderer
 			TextureCreateInfo const& createInfo);
 		void CreateFromImages(const std::vector<Image>& image,
 			TextureCreateInfo const& createInfo);
+
+		void CreateFromData(void const* data,
+							uint32_t const& size,
+							vk::Extent3D const& extent,
+							TextureCreateInfo const& createInfo);
 
 		void Free();
 

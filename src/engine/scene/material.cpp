@@ -15,21 +15,10 @@ namespace VK_Renderer
 	}
 	void Material::Load(MaterialInfo const& info)
 	{
-		if (info.albedoTex.length() > 0)
+		m_Textures.resize(info.texPath.size());
+		for (int i = 0; i < m_Textures.size(); ++i)
 		{
-			m_AlbedoTex.LoadFromFile(info.albedoTex);
-		}
-		if (info.normalTex.length() > 0)
-		{
-			m_NormalTex.LoadFromFile(info.normalTex);
-		}
-		if (info.roughnessTex.length() > 0)
-		{
-			m_RoughnessTex.LoadFromFile(info.roughnessTex);
-		}
-		if (info.metallicTex.length() > 0)
-		{
-			m_MetallicTex.LoadFromFile(info.metallicTex);
+			if(info.texPath[i].size() > 0) m_Textures[i].LoadFromFile(info.texPath[i]);
 		}
 	}
 }

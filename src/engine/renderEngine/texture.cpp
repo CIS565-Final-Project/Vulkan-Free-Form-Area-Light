@@ -82,7 +82,7 @@ namespace VK_Renderer
 			}, createInfo);
 	}
 
-	void VK_Texture2D::CreateFromData(void* data, uint32_t const& size, vk::Extent3D const& extent, TextureCreateInfo const& createInfo)
+	void VK_Texture2D::CreateFromData(void const* data, uint32_t const& size, vk::Extent3D const& extent, TextureCreateInfo const& createInfo)
 	{
 		Create(extent, createInfo, size);
 		TransitionLayout(VK_ImageLayout{
@@ -302,6 +302,42 @@ namespace VK_Renderer
 			.unnormalizedCoordinates = vk::False
 			});
 	}
+	
+	void VK_Texture2DArray::CreateFromData(void const* data, 
+											uint32_t const& size,
+											vk::Extent3D const& extent, 
+											TextureCreateInfo const& createInfo)
+	{
+		Create(extent, createInfo, size);
+		TransitionLayout(VK_ImageLayout{
+			.layout = vk::ImageLayout::eTransferDstOptimal,
+			.accessFlag = vk::AccessFlagBits::eMemoryWrite,
+			.pipelineStage = vk::PipelineStageFlagBits::eTransfer,
+		});
+
+		CopyFrom(data, extent.width, extent.height);
+		
+		vk::PhysicalDeviceProperties property = m_Device.GetPhysicalDevice().getProperties();
+
+		// Create Sampler
+		vk_Sampler = m_Device.GetDevice().createSampler(vk::SamplerCreateInfo{
+			.magFilter = vk::Filter::eLinear,
+			.minFilter = vk::Filter::eLinear,
+			.mipmapMode = vk::SamplerMipmapMode::eLinear,
+			.addressModeU = vk::SamplerAddressMode::eRepeat,
+			.addressModeV = vk::SamplerAddressMode::eRepeat,
+			.addressModeW = vk::SamplerAddressMode::eRepeat,
+			.mipLodBias = 0.f,
+			.anisotropyEnable = vk::True,
+			.maxAnisotropy = property.limits.maxSamplerAnisotropy,
+			.compareEnable = vk::False,
+			.minLod = 0.f,
+			.maxLod = 0.f,
+			.borderColor = vk::BorderColor::eIntOpaqueBlack,
+			.unnormalizedCoordinates = vk::False
+		});
+	}
+
 	void VK_Texture2DArray::Free()
 	{
 		m_Layout = VK_ImageLayout{ .accessFlag = vk::AccessFlagBits::eNone,

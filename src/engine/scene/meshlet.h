@@ -35,20 +35,7 @@ namespace VK_Renderer
 		}
 	};
 
-	struct TextureAtlas
-	{
-		glm::ivec2 start{ 0, 0 };
-
-		uint32_t width{ 0 };
-		uint32_t height{ 0 };
-		uint32_t id{ 0 };
-
-		bool operator < (TextureAtlas const& other) const
-		{
-			return (start.x != other.start.x ? start.x < other.start.x : 
-					start.y < other.start.y);
-		}
-	};
+	struct TextureBlock2D;
 
 	class Meshlets
 	{
@@ -59,24 +46,17 @@ namespace VK_Renderer
 
 		void Append(Mesh const& mesh);
 
-		void CreateMaterialData();
+		inline std::vector<Vertex>& GetVertices() { return m_Vertices; }
 
 	protected:
 		uint16_t m_MaxPrimitiveCount;
 		uint16_t m_MaxVertexCount;
 
+		uint16_t m_MaterialOffset{ 0 };
+
 		DeclareWithGetFunc(protected, std::vector<Vertex>, m, Vertices, const);
 		DeclareWithGetFunc(protected, std::vector<MeshletDescription>, m, MeshletInfos, const);
 		DeclareWithGetFunc(protected, std::vector<uint8_t>, m, PrimitiveIndices, const);
 		DeclareWithGetFunc(protected, std::vector<uint32_t>, m, VertexIndices, const);
-	
-	public:
-		TextureAtlas m_TextureAtlas;
-
-		glm::ivec2 m_Extent{ 0, 0 };
-
-		std::vector<unsigned char> m_TextureData;
-
-		std::vector<Material> m_Materials;
 	};
 }

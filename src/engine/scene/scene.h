@@ -1,8 +1,17 @@
 #pragma once
 
+#include "mesh.h"
+#include "meshlet.h"
+#include "material.h"
+#include "atlasTexture.h"
+
 namespace VK_Renderer
 {
-	class Mesh;
+	struct ComputeRenderDataInfo
+	{
+		uint16_t MeshletMaxPrimCount;
+		uint16_t MeshletMaxVertexCount;
+	};
 
 	class Scene
 	{
@@ -10,10 +19,21 @@ namespace VK_Renderer
 		Scene();
 		~Scene();
 
-		void AddMesh(uPtr<Mesh>& mesh);
+		void Free();
+
 		void AddMesh(const std::string& file);
 
-	public:
-		std::vector<uPtr<Mesh>> m_Meshes;
+		void ComputeRenderData(ComputeRenderDataInfo const& info);
+		
+	protected:
+		void ComputeMeshlet(uint16_t const& maxPrimitiveCount, uint16_t const& maxVertexCount);
+		void ComputeAtlasTexture();
+
+	protected:
+		std::vector<std::string> m_MeshFiles;
+		std::vector<MaterialInfo> m_MaterialInfos;
+
+		DeclarePtrWithGetFunc(protected, uPtr, Meshlets, m, Meshlets, const);
+		DeclarePtrWithGetFunc(protected, uPtr, AtlasTexture2D, m, AtlasTex2D, const);
 	};
 };

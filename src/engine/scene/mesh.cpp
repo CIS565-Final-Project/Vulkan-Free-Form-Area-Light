@@ -93,12 +93,12 @@ namespace VK_Renderer
 		// load materials
 		for (auto const& material : materials)
 		{
-			m_MaterialInfos.push_back(MaterialInfo{
-				.albedoTex = material.diffuse_texname,
-				.normalTex = (material.bump_texname.empty() ? material.normal_texname : material.bump_texname),
-				.roughnessTex = material.roughness_texname,
-				.metallicTex = material.metallic_texname,
-			});
+			m_MaterialInfos.push_back(MaterialInfo({
+				material.diffuse_texname,
+				(material.bump_texname.empty() ? material.normal_texname : material.bump_texname),
+				material.roughness_texname,
+				material.metallic_texname,
+			}));
 		}
 	}
 }

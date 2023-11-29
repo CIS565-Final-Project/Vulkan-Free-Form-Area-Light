@@ -118,12 +118,14 @@ void RenderLayer::OnAttach()
 	m_MaterialParamBuffer = mkU<VK_StagingBuffer>(*m_Device);
 	m_MaterialParamBuffer->CreateFromData(&roughness, sizeof(float), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
-	m_Meshlets = mkU<Meshlets>(32, 255);
+	m_Scene = mkU<Scene>(); ;
+	m_Scene->AddMesh("meshes/plane.obj");
+	m_Scene->AddMesh("meshes/wahoo.obj");
 
-	m_Meshlets->Append({ "meshes/plane.obj" });
-	m_Meshlets->Append({ "meshes/wahoo.obj" });
-
-	m_Meshlets->CreateMaterialData();
+	m_Scene->ComputeRenderData({
+		.MeshletMaxPrimCount = 32, 
+		.MeshletMaxVertexCount = 255
+	});
 
 	Mesh lightMesh;
 	lightMesh.LoadMeshFromFile("meshes/lightQuad.obj");
@@ -136,21 +138,22 @@ void RenderLayer::OnAttach()
 		.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
 		.accessFlag = vk::AccessFlagBits::eShaderRead,
 		.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
-		});
+	});
 
 	m_LightTexture = mkU<VK_Texture2DArray>(*m_Device);
 	
-	m_CompressedTexture = mkU<VK_Texture2D>(*m_Device);
-	m_CompressedTexture->CreateFromData(m_Meshlets->m_TextureData.data(), 
-		m_Meshlets->m_TextureData.size() * sizeof(unsigned char),
+	m_CompressedTexture = mkU<VK_Texture2DArray>(*m_Device);
+	m_CompressedTexture->CreateFromData(m_Scene->GetAtlasTex2D()->GetData().data(),
+		m_Scene->GetAtlasTex2D()->GetSize(),
 		{
-			.width = static_cast<uint32_t>(m_Meshlets->m_Extent.x), 
-			.height = static_cast<uint32_t>(m_Meshlets->m_Extent.y),
+			.width = static_cast<uint32_t>(m_Scene->GetAtlasTex2D()->GetResolution().x),
+			.height = static_cast<uint32_t>(m_Scene->GetAtlasTex2D()->GetResolution().y),
 			.depth = 1,
 		},
 		{ 
 			.format = vk::Format::eR8G8B8A8Unorm, 
-			.usage = vk::ImageUsageFlagBits::eSampled 
+			.usage = vk::ImageUsageFlagBits::eSampled,
+			.arrayLayer = 4
 		}
 	);
 	
@@ -229,10 +232,10 @@ void RenderLayer::OnAttach()
 	m_PrimitiveIndicesBuffer = mkU<VK_DeviceBuffer>(*m_Device);
 	m_VertexBuffer = mkU<VK_DeviceBuffer>(*m_Device);
 
-	m_MeshletInfoBuffer->CreateFromData(m_Meshlets->GetMeshletInfos().data(), sizeof(MeshletDescription) * m_Meshlets->GetMeshletInfos().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
-	m_VertexIndicesBuffer->CreateFromData(m_Meshlets->GetVertexIndices().data(), sizeof(uint32_t) * m_Meshlets->GetVertexIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
-	m_PrimitiveIndicesBuffer->CreateFromData(m_Meshlets->GetPrimitiveIndices().data(), sizeof(uint8_t) * m_Meshlets->GetPrimitiveIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
-	m_VertexBuffer->CreateFromData(m_Meshlets->GetVertices().data(), sizeof(Vertex) * m_Meshlets->GetVertices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_MeshletInfoBuffer->CreateFromData(m_Scene->GetMeshlets()->GetMeshletInfos().data(), sizeof(MeshletDescription) * m_Scene->GetMeshlets()->GetMeshletInfos().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_VertexIndicesBuffer->CreateFromData(m_Scene->GetMeshlets()->GetVertexIndices().data(), sizeof(uint32_t) * m_Scene->GetMeshlets()->GetVertexIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_PrimitiveIndicesBuffer->CreateFromData(m_Scene->GetMeshlets()->GetPrimitiveIndices().data(), sizeof(uint8_t) * m_Scene->GetMeshlets()->GetPrimitiveIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_VertexBuffer->CreateFromData(m_Scene->GetMeshlets()->GetVertices().data(), sizeof(Vertex) * m_Scene->GetMeshlets()->GetVertices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
 
 	std::vector<VK_DescriptorBinding> bindings{
 		VK_DescriptorBinding{
@@ -549,7 +552,7 @@ void RenderLayer::RecordCmd()
 			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLTCPipeline->GetPipeline());
 
 			// Draw call
-			uint32_t num_workgroups_x = m_Meshlets->GetMeshletInfos().size();
+			uint32_t num_workgroups_x = m_Scene->GetMeshlets()->GetMeshletInfos().size();
 			uint32_t num_workgroups_y = 1;
 			uint32_t num_workgroups_z = 1;
 

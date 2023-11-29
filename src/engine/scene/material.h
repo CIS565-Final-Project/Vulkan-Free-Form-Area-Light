@@ -6,10 +6,7 @@ namespace VK_Renderer
 {
 	struct MaterialInfo
 	{
-		std::string albedoTex{ "" };
-		std::string normalTex{ "" };
-		std::string roughnessTex{ "" };
-		std::string metallicTex{ "" };
+		std::vector<std::string> texPath;
 	};
 
 	class Material
@@ -22,9 +19,6 @@ namespace VK_Renderer
 		void Load(MaterialInfo const& info);
 
 	protected:
-		DeclareWithGetFunc(protected, Image, m, AlbedoTex, const);
-		DeclareWithGetFunc(protected, Image, m, NormalTex, const);
-		DeclareWithGetFunc(protected, Image, m, RoughnessTex, const);
-		DeclareWithGetFunc(protected, Image, m, MetallicTex, const);
+		DeclareWithGetFunc(protected, std::vector <Image>, m, Textures, const);
 	};
 }
