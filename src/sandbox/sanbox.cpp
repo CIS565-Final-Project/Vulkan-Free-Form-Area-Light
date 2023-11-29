@@ -8,7 +8,6 @@ public:
 	Sandbox()
 	{
 		PushLayer(mkU<RenderLayer>("TestLayer_2", "meshes/wahoo.obj", "images/wahoo.bmp"));
-		//PushLayer(mkU<RenderLayer>("TestLayer_1", "meshes/plane.obj", "images/wall.jpg"));
 	}
 
 	~Sandbox()

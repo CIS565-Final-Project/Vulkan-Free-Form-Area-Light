@@ -63,6 +63,9 @@ protected:
 	uPtr<VK_Renderer::VK_CommandBuffer> m_Cmd;
 	
 	uPtr<VK_Renderer::VK_Texture2D> m_LTCTexture;
+	
+	uPtr<VK_Renderer::VK_Texture2D> m_CompressedTexture;
+
 	uPtr<VK_Renderer::VK_Texture2DArray> m_LightTexture;
 
 	uPtr<VK_Renderer::VK_PipelineInput> m_PipelineInput;

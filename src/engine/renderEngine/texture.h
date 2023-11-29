@@ -33,11 +33,17 @@ namespace VK_Renderer
 		~VK_Texture2D();
 
 		void Create(vk::Extent3D const& extent, 
-					TextureCreateInfo const& createInfo);
+					TextureCreateInfo const& createInfo,
+					uint32_t const& size = 0);
 
 		void CreateFromFile(std::string const& file,
 							TextureCreateInfo const& createInfo);
 		void CreateFromImage(Image const& image, 
+							TextureCreateInfo const& createInfo);
+
+		void CreateFromData(void* data,
+							uint32_t const& size,
+							vk::Extent3D const& extent,
 							TextureCreateInfo const& createInfo);
 
 		void Free();
@@ -68,7 +74,8 @@ namespace VK_Renderer
 		~VK_Texture2DArray();
 
 		void Create(vk::Extent3D const& extent,
-			TextureCreateInfo const& createInfo);
+					TextureCreateInfo const& createInfo,
+					uint32_t const& size = 0);
 
 		void CreateFromFiles(const std::vector<std::string>& file,
 			TextureCreateInfo const& createInfo);

@@ -94,7 +94,7 @@ void RenderLayer::OnAttach()
 	m_Camera = mkU<PerspectiveCamera>();
 	m_Camera->far = 500.f;
 	m_Camera->m_Transform = Transformation{
-		.position = {0, 0, 10},
+		.position = {0, 0, 15},
 	};
 	m_Camera->m_Transform.Rotate(glm::pi<float>(), { 0, 1, 0 });
 	m_Camera->resolution = { 680, 680 };
@@ -121,7 +121,9 @@ void RenderLayer::OnAttach()
 	m_Meshlets = mkU<Meshlets>(32, 255);
 
 	m_Meshlets->Append({ "meshes/plane.obj" });
-	m_Meshlets->Append({ "meshes/stanford_bunny.obj" });
+	m_Meshlets->Append({ "meshes/wahoo.obj" });
+
+	m_Meshlets->CreateMaterialData();
 
 	Mesh lightMesh;
 	lightMesh.LoadMeshFromFile("meshes/lightQuad.obj");
@@ -138,6 +140,32 @@ void RenderLayer::OnAttach()
 
 	m_LightTexture = mkU<VK_Texture2DArray>(*m_Device);
 	
+	m_CompressedTexture = mkU<VK_Texture2D>(*m_Device);
+	m_CompressedTexture->CreateFromData(m_Meshlets->m_TextureData.data(), 
+		m_Meshlets->m_TextureData.size() * sizeof(unsigned char),
+		{
+			.width = static_cast<uint32_t>(m_Meshlets->m_Extent.x), 
+			.height = static_cast<uint32_t>(m_Meshlets->m_Extent.y),
+			.depth = 1,
+		},
+		{ 
+			.format = vk::Format::eR8G8B8A8Unorm, 
+			.usage = vk::ImageUsageFlagBits::eSampled 
+		}
+	);
+	
+	m_CompressedTexture->TransitionLayout(VK_ImageLayout{
+		.layout = vk::ImageLayout::eTransferDstOptimal,
+		.accessFlag = vk::AccessFlagBits::eMemoryWrite,
+		.pipelineStage = vk::PipelineStageFlagBits::eTransfer,
+	});
+
+	m_CompressedTexture->TransitionLayout(VK_ImageLayout{
+		.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+		.accessFlag = vk::AccessFlagBits::eShaderRead,
+		.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
+	});
+
 	m_LightTexture->CreateFromFiles(
 		//image files
 		{
@@ -364,9 +392,17 @@ void RenderLayer::OnAttach()
 			.sampler = m_LightTexture->GetSampler(),
 			.imageView = m_LightTexture->GetImageView(),
 			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-		}
+		},
 	});
-
+	bindings.push_back(VK_DescriptorBinding{
+		.type = vk::DescriptorType::eCombinedImageSampler,
+		.stage = vk::ShaderStageFlagBits::eFragment,
+		.imageInfo = vk::DescriptorImageInfo{
+			.sampler = m_CompressedTexture->GetSampler(),
+			.imageView = m_CompressedTexture->GetImageView(),
+			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+		},
+	});
 	//m_LTCMeshShaderInputDescriptor->Create(ltcMeshShaderDescriptorSet);
 	//ltcMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
 	//	.type = vk::DescriptorType::eCombinedImageSampler,

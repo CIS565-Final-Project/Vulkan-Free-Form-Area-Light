@@ -41,6 +41,7 @@ INTERFACE
 	tinyobjloader
 	glm
 	dds
+	ImGui
 )
 target_include_directories(ExternalLibs
 INTERFACE 

@@ -3,16 +3,36 @@
 #include "tiny_obj_loader.h"
 #include <iostream>
 
+#include "material.h"
+#include "image.h"
+
 namespace VK_Renderer
 {
 	Mesh::Mesh(const std::string& file)
+		: m_MaterialCounts(0), m_TriangleCounts(0)
 	{
 		LoadMeshFromFile(file);
 	}
 
+	Mesh::~Mesh()
+	{
+		Free();
+	}
+
+	void Mesh::Free()
+	{
+		m_MaterialCounts = 0;
+		m_TriangleCounts = 0;
+		m_Positions.clear();
+		m_Normals.clear();
+		m_UVs.clear();
+		m_Triangles.clear();
+		m_MaterialInfos.clear();
+	}
+
 	void Mesh::LoadMeshFromFile(const std::string& file)
 	{
-		Clear();
+		Free();
 
 		tinyobj::ObjReaderConfig reader_config;
 		reader_config.triangulate = true;
@@ -68,6 +88,17 @@ namespace VK_Renderer
 
 				index_offset += fv;
 			}
+		}
+
+		// load materials
+		for (auto const& material : materials)
+		{
+			m_MaterialInfos.push_back(MaterialInfo{
+				.albedoTex = material.diffuse_texname,
+				.normalTex = (material.bump_texname.empty() ? material.normal_texname : material.bump_texname),
+				.roughnessTex = material.roughness_texname,
+				.metallicTex = material.metallic_texname,
+			});
 		}
 	}
 }

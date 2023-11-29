@@ -1,9 +1,9 @@
 #pragma once
 
+#include "scene/mesh.h"
+
 namespace VK_Renderer
 {
-	class Mesh;
-
 	struct MeshletOffset
 	{
 		uint32_t vertexOffset{ 0 };
@@ -35,6 +35,21 @@ namespace VK_Renderer
 		}
 	};
 
+	struct TextureAtlas
+	{
+		glm::ivec2 start{ 0, 0 };
+
+		uint32_t width{ 0 };
+		uint32_t height{ 0 };
+		uint32_t id{ 0 };
+
+		bool operator < (TextureAtlas const& other) const
+		{
+			return (start.x != other.start.x ? start.x < other.start.x : 
+					start.y < other.start.y);
+		}
+	};
+
 	class Meshlets
 	{
 	public:
@@ -44,8 +59,9 @@ namespace VK_Renderer
 
 		void Append(Mesh const& mesh);
 
+		void CreateMaterialData();
+
 	protected:
-		uint16_t m_MaterialOffset = 0;
 		uint16_t m_MaxPrimitiveCount;
 		uint16_t m_MaxVertexCount;
 
@@ -53,5 +69,14 @@ namespace VK_Renderer
 		DeclareWithGetFunc(protected, std::vector<MeshletDescription>, m, MeshletInfos, const);
 		DeclareWithGetFunc(protected, std::vector<uint8_t>, m, PrimitiveIndices, const);
 		DeclareWithGetFunc(protected, std::vector<uint32_t>, m, VertexIndices, const);
+	
+	public:
+		TextureAtlas m_TextureAtlas;
+
+		glm::ivec2 m_Extent{ 0, 0 };
+
+		std::vector<unsigned char> m_TextureData;
+
+		std::vector<Material> m_Materials;
 	};
 }

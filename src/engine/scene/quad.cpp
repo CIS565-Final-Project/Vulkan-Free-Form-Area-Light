@@ -4,7 +4,7 @@ namespace VK_Renderer
 {
 
 	Quad::Quad() {
-		Clear();
+		Free();
 		
 		m_Triangles.emplace_back();
 

@@ -1,7 +1,5 @@
 #include "meshlet.h"
 
-#include "scene/mesh.h"
-
 namespace std {
 	template<>
 	struct hash<glm::ivec4> {
@@ -37,7 +35,6 @@ namespace VK_Renderer
 
 		for (size_t i = 0; i < mesh.m_Triangles.size(); ++i)
 		{
-			//std::vector<glm::ivec4> test_datas;
 			std::unordered_map<glm::ivec4, uint32_t> unordered_map;
 			for (auto const& triangle : mesh.m_Triangles[i])
 			{
@@ -45,8 +42,9 @@ namespace VK_Renderer
 				for (int v = 0; v < 3; ++v)
 				{
 					glm::ivec4 vertex(triangle.pId[v], triangle.nId[v], triangle.uvId[v], triangle.materialId);
-					//test_datas.push_back(vertex);
+					
 					auto it = unordered_map.find(vertex);
+
 					if (it == unordered_map.end())
 					{
 						unique_vertices.push_back(vertex);
@@ -64,18 +62,15 @@ namespace VK_Renderer
 									   0.f},
 							.uv = {mesh.m_UVs[2 * vertex.z],
 								   mesh.m_UVs[2 * vertex.z + 1], 0.f, 0.f},
-							.materialId = {vertex.w + static_cast<int>(m_MaterialOffset), 0, 0, 0}
+							.materialId = {vertex.w + static_cast<int>(m_Materials.size()), 0, 0, 0}
 						});
 					}
-					else
+					else 
 					{
 						triangles[i].back()[v] = (*it).second;
 					}
 				}
 			}
-			//std::vector <glm::ivec4> result = RemoveDuplicates<glm::ivec4>(test_datas);
-			//printf("RemoveDulplicate size: %d\n", result.size());
-			//printf("manually size: %d\n", unique_vertices[i].size());
 		}
 
 		// TODO: Step 1.2 - Clustering Vertices and Triangles
@@ -101,6 +96,7 @@ namespace VK_Renderer
 					auto it = meshlet_vertices.find(tri[v]);
 					if (it == meshlet_vertices.end())
 					{
+						// if vertex not yes in the meshlet
 						// Add vertices
 						m_VertexIndices.push_back(tri[v]);
 						m_PrimitiveIndices.push_back(meshlet.vertexCount);
@@ -108,7 +104,7 @@ namespace VK_Renderer
 
 						++meshlet.vertexCount;
 					}
-					else
+					else // if vertex already in the meshlet
 					{
 						m_PrimitiveIndices.push_back((*it).second);
 					}
@@ -131,8 +127,18 @@ namespace VK_Renderer
 
 		if (meshlet.primCount > 0) m_MeshletInfos.push_back(meshlet);
 
-		m_MaterialOffset += mesh.GetMaterialCounts();
+		// Load textures
+		m_Materials.reserve(m_Materials.size() + mesh.GetMaterialCounts());
+		for (auto const& mat_info : mesh.m_MaterialInfos)
+		{
+			m_Materials.emplace_back(mat_info);
 
+			glm::ivec3 const& dim = m_Materials.back().GetAlbedoTex().GetResolution();
+			m_TextureAtlas.width += dim.x;
+			m_TextureAtlas.height += dim.y;
+		}
+
+		/*
 		std::vector<glm::ivec3> out_triangles;
 		for (auto const& meshlet : m_MeshletInfos)
 		{
@@ -158,5 +164,123 @@ namespace VK_Renderer
 		printf("meshlets: %d\n", sizeof(MeshletDescription)* m_MeshletInfos.size() + 
 								 sizeof(uint8_t) * m_PrimitiveIndices.size() + 
 								 sizeof(uint32_t) * m_VertexIndices.size());
+		*/
+	}
+
+	void Meshlets::CreateMaterialData()
+	{
+		std::set<TextureAtlas> avaliable_atlas;
+		std::vector<TextureAtlas> finished_atlas;
+		std::vector<TextureAtlas> ordered_atlas;
+
+		avaliable_atlas.insert(m_TextureAtlas);
+
+		struct MaterialProxy
+		{
+			uint32_t id;
+			uint32_t size;
+			bool operator <(MaterialProxy const& other) const
+			{
+				return size > other.size; // in decending order
+			}
+		};
+
+		std::vector<MaterialProxy> sorted_materials;
+		
+		for (size_t i = 0; i < m_Materials.size(); ++i)
+		{
+			glm::ivec3 const& dim = m_Materials[i].GetAlbedoTex().GetResolution();
+			sorted_materials.emplace_back(i, dim.x * dim.y);
+		}
+		std::sort(sorted_materials.begin(), sorted_materials.end());
+
+		finished_atlas.resize(m_Materials.size());
+
+		for (auto const& material_proxy : sorted_materials)
+		{
+			glm::ivec3 const& dim = m_Materials[material_proxy.id].GetAlbedoTex().GetResolution();
+			for (TextureAtlas const& atlas : avaliable_atlas)
+			{
+				if (atlas.width >= dim.x && atlas.height >= dim.y)
+				{
+					// Step 1. Add a new atlas finished list
+					finished_atlas[material_proxy.id] = TextureAtlas{
+						.start = atlas.start,
+						.width = static_cast<unsigned int>(dim.x),
+						.height = static_cast<unsigned int>(dim.y),
+					};
+					// compute some necessary data
+					glm::ivec2 end = atlas.start + glm::ivec2{dim.x, dim.y};
+
+					unsigned int w = atlas.width - dim.x;
+					unsigned int h = atlas.height - dim.y;
+
+					// Step 2. Add splited atlas into aviable set
+					if (w > 0)
+					{
+						avaliable_atlas.insert(TextureAtlas{
+							.start = atlas.start + glm::ivec2{0, dim.y},
+							.width = w,
+							.height = static_cast<unsigned int>(dim.y),
+						});
+					}
+					if (h > 0)
+					{
+						avaliable_atlas.insert(TextureAtlas{
+							.start = atlas.start + glm::ivec2{dim.x, 0},
+							.width = static_cast<unsigned int>(dim.x),
+							.height = h,
+						});
+					}
+					if (w > 0 && h > 0)
+					{
+						avaliable_atlas.insert(TextureAtlas{
+							.start = end,
+							.width = w,
+							.height = h,
+						});
+					}
+
+					// Step 3. update max extent
+					m_Extent = glm::max(m_Extent, end);
+
+					// Step 4. remove current atlas from aviable set
+					avaliable_atlas.erase(atlas);
+
+					break;
+				}
+			}
+		}
+
+		// copy texture data
+		m_TextureData.resize(m_Extent.x* m_Extent.y * 4);
+		for (size_t i = 0; i < finished_atlas.size(); ++i)
+		{
+			TextureAtlas const& atlas = finished_atlas[i];
+			Material const& material = m_Materials[i];
+
+			uint32_t start = (atlas.start.y * (m_Extent.x) + atlas.start.x) * 4;
+			unsigned char const* data = reinterpret_cast<unsigned char*>(material.GetAlbedoTex().GetRawData());
+
+			uint32_t size = atlas.width * 4 * sizeof(unsigned char);
+			for (uint32_t h = 0; h < atlas.height; ++h)
+			{
+				uint32_t copy_start = start + h * m_Extent.x * 4;
+				std::memcpy(m_TextureData.data() + copy_start, data + h * size, size);
+			}
+		}
+
+		// recompute uv
+		for (Vertex& v : m_Vertices)
+		{
+			TextureAtlas const& atlas = finished_atlas[v.materialId.x];
+			glm::vec2 start = static_cast<glm::vec2>(atlas.start) / static_cast<glm::vec2>(m_Extent);
+			glm::vec2 end = static_cast<glm::vec2>(atlas.start + glm::ivec2(atlas.width, atlas.height)) / static_cast<glm::vec2>(m_Extent);
+
+			glm::vec2 uv = v.uv;
+			uv = glm::mix(start, end, uv);
+			v.uv.x = uv.x;
+			v.uv.y = uv.y;
+		}
 	}
 }

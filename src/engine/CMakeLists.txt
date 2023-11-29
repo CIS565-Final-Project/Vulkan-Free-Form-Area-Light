@@ -22,7 +22,6 @@ PUBLIC
 )
 target_link_libraries(Engine
     ExternalLibs
-	ImGui
 )
 target_precompile_headers(Engine PUBLIC
   "pch.h"

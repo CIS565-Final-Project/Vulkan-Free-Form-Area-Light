@@ -1,5 +1,7 @@
 #pragma once
 
+#include "material.h"
+
 namespace VK_Renderer
 {
 	struct Triangle
@@ -13,18 +15,15 @@ namespace VK_Renderer
 	class Mesh
 	{
 	public:
-		Mesh() {}
+		Mesh()
+			: m_MaterialCounts(0), m_TriangleCounts(0)
+		{}
 		Mesh(const std::string& file);
 
-		void Clear()
-		{
-			m_MaterialCounts = 0;
-			m_TriangleCounts = 0;
-			m_Positions.clear();
-			m_Normals.clear();
-			m_UVs.clear();
-			m_Triangles.clear();
-		}
+		virtual ~Mesh();
+
+		void Free();
+
 		void LoadMeshFromFile(const std::string& file);
 
 	public:
@@ -36,5 +35,7 @@ namespace VK_Renderer
 		std::vector<Float> m_UVs;
 
 		std::vector<std::vector<Triangle>> m_Triangles;
+
+		std::vector<MaterialInfo> m_MaterialInfos;
 	};
 };

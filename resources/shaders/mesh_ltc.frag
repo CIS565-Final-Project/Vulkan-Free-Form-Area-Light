@@ -13,6 +13,7 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 } u_CamUBO;
 layout(set = 1, binding = 4) uniform sampler2D texSampler;
 layout(set = 1, binding = 5) uniform sampler2DArray ltSampler;
+layout(set = 1, binding = 6) uniform sampler2D compressedSampler;
 
 layout(set = 2, binding = 0) uniform Roughness{
 	float u_Roughness;
@@ -186,6 +187,9 @@ void main(){
 
 	vec3 albedo = vec3(1.f);//texture(texSampler, fragIn.uv).xyz;
 
+	fs_Color = texture(compressedSampler, fragIn.uv).rgb;
+
+	return;
 	vec3 pos = fragIn.pos;
 	vec3 cameraPos = u_CamUBO.pos.xyz;
 	vec3 fs_norm = fragIn.normal;
