@@ -128,7 +128,7 @@ void RenderLayer::OnAttach()
 
 	m_LTCTexture = mkU<VK_Texture2D>(*m_Device);
 	//m_LTCTexture->CreateFromFile("images/wahoo.bmp", { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
-	m_LTCTexture->CreateFromFile("images/sample.dds", {.format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
+	m_LTCTexture->CreateFromFile("images/ltc.dds", {.format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
 	// m_LTCTexture->CreateFromFile("images/wall.jpg", { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
 	m_LTCTexture->TransitionLayout(VK_ImageLayout{
 		.layout = vk::ImageLayout::eShaderReadOnlyOptimal,

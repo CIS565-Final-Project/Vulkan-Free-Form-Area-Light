@@ -62,7 +62,6 @@ mat3 LTCMatrix(vec3 V, vec3 N, float roughness){
 	//reproject uv to 64x64 texture eg. for roughness = 1, u should be 63.5/64;
 	uv = uv * (LUT_SIZE - 1)/LUT_SIZE  + 0.5 / LUT_SIZE;
 	vec4 ltcVal = texture(texSampler, uv);
-	//vec4 ltcVal = vec4(1.f);	
 	
 	mat3 res = mat3(
 		vec3(1,0,ltcVal.y),
@@ -285,12 +284,51 @@ bool ClipBezier(vec3 controlPts[4], out int intersectCnt, out float intersectTs[
 	return false;
 }
 
-
+// ----------------------------------------------
+// Integration
+// ----------------------------------------------
 vec3 IntegrateEdge(vec3 p_i, vec3 p_j){
 	float theta = acos(dot(p_i,p_j));
 	vec3 res = normalize(cross(p_i,p_j));
 	//float res = dot(normalize(cross(p_i,p_j)), vec3(0,0,1))
 	return res * theta;
+}
+vec2 tStack[MAX_STACK_SIZE];
+float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold){
+	float res = 0.0;
+	int stackTop = 0;
+	tStack[stackTop++] = vec2(tStart,tEnd);
+	while(stackTop!=0){
+		vec2 tmp = tStack[--stackTop];
+		float tMin = tmp.x;
+		float tMax = tmp.y;
+		float tMid = (tMin + tMax) / 2.f;
+
+		vec3 v0 = BezierCurve(ctrlPts,tMin);
+		vec3 v1 = BezierCurve(ctrlPts,tMid);
+		vec3 v2 = BezierCurve(ctrlPts,tMax);
+		
+		//if curve is nearly a segment
+		bool isLine = false;
+		if(dot(cross(v0-v1,v0-v2),cross(v0-v1,v0-v2)) < 0.001){
+			isLine = true;
+		}
+		v0 = normalize(v0);
+		v1 = normalize(v1);
+		v2 = normalize(v2);
+
+		float I01 = IntegrateEdge(v0,v1).z;
+		float I12 = IntegrateEdge(v1,v2).z;
+		float I20 = IntegrateEdge(v2,v0).z;
+
+		if(!isLine || (abs(I01 + I12 + I20) >= threshold && stackTop<(MAX_STACK_SIZE -2))){
+			tStack[stackTop++] = vec2(tMin, tMid);
+			tStack[stackTop++] = vec2(tMid, tMax);
+		}else{
+			res += (I01 + I12);
+		}
+	}
+	return res;
 }
 float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MAX_LIGHT_VERTEX], int arrSize, out vec2 uv, out float lod){
 	//to tangent space
@@ -338,45 +376,6 @@ float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MA
 	//****************************
 	return res * 0.5 * INV_PI;
 }
-
-vec2 tStack[MAX_STACK_SIZE];
-float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold){
-	float res = 0.0;
-	int stackTop = 0;
-	tStack[stackTop++] = vec2(tStart,tEnd);
-	while(stackTop!=0){
-		vec2 tmp = tStack[--stackTop];
-		float tMin = tmp.x;
-		float tMax = tmp.y;
-		float tMid = (tMin + tMax) / 2.f;
-
-		vec3 v0 = BezierCurve(ctrlPts,tMin);
-		vec3 v1 = BezierCurve(ctrlPts,tMid);
-		vec3 v2 = BezierCurve(ctrlPts,tMax);
-		
-		//if curve is nearly a segment
-		bool isLine = false;
-		if(dot(cross(v0-v1,v0-v2),cross(v0-v1,v0-v2)) < 0.01){
-			isLine = true;
-		}
-		v0 = normalize(v0);
-		v1 = normalize(v1);
-		v2 = normalize(v2);
-
-		float I01 = IntegrateEdge(v0,v1).z;
-		float I12 = IntegrateEdge(v1,v2).z;
-		float I20 = IntegrateEdge(v2,v0).z;
-
-		if(!isLine || (abs(I01 + I12 + I20) >= threshold && stackTop<(MAX_STACK_SIZE -2))){
-			tStack[stackTop++] = vec2(tMin, tMid);
-			tStack[stackTop++] = vec2(tMid, tMax);
-		}else{
-			res += (I01 + I12);
-		}
-	}
-	return res;
-}
-
 float IntegrateBezierD(vec3 V, vec3 N, vec3 shadePos, float roughness
 	,  int bezierNum, mat3 LTCMat){
 
@@ -412,8 +411,8 @@ float IntegrateBezierD(vec3 V, vec3 N, vec3 shadePos, float roughness
 		//Clip
 		if(ClipBezier(tmpCtrlPts, tCnt, ts)){
 			//Integrate
-			// res += tCnt/6.0;
-			// continue;
+			//res += tCnt/2.0;
+			//continue;
 			float t0,t1,t2;
 			switch(tCnt){
 				case 0:
@@ -542,7 +541,7 @@ void main(){
 	vec3 fs_norm = fragIn.normal;
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
-	float roughness = u_Roughness;
+	float roughness = min(u_Roughness,0.99);//fix visual artifact when roughness is 1.0
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	float lod;
 	vec2 ltuv;
