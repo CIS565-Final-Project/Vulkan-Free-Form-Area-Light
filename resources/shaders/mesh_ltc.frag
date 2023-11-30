@@ -575,8 +575,8 @@ void main(){
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
 	float roughness = texture(compressedSampler, vec3(fragIn.uv, 2.0)).r;
-	roughness = min(roughness , 0.99);//fix visual artifact when roughness is 1.0
 	roughness = clamp(roughness - u_Roughness, 0.f, 1.f);
+	roughness = min(roughness , 0.99);//fix visual artifact when roughness is 1.0
 
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	float lod;

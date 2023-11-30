@@ -35,7 +35,7 @@ namespace VK_Renderer
 
 		m_ModelMatries.push_back(ModelMatrix{
 			.model =  model,
-			.invModel = glm::inverse(model)
+			.invModel = glm::transpose(glm::inverse(model))
 		});
 	}
 	
@@ -50,7 +50,7 @@ namespace VK_Renderer
 		MeshProxy const& mesh = m_MeshProxies[id];
 		glm::mat4 model = mesh.transform.GetTransformation();
 		m_ModelMatries[mesh.id].model = model;
-		m_ModelMatries[mesh.id].invModel = glm::inverse(model);
+		m_ModelMatries[mesh.id].invModel = glm::transpose(glm::inverse(model));
 	}
 
 	void Scene::ComputeMeshlet(uint16_t const& maxPrimitiveCount, uint16_t const& maxVertexCount)
