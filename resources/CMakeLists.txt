@@ -6,7 +6,7 @@ file(GLOB_RECURSE Shader_Sources
 	"shaders/*.task"
 )
 
-file(GLOB IMAGES
+file(GLOB_RECURSE IMAGES
     "images/*.jpg"
 	"images/*.png"
 	"images/*.bmp"
@@ -14,7 +14,7 @@ file(GLOB IMAGES
 	"images/*.dds"
 )
 
-file(GLOB MESHES
+file(GLOB_RECURSE MESHES
     "meshes/*.obj"
     "meshes/*.mtl"
 	"meshes/*.fbx"
@@ -24,17 +24,16 @@ file(GLOB MESHES
 #message("Shaders: ${Shaders_Sources}")
 #message("Images: ${IMAGES}")
 #message("Meshes: ${MESHES}")
-
 #copy images
 foreach(IMAGE ${IMAGES})
-    get_filename_component(fname ${IMAGE} NAME)
-    configure_file(${IMAGE} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/images/${fname} COPYONLY)
+	string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" RELATIVE_PATH "${IMAGE}")
+    configure_file(${IMAGE} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${RELATIVE_PATH} COPYONLY)
 endforeach()
 
 #copy meshes
 foreach(MESH ${MESHES})
-    get_filename_component(fname ${MESH} NAME)
-    configure_file(${MESH} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/meshes/${fname} COPYONLY)
+	string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" RELATIVE_PATH "${MESH}")
+    configure_file(${MESH} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${RELATIVE_PATH} COPYONLY)
 endforeach()
 
 #compile shaders
@@ -42,13 +41,18 @@ source_group("Shaders" FILES ${Shader_Sources})
 
 foreach(shader ${Shader_Sources})
 	set(Shader_Dir ${PROJECT_SOURCE_DIR}/bin/shaders)
-
 	get_filename_component(fname ${shader} NAME)
-	add_custom_target(${fname}.spv 
-		COMMAND ${CMAKE_COMMAND} -E make_directory ${Shader_Dir} &&
-		$ENV{VK_SDK_PATH}/Bin/glslangValidator.exe --target-env spirv1.4 -V ${shader} -o ${Shader_Dir}/${fname}.spv -g
+	
+	string(REPLACE "${CMAKE_CURRENT_SOURCE_DIR}/" "" RELATIVE_PATH "${shader}")
+	string(REPLACE "/" "_" RELATIVE_NAME "${RELATIVE_PATH}")
+	string(REPLACE "${fname}" "" RELATIVE_PATH_ONLY "${RELATIVE_PATH}")
+
+	file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${RELATIVE_PATH_ONLY})
+
+	add_custom_target(${RELATIVE_NAME}.spv 
+		COMMAND $ENV{VK_SDK_PATH}/Bin/glslangValidator.exe --target-env spirv1.4 -V ${shader} -o ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${RELATIVE_PATH}.spv -g
         SOURCES ${shader}
 	)
-	ExternalTarget("Shaders" ${fname}.spv)
-    add_dependencies(${CMAKE_PROJECT_NAME} ${fname}.spv)
+	ExternalTarget("Shaders" ${RELATIVE_NAME}.spv)
+    add_dependencies(${CMAKE_PROJECT_NAME} ${RELATIVE_NAME}.spv)
 endforeach()

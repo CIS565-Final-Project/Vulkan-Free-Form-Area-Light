@@ -21,9 +21,12 @@ namespace VK_Renderer
 	}
 
 	void VK_Texture2D::Create(vk::Extent3D const& extent,
-								TextureCreateInfo const& createInfo)
+								TextureCreateInfo const& createInfo,
+								uint32_t const& size)
 	{
 		Free();
+
+		vk_Size = size;
 
 		vk_Extent = extent;
 
@@ -71,18 +74,23 @@ namespace VK_Renderer
 	void VK_Texture2D::CreateFromImage(Image const& image, 
 										TextureCreateInfo const& createInfo)
 	{
-		vk_Size = image.GetSize();
+		CreateFromData(image.GetRawData(), image.GetSize() , 
+			{ 
+				static_cast<uint32_t>(image.GetResolution().x),
+				static_cast<uint32_t>(image.GetResolution().y),
+				1
+			}, createInfo);
+	}
 
-		Create({ static_cast<uint32_t>(image.GetResolution().x),
-				 static_cast<uint32_t>(image.GetResolution().y),
-				 1 
-				}, createInfo);
+	void VK_Texture2D::CreateFromData(void const* data, uint32_t const& size, vk::Extent3D const& extent, TextureCreateInfo const& createInfo)
+	{
+		Create(extent, createInfo, size);
 		TransitionLayout(VK_ImageLayout{
 			.layout = vk::ImageLayout::eTransferDstOptimal,
 			.accessFlag = vk::AccessFlagBits::eMemoryWrite,
 			.pipelineStage = vk::PipelineStageFlagBits::eTransfer,
-		});
-		CopyFrom(image.GetRawData());
+			});
+		CopyFrom(data);
 
 		vk::PhysicalDeviceProperties property = m_Device.GetPhysicalDevice().getProperties();
 
@@ -192,9 +200,13 @@ namespace VK_Renderer
 	{
 		Free();
 	}
-	void VK_Texture2DArray::Create(vk::Extent3D const& extent, TextureCreateInfo const& createInfo)
+	void VK_Texture2DArray::Create(vk::Extent3D const& extent, 
+									TextureCreateInfo const& createInfo,
+									uint32_t const& size)
 	{
 		Free();
+
+		vk_Size = size;
 
 		vk_Extent = extent;
 
@@ -244,7 +256,6 @@ namespace VK_Renderer
 	void VK_Texture2DArray::CreateFromImages(const std::vector<Image>& images, TextureCreateInfo const& createInfo)
 	{
 		const auto& image = images[0];
-		vk_Size = image.GetSize() * images.size();
 		auto image_size = image.GetSize();
 		for (const auto& tmp_image : images) {
 			if (image_size != tmp_image.GetSize()) {
@@ -255,7 +266,7 @@ namespace VK_Renderer
 		Create({ static_cast<uint32_t>(image.GetResolution().x),
 				 static_cast<uint32_t>(image.GetResolution().y),
 				 1 
-			}, createInfo);
+			}, createInfo, image.GetSize()* images.size());
 		TransitionLayout(VK_ImageLayout{
 			.layout = vk::ImageLayout::eTransferDstOptimal,
 			.accessFlag = vk::AccessFlagBits::eMemoryWrite,
@@ -291,6 +302,42 @@ namespace VK_Renderer
 			.unnormalizedCoordinates = vk::False
 			});
 	}
+	
+	void VK_Texture2DArray::CreateFromData(void const* data, 
+											uint32_t const& size,
+											vk::Extent3D const& extent, 
+											TextureCreateInfo const& createInfo)
+	{
+		Create(extent, createInfo, size);
+		TransitionLayout(VK_ImageLayout{
+			.layout = vk::ImageLayout::eTransferDstOptimal,
+			.accessFlag = vk::AccessFlagBits::eMemoryWrite,
+			.pipelineStage = vk::PipelineStageFlagBits::eTransfer,
+		});
+
+		CopyFrom(data, extent.width, extent.height);
+		
+		vk::PhysicalDeviceProperties property = m_Device.GetPhysicalDevice().getProperties();
+
+		// Create Sampler
+		vk_Sampler = m_Device.GetDevice().createSampler(vk::SamplerCreateInfo{
+			.magFilter = vk::Filter::eLinear,
+			.minFilter = vk::Filter::eLinear,
+			.mipmapMode = vk::SamplerMipmapMode::eLinear,
+			.addressModeU = vk::SamplerAddressMode::eRepeat,
+			.addressModeV = vk::SamplerAddressMode::eRepeat,
+			.addressModeW = vk::SamplerAddressMode::eRepeat,
+			.mipLodBias = 0.f,
+			.anisotropyEnable = vk::True,
+			.maxAnisotropy = property.limits.maxSamplerAnisotropy,
+			.compareEnable = vk::False,
+			.minLod = 0.f,
+			.maxLod = 0.f,
+			.borderColor = vk::BorderColor::eIntOpaqueBlack,
+			.unnormalizedCoordinates = vk::False
+		});
+	}
+
 	void VK_Texture2DArray::Free()
 	{
 		m_Layout = VK_ImageLayout{ .accessFlag = vk::AccessFlagBits::eNone,

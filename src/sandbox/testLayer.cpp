@@ -94,7 +94,7 @@ void RenderLayer::OnAttach()
 	m_Camera = mkU<PerspectiveCamera>();
 	m_Camera->far = 500.f;
 	m_Camera->m_Transform = Transformation{
-		.position = {0, 0, 10},
+		.position = {0, 0, 15},
 	};
 	m_Camera->m_Transform.Rotate(glm::pi<float>(), { 0, 1, 0 });
 	m_Camera->resolution = { 680, 680 };
@@ -118,10 +118,22 @@ void RenderLayer::OnAttach()
 	m_MaterialParamBuffer = mkU<VK_StagingBuffer>(*m_Device);
 	m_MaterialParamBuffer->CreateFromData(&roughness, sizeof(float), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
-	m_Meshlets = mkU<Meshlets>(32, 255);
+	m_Scene = mkU<Scene>(); ;
+	m_Scene->AddMesh("meshes/plane.obj", "Plane");
+	m_Scene->AddMesh("meshes/wahoo.obj", "Wahoo", 
+	Transformation{
+		.position = {0, 2, 7},
+		.scale = {.5f, .5f, .5f}
+	});
+	//m_Scene->AddMesh("meshes/wahoo.obj");
 
-	m_Meshlets->Append({ "meshes/plane.obj" });
-	//m_Meshlets->Append({ "meshes/stanford_bunny.obj" });
+	m_Scene->ComputeRenderData({
+		.MeshletMaxPrimCount = 32, 
+		.MeshletMaxVertexCount = 255
+	});
+
+	m_ModelMatrixBuffer = mkU<VK_StagingBuffer>(*m_Device);
+	m_ModelMatrixBuffer->CreateFromData(m_Scene->GetModelMatries().data(), m_Scene->GetModelMatries().size() * sizeof(ModelMatrix), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
 
 	Mesh lightMesh;
 	lightMesh.LoadMeshFromFile("meshes/lightQuad.obj");
@@ -134,11 +146,37 @@ void RenderLayer::OnAttach()
 		.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
 		.accessFlag = vk::AccessFlagBits::eShaderRead,
 		.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
-		});
+	});
 
 	m_LightTexture = mkU<VK_Texture2DArray>(*m_Device);
 	
-	/*
+	m_CompressedTexture = mkU<VK_Texture2DArray>(*m_Device);
+	m_CompressedTexture->CreateFromData(m_Scene->GetAtlasTex2D()->GetData().data(),
+		m_Scene->GetAtlasTex2D()->GetSize(),
+		{
+			.width = static_cast<uint32_t>(m_Scene->GetAtlasTex2D()->GetResolution().x),
+			.height = static_cast<uint32_t>(m_Scene->GetAtlasTex2D()->GetResolution().y),
+			.depth = 1,
+		},
+		{ 
+			.format = vk::Format::eR8G8B8A8Unorm, 
+			.usage = vk::ImageUsageFlagBits::eSampled,
+			.arrayLayer = 4
+		}
+	);
+	
+	m_CompressedTexture->TransitionLayout(VK_ImageLayout{
+		.layout = vk::ImageLayout::eTransferDstOptimal,
+		.accessFlag = vk::AccessFlagBits::eMemoryWrite,
+		.pipelineStage = vk::PipelineStageFlagBits::eTransfer,
+	});
+
+	m_CompressedTexture->TransitionLayout(VK_ImageLayout{
+		.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+		.accessFlag = vk::AccessFlagBits::eShaderRead,
+		.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
+	});
+
 	m_LightTexture->CreateFromFiles(
 		//image files
 		{
@@ -159,7 +197,6 @@ void RenderLayer::OnAttach()
 			.arrayLayer = 9
 		}
 	);
-	*/
 	
 	m_LightTexture->CreateFromFiles(
 		//image files
@@ -205,10 +242,10 @@ void RenderLayer::OnAttach()
 	m_PrimitiveIndicesBuffer = mkU<VK_DeviceBuffer>(*m_Device);
 	m_VertexBuffer = mkU<VK_DeviceBuffer>(*m_Device);
 
-	m_MeshletInfoBuffer->CreateFromData(m_Meshlets->GetMeshletInfos().data(), sizeof(MeshletDescription) * m_Meshlets->GetMeshletInfos().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
-	m_VertexIndicesBuffer->CreateFromData(m_Meshlets->GetVertexIndices().data(), sizeof(uint32_t) * m_Meshlets->GetVertexIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
-	m_PrimitiveIndicesBuffer->CreateFromData(m_Meshlets->GetPrimitiveIndices().data(), sizeof(uint8_t) * m_Meshlets->GetPrimitiveIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
-	m_VertexBuffer->CreateFromData(m_Meshlets->GetVertices().data(), sizeof(Vertex) * m_Meshlets->GetVertices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_MeshletInfoBuffer->CreateFromData(m_Scene->GetMeshlets()->GetMeshletInfos().data(), sizeof(MeshletDescription) * m_Scene->GetMeshlets()->GetMeshletInfos().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_VertexIndicesBuffer->CreateFromData(m_Scene->GetMeshlets()->GetVertexIndices().data(), sizeof(uint32_t) * m_Scene->GetMeshlets()->GetVertexIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_PrimitiveIndicesBuffer->CreateFromData(m_Scene->GetMeshlets()->GetPrimitiveIndices().data(), sizeof(uint8_t) * m_Scene->GetMeshlets()->GetPrimitiveIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_VertexBuffer->CreateFromData(m_Scene->GetMeshlets()->GetVertices().data(), sizeof(Vertex) * m_Scene->GetMeshlets()->GetVertices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
 
 	std::vector<VK_DescriptorBinding> bindings{
 		VK_DescriptorBinding{
@@ -218,6 +255,15 @@ void RenderLayer::OnAttach()
 					.buffer = m_MeshletInfoBuffer->GetBuffer(),
 					.offset = 0,
 					.range = m_MeshletInfoBuffer->GetSize()
+				}
+		},
+		VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = m_ModelMatrixBuffer->GetBuffer(),
+					.offset = 0,
+					.range = m_ModelMatrixBuffer->GetSize()
 				}
 		},
 		VK_DescriptorBinding{
@@ -368,9 +414,17 @@ void RenderLayer::OnAttach()
 			.sampler = m_LightTexture->GetSampler(),
 			.imageView = m_LightTexture->GetImageView(),
 			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-		}
+		},
 	});
-
+	bindings.push_back(VK_DescriptorBinding{
+		.type = vk::DescriptorType::eCombinedImageSampler,
+		.stage = vk::ShaderStageFlagBits::eFragment,
+		.imageInfo = vk::DescriptorImageInfo{
+			.sampler = m_CompressedTexture->GetSampler(),
+			.imageView = m_CompressedTexture->GetImageView(),
+			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
+		},
+	});
 	//m_LTCMeshShaderInputDescriptor->Create(ltcMeshShaderDescriptorSet);
 	//ltcMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
 	//	.type = vk::DescriptorType::eCombinedImageSampler,
@@ -447,6 +501,43 @@ void RenderLayer::OnImGui(double const& deltaTime)
 		m_MaterialParamBuffer->Update(&v, 0, sizeof(float));
 	}
 	ImGui::End();
+
+	ImGui::Begin("Model Window");
+	{
+		static uint32_t current_id = 1;
+
+		std::vector<MeshProxy>& meshes = m_Scene->GetMeshProxies();
+
+		if (ImGui::BeginCombo("##combo", meshes[current_id].name.c_str()))
+		{
+			for (int i = 0; i < meshes.size(); ++i)
+			{
+				bool is_selected = (current_id == i);
+				if (ImGui::Selectable(meshes[i].name.c_str(), is_selected))
+				{
+					current_id = i;
+				}
+			}
+			ImGui::EndCombo();
+		}
+
+		bool modified = false;
+		
+		MeshProxy& mesh = meshes[current_id];
+		glm::vec3 euler = glm::eulerAngles(mesh.transform.rotation);
+
+		modified |= ImGui::DragFloat3("Position", &mesh.transform.position[0], 0.1f, -200.f, 200.f);
+		modified |= ImGui::DragFloat3("Rotation", &euler[0], 0.1f, -2.f * glm::pi<float>(), 2.f * glm::pi<float>());
+		modified |= ImGui::DragFloat3("Scale", &mesh.transform.scale[0], 0.01f, 0.01f, 1.f);
+		
+		if (modified)
+		{
+			mesh.transform.rotation = glm::quat(euler);
+			m_Scene->UpdateModelMatrix(current_id);
+			m_ModelMatrixBuffer->Update(&m_Scene->GetModelMatries()[mesh.id], sizeof(ModelMatrix) * mesh.id, sizeof(ModelMatrix));
+		}
+	}
+	ImGui::End();
 }
 
 bool RenderLayer::OnEvent(SDL_Event const& e)
@@ -519,7 +610,7 @@ void RenderLayer::RecordCmd()
 			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLTCPipeline->GetPipeline());
 
 			// Draw call
-			uint32_t num_workgroups_x = m_Meshlets->GetMeshletInfos().size();
+			uint32_t num_workgroups_x = m_Scene->GetMeshlets()->GetMeshletInfos().size();
 			uint32_t num_workgroups_y = 1;
 			uint32_t num_workgroups_z = 1;
 

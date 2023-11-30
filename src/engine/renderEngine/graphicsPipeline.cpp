@@ -142,7 +142,5 @@ namespace VK_Renderer
 		}
 		vk_UniquePipeline = std::move(result.value);
 		vk_Pipeline = vk_UniquePipeline.get();
-
-		printf("Create Pipeline %d\n", vk_Pipeline);
 	}
 }

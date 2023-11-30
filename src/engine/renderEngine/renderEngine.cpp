@@ -66,7 +66,7 @@ namespace VK_Renderer
 								TextureCreateInfo{ .format = vk::Format::eD32Sfloat,
 												   .aspectMask = vk::ImageAspectFlagBits::eDepth,
 												   .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
-												   .sampleCount = m_Device->GetDeviceProperties().maxSampleCount });
+												   .sampleCount = m_Device->GetDeviceProperties().maxSampleCount }, 0);
 
 		m_DepthTexture->TransitionLayout({ .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
 											.accessFlag = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
@@ -77,7 +77,7 @@ namespace VK_Renderer
 								TextureCreateInfo{ .format = m_Swapchain->vk_ImageFormat,
 												   .aspectMask = vk::ImageAspectFlagBits::eColor,
 												   .usage = vk::ImageUsageFlagBits::eColorAttachment,
-												   .sampleCount = m_Device->GetDeviceProperties().maxSampleCount });
+												   .sampleCount = m_Device->GetDeviceProperties().maxSampleCount }, 0);
 		
 		// Create FrameBuffer
 		m_Swapchain->CreateFramebuffers(m_RenderPass->GetRenderPass(), { m_DepthTexture->GetImageView(), m_ColorTexture->GetImageView() });

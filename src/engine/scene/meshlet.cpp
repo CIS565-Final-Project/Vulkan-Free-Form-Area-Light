@@ -1,7 +1,5 @@
 #include "meshlet.h"
 
-#include "scene/mesh.h"
-
 namespace std {
 	template<>
 	struct hash<glm::ivec4> {
@@ -22,7 +20,7 @@ namespace VK_Renderer
 		  m_MaxVertexCount(maxVertexCount)
 	{}
 
-	void Meshlets::Append(Mesh const& mesh)
+	void Meshlets::Append(Mesh const& mesh, uint32_t const& modelId)
 	{
 		if (mesh.GetTriangleCounts() < 1) return;
 		// Step 1 - Clustering Vertices and Triangles
@@ -37,7 +35,6 @@ namespace VK_Renderer
 
 		for (size_t i = 0; i < mesh.m_Triangles.size(); ++i)
 		{
-			//std::vector<glm::ivec4> test_datas;
 			std::unordered_map<glm::ivec4, uint32_t> unordered_map;
 			for (auto const& triangle : mesh.m_Triangles[i])
 			{
@@ -45,8 +42,9 @@ namespace VK_Renderer
 				for (int v = 0; v < 3; ++v)
 				{
 					glm::ivec4 vertex(triangle.pId[v], triangle.nId[v], triangle.uvId[v], triangle.materialId);
-					//test_datas.push_back(vertex);
+					
 					auto it = unordered_map.find(vertex);
+
 					if (it == unordered_map.end())
 					{
 						unique_vertices.push_back(vertex);
@@ -67,22 +65,20 @@ namespace VK_Renderer
 							.materialId = {vertex.w + static_cast<int>(m_MaterialOffset), 0, 0, 0}
 						});
 					}
-					else
+					else 
 					{
 						triangles[i].back()[v] = (*it).second;
 					}
 				}
 			}
-			//std::vector <glm::ivec4> result = RemoveDuplicates<glm::ivec4>(test_datas);
-			//printf("RemoveDulplicate size: %d\n", result.size());
-			//printf("manually size: %d\n", unique_vertices[i].size());
 		}
-
+		m_MaterialOffset += mesh.GetMaterialCounts();
 		// TODO: Step 1.2 - Clustering Vertices and Triangles
 
 		// Step 2 - Assemble meshlets
 		MeshletDescription meshlet{.vertexBegin = static_cast<uint32_t>(m_VertexIndices.size()),
-									.primBegin  = static_cast<uint32_t>(m_PrimitiveIndices.size()), };
+									.primBegin  = static_cast<uint32_t>(m_PrimitiveIndices.size()), 
+									.modelId = modelId};
 		std::unordered_map<uint32_t, uint8_t> meshlet_vertices;
 
 		for (size_t i = 0; i < triangles.size(); ++i)
@@ -101,6 +97,7 @@ namespace VK_Renderer
 					auto it = meshlet_vertices.find(tri[v]);
 					if (it == meshlet_vertices.end())
 					{
+						// if vertex not yes in the meshlet
 						// Add vertices
 						m_VertexIndices.push_back(tri[v]);
 						m_PrimitiveIndices.push_back(meshlet.vertexCount);
@@ -108,7 +105,7 @@ namespace VK_Renderer
 
 						++meshlet.vertexCount;
 					}
-					else
+					else // if vertex already in the meshlet
 					{
 						m_PrimitiveIndices.push_back((*it).second);
 					}
@@ -123,7 +120,8 @@ namespace VK_Renderer
 					meshlet.Reset();
 					meshlet.primBegin = m_PrimitiveIndices.size();
 					meshlet.vertexBegin = m_VertexIndices.size();
-					
+					meshlet.modelId = modelId;
+
 					meshlet_vertices.clear();
 				}
 			}
@@ -131,8 +129,16 @@ namespace VK_Renderer
 
 		if (meshlet.primCount > 0) m_MeshletInfos.push_back(meshlet);
 
-		m_MaterialOffset += mesh.GetMaterialCounts();
+		// Load textures
+		//m_Materials.reserve(m_Materials.size() + mesh.GetMaterialCounts());
+		//for (auto const& mat_info : mesh.m_MaterialInfos)
+		//{
+		//	m_Materials.emplace_back(mat_info);
+		//
+		//	glm::ivec3 const& dim = m_Materials.back().GetAlbedoTex().GetResolution();
+		//}
 
+		/*
 		std::vector<glm::ivec3> out_triangles;
 		for (auto const& meshlet : m_MeshletInfos)
 		{
@@ -158,5 +164,6 @@ namespace VK_Renderer
 		printf("meshlets: %d\n", sizeof(MeshletDescription)* m_MeshletInfos.size() + 
 								 sizeof(uint8_t) * m_PrimitiveIndices.size() + 
 								 sizeof(uint32_t) * m_VertexIndices.size());
+		*/
 	}
 }

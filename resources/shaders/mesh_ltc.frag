@@ -15,8 +15,10 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 	vec4 pos;
     mat4 viewProjMat;
 } u_CamUBO;
-layout(set = 1, binding = 4) uniform sampler2D texSampler;
-layout(set = 1, binding = 5) uniform sampler2DArray ltSampler;
+layout(set = 1, binding = 5) uniform sampler2D texSampler;
+layout(set = 1, binding = 6) uniform sampler2DArray ltSampler;
+layout(set = 1, binding = 7) uniform sampler2DArray compressedSampler;
+
 layout(set = 2, binding = 0) uniform Roughness{
 	float u_Roughness;
 };
@@ -362,7 +364,7 @@ float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MA
 		lookup += IntegrateEdge(p_i,p_j);
 	}
 	float res = abs(lookup.z);
-	
+	lookup = (lookup.z < 0.f ? -lookup : lookup);
 	//calculate fetch uv, lod
 	//******************
 	//Assuming it's a quad light!!!!!
@@ -532,16 +534,50 @@ float IntegrateBezierD(vec3 V, vec3 N, vec3 shadePos, float roughness
 }
 
 
+void CoordinateSystem(in vec3 normal, out vec3 tangent, out vec3 bitangent)
+{
+	vec3 up = abs(normal.z) < 0.999f ? vec3(0.f, 0.f, 1.f) : vec3(1.f, 0.f, 0.f);
+	tangent = normalize(cross(up, normal));
+	bitangent = cross(normal, tangent);
+}
+
+vec3 GetNormal()
+{
+	vec3 normal = fragIn.normal;
+	vec3 nor = texture(compressedSampler, vec3(fragIn.uv, 1.0)).rgb;
+	
+	if(dot(nor, nor) > 0.f)
+	{
+		vec3 tangent;
+		vec3 bitangent;
+		CoordinateSystem(normal, tangent, bitangent);
+
+		normal = normalize(nor.x * tangent + nor.y * bitangent + nor.z * normal);
+	}
+
+	return normal;
+}
+
 void main(){
 
-	vec3 albedo = vec3(1.f);//texture(texSampler, fragIn.uv).xyz;
+	vec3 albedo = texture(compressedSampler, vec3(fragIn.uv, 0.0)).rgb;
 
+	//fs_Color = texture(compressedSampler, vec3(fragIn.uv, 0.0)).rgb;
+	//
+	//return;
 	vec3 pos = fragIn.pos;
 	vec3 cameraPos = u_CamUBO.pos.xyz;
-	vec3 fs_norm = fragIn.normal;
+	vec3 fs_norm = GetNormal();
+	
+	//fs_Color = fs_norm * 0.5f + 0.5f;
+	//return;
+
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
-	float roughness = min(u_Roughness,0.99);//fix visual artifact when roughness is 1.0
+	float roughness = texture(compressedSampler, vec3(fragIn.uv, 2.0)).r;
+	roughness = min(roughness , 0.99);//fix visual artifact when roughness is 1.0
+	roughness = clamp(roughness - u_Roughness, 0.f, 1.f);
+
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	float lod;
 	vec2 ltuv;
@@ -554,5 +590,14 @@ void main(){
 	// IntegrateBezier
 
 	float d = IntegrateBezierD(V, N, pos, roughness, 2, LTCMat);
-	fs_Color = vec3(d, d, d);
+	fs_Color = vec3(d, d, d) *  albedo;
+	/*
+	mat3 LTCMat = LTCMatrix(V, N, roughness);
+	float lod;
+	vec2 ltuv; 
+	float d = IntegrateD(LTCMat,V,N,pos,lights,4, ltuv, lod);
+	fs_Color = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+	fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f)) * albedo;
+	fs_Color += 0.1f;
+	*/
 }

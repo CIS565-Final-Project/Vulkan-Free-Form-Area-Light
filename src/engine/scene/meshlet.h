@@ -1,9 +1,9 @@
 #pragma once
 
+#include "scene/mesh.h"
+
 namespace VK_Renderer
 {
-	class Mesh;
-
 	struct MeshletOffset
 	{
 		uint32_t vertexOffset{ 0 };
@@ -25,7 +25,7 @@ namespace VK_Renderer
 		uint32_t primCount{ 0 };
 		uint32_t vertexBegin{ 0 };
 		uint32_t primBegin{ 0 };
-
+		uint32_t modelId;
 		void Reset()
 		{
 			vertexCount = 0;
@@ -35,6 +35,8 @@ namespace VK_Renderer
 		}
 	};
 
+	struct TextureBlock2D;
+
 	class Meshlets
 	{
 	public:
@@ -42,12 +44,15 @@ namespace VK_Renderer
 		Meshlets(uint16_t const& maxPrimitiveCount, 
 				  uint16_t const& maxVertexCount);
 
-		void Append(Mesh const& mesh);
+		void Append(Mesh const& mesh, uint32_t const& modelId);
+
+		inline std::vector<Vertex>& GetVertices() { return m_Vertices; }
 
 	protected:
-		uint16_t m_MaterialOffset = 0;
 		uint16_t m_MaxPrimitiveCount;
 		uint16_t m_MaxVertexCount;
+
+		uint16_t m_MaterialOffset{ 0 };
 
 		DeclareWithGetFunc(protected, std::vector<Vertex>, m, Vertices, const);
 		DeclareWithGetFunc(protected, std::vector<MeshletDescription>, m, MeshletInfos, const);
