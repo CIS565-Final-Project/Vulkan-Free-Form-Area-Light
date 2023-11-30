@@ -27,7 +27,7 @@ namespace MyCore
 		// Create Window
 		SDL_Init(SDL_INIT_VIDEO);
 
-		SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
+		SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
 		SDL_Window* window = SDL_CreateWindow(
 			"Vulkan Hello Triangle",
@@ -89,44 +89,65 @@ namespace MyCore
 		{
 			while (SDL_PollEvent(&e) != 0) 
 			{
-				// compute delta time
-				double delta_t = 0.f;
-
 				if (e.type == SDL_QUIT) b_IsRunning = false;
-				// OnEvent
-				
-				if (!m_ImGuiLayer->HandleEvents(e))
+				if (e.type == SDL_WINDOWEVENT)
 				{
+					if (e.window.event == SDL_WINDOWEVENT_MAXIMIZED)
+					{
+						int width, height;
+						SDL_GetWindowSize(reinterpret_cast<SDL_Window*>(Application::GetInstance()->GetWindow()), &width, &height);
+						m_RenderEngine->OnWindowResized(width, height);
+					}
+					if (e.window.event == SDL_WINDOWEVENT_RESIZED)
+					{
+						m_RenderEngine->OnWindowResized(e.window.data1, e.window.data2);
+					}
+					if (e.window.event == SDL_WINDOWEVENT_SHOWN)
+					{
+						b_IsHidden = false;
+					}
+					if (e.window.event == SDL_WINDOWEVENT_HIDDEN || e.window.event == SDL_WINDOWEVENT_MINIMIZED)
+					{
+						b_IsHidden = true;
+					}
+				}
+
+				// OnEvent
+				if (!m_ImGuiLayer->HandleEvents(e))
+				{	
 					for (auto& layer : m_Layers)
 					{
 						if (layer->OnEvent(e)) break;
 					}
 				}
-
-				m_ImGuiLayer->BeginFrame();
-				for (auto& layer : m_Layers)
-				{
-					layer->OnImGui(delta_t);
-				}
-				m_ImGuiLayer->EndFrame();
-
-				// OnUpdate
-				for (auto& layer : m_Layers)
-				{
-					layer->OnUpdate(delta_t);
-				}
-
-				// OnRender
-				m_RenderEngine->BeforeRender();
-
-				//printf("current frame: %d\n", m_RenderEngine->GetSwapchain()->GetImageIdx());
-				for (auto& layer : m_Layers)
-				{
-					layer->OnRender(delta_t);
-				}
-				m_RenderEngine->RecordCommandBuffer();
-				m_RenderEngine->Render();
 			}
+			if (b_IsHidden) continue;
+			// compute delta time
+			double delta_t = 0.f;
+
+			m_ImGuiLayer->BeginFrame();
+			for (auto& layer : m_Layers)
+			{
+				layer->OnImGui(delta_t);
+			}
+			m_ImGuiLayer->EndFrame();
+
+			// OnUpdate
+			for (auto& layer : m_Layers)
+			{
+				layer->OnUpdate(delta_t);
+			}
+
+			// OnRender
+			m_RenderEngine->BeforeRender();
+
+			//printf("current frame: %d\n", m_RenderEngine->GetSwapchain()->GetImageIdx());
+			for (auto& layer : m_Layers)
+			{
+				layer->OnRender(delta_t);
+			}
+			m_RenderEngine->RecordCommandBuffer();
+			m_RenderEngine->Render();
 		}
 	}
 }

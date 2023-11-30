@@ -2,6 +2,8 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include <SDL.h>
+
 #include "instance.h"
 #include "swapchain.h"
 #include "device.h"
@@ -63,7 +65,15 @@ namespace VK_Renderer
 		void BeforeRender();
 		void Render();
 
+		bool OnWindowResized(int const& w, int const& h);
+
 	protected:
+		void FreeRenderTargets();
+		void CreateRenderTargets(int const& w, int const& h);
+
+	protected:
+		CreateSurfaceFN m_CreateSurfaceFN;
+
 		DeclarePtrWithGetFunc(protected, uPtr, VK_Instance, m, Instance, const);
 		DeclarePtrWithGetFunc(protected, uPtr, VK_Device, m, Device, const);
 		DeclarePtrWithGetFunc(protected, uPtr, VK_Swapchain, m, Swapchain, const);

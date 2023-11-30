@@ -32,10 +32,11 @@ namespace MyCore
 		static Application* s_Instance;
 
 	protected:
-		void* m_Window;
+		DeclareWithGetFunc(protected, void*, m, Window, const);
 
 		DeclarePtrWithGetFunc(protected, uPtr, VK_Renderer::VK_RenderEngine, m, RenderEngine);
 		DeclareWithGetFunc(protected, bool, b, IsRunning, const);
+		DeclareWithGetFunc(protected, bool, b, IsHidden, const);
 
 		ImGuiLayer* m_ImGuiLayer;
 		std::vector<uPtr<Layer>> m_Layers;

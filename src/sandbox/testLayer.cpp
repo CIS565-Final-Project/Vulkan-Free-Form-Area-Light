@@ -573,7 +573,39 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 		}
 		mouse_pre = mouse_cur;
 	}
+	if (e.type == SDL_WINDOWEVENT)
+	{
+		if (e.window.event == SDL_WINDOWEVENT_RESIZED)
+		{
+			m_Swapchain = m_Engine->GetSwapchain();
+			RecordCmd();
 
+			m_Camera->resolution = { e.window.data1, e.window.data2 };
+
+			m_Camera->RecomputeProjView();
+
+			CameraUBO camera_ubo;
+			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
+			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
+		}
+		if (e.window.event == SDL_WINDOWEVENT_MAXIMIZED)
+		{
+			m_Swapchain = m_Engine->GetSwapchain();
+			RecordCmd();
+
+			int width, height;
+			SDL_GetWindowSize(reinterpret_cast<SDL_Window*>(Application::GetInstance()->GetWindow()), &width, &height);
+			m_Camera->resolution = { width, height };
+
+			m_Camera->RecomputeProjView();
+
+			CameraUBO camera_ubo;
+			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
+			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
+		}
+	}
 	return false;
 }
 
@@ -586,7 +618,7 @@ void RenderLayer::RecordCmd()
 			.inheritInfo = {
 				.renderPass = Application::GetInstance()->GetRenderEngine()->GetRenderPass()->GetRenderPass(),
 				.subpass = 0}
-			});
+		});
 
 
 

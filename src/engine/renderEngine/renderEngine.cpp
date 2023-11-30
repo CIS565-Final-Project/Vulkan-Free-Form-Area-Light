@@ -21,11 +21,12 @@ namespace VK_Renderer
 								int const& width,
 								int const& height)
 	{
+		m_CreateSurfaceFN = createSurfaceFunc;
 		m_Instance = mkU<VK_Instance>(instanceExtensions, "Vulkan Render Engine");
 
 		// Create surface for rendering
 		VkSurfaceKHR surface;
-		if (createSurfaceFunc(m_Instance->vk_Instance, &surface) != true)
+		if (m_CreateSurfaceFN(m_Instance->vk_Instance, &surface) != true)
 		{
 			throw std::runtime_error("SDL_Vulkan_CreateSurface Failed!");
 		}
@@ -43,42 +44,12 @@ namespace VK_Renderer
 								  m_Instance->m_QueueFamilyIndices);
 		m_Device->CreateDescriptiorPool(1, 10);
 		
-		// Create Swapchain
-		m_Swapchain = mkU<VK_Swapchain>(*m_Device,
-										SwapchainSupportDetails{
-											.cpabilities = m_Instance->vk_PhysicalDevice.getSurfaceCapabilitiesKHR(surface),
-											.surfaceFormats = m_Instance->vk_PhysicalDevice.getSurfaceFormatsKHR(surface),
-											.presentModes = m_Instance->vk_PhysicalDevice.getSurfacePresentModesKHR(surface)
-										},
-										surface,
-										m_Instance->m_QueueFamilyIndices,
-										width, height);
+		CreateRenderTargets(width, height);
 
 		// Create RenderPass
 		m_RenderPass = mkU<VK_RenderPass>(*m_Device);
 		m_RenderPass->Create(m_Swapchain->vk_ImageFormat);
 
-		// Create Textures
-		m_DepthTexture = mkU<VK_Texture2D>(*m_Device);
-		m_ColorTexture = mkU<VK_Texture2D>(*m_Device);
-
-		m_DepthTexture->Create(vk::Extent3D{ m_Swapchain->vk_ImageExtent.width, m_Swapchain->vk_ImageExtent.height, 1 },
-								TextureCreateInfo{ .format = vk::Format::eD32Sfloat,
-												   .aspectMask = vk::ImageAspectFlagBits::eDepth,
-												   .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
-												   .sampleCount = m_Device->GetDeviceProperties().maxSampleCount }, 0);
-
-		m_DepthTexture->TransitionLayout({ .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
-											.accessFlag = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
-											.pipelineStage = vk::PipelineStageFlagBits::eEarlyFragmentTests
-										 });
-
-		m_ColorTexture->Create(vk::Extent3D{ m_Swapchain->vk_ImageExtent.width, m_Swapchain->vk_ImageExtent.height, 1 },
-								TextureCreateInfo{ .format = m_Swapchain->vk_ImageFormat,
-												   .aspectMask = vk::ImageAspectFlagBits::eColor,
-												   .usage = vk::ImageUsageFlagBits::eColorAttachment,
-												   .sampleCount = m_Device->GetDeviceProperties().maxSampleCount }, 0);
-		
 		// Create FrameBuffer
 		m_Swapchain->CreateFramebuffers(m_RenderPass->GetRenderPass(), { m_DepthTexture->GetImageView(), m_ColorTexture->GetImageView() });
 
@@ -110,10 +81,9 @@ namespace VK_Renderer
 		vk_UniqueRenderFinishedSemaphore.reset();
 
 		m_RenderPass.reset();
-		m_DepthTexture.reset();
-		m_ColorTexture.reset();
+		
+		FreeRenderTargets();
 
-		m_Swapchain.reset();
 		m_Device.reset();
 		m_Instance.reset();
 	}
@@ -194,5 +164,61 @@ namespace VK_Renderer
 		}, m_Fences[m_Swapchain->GetImageIdx()].get());
 
 		m_Swapchain->Present(m_RenderFinishSemaphores);
+	}
+
+	bool VK_RenderEngine::OnWindowResized(int const& w, int const& h)
+	{
+		WaitIdle();
+		CreateRenderTargets(w, h);
+		
+		// Create FrameBuffer
+		m_Swapchain->CreateFramebuffers(m_RenderPass->GetRenderPass(), { m_DepthTexture->GetImageView(), m_ColorTexture->GetImageView() });
+
+		return false;
+	}
+	void VK_RenderEngine::FreeRenderTargets()
+	{
+		m_Swapchain.reset();
+		m_DepthTexture.reset();
+		m_ColorTexture.reset();
+	}
+
+	void VK_RenderEngine::CreateRenderTargets(int const& width, int const& height)
+	{
+		FreeRenderTargets();
+
+		vk::SurfaceKHR surface = m_Instance->vk_Surface;
+		
+		// Create Swapchain
+		m_Swapchain = mkU<VK_Swapchain>(*m_Device,
+			SwapchainSupportDetails{
+				.cpabilities = m_Instance->vk_PhysicalDevice.getSurfaceCapabilitiesKHR(surface),
+				.surfaceFormats = m_Instance->vk_PhysicalDevice.getSurfaceFormatsKHR(surface),
+				.presentModes = m_Instance->vk_PhysicalDevice.getSurfacePresentModesKHR(surface)
+			},
+		surface,
+		m_Instance->m_QueueFamilyIndices,
+		width, height);
+
+		// Create Textures
+		m_DepthTexture = mkU<VK_Texture2D>(*m_Device);
+		m_ColorTexture = mkU<VK_Texture2D>(*m_Device);
+
+		m_DepthTexture->Create(vk::Extent3D{ m_Swapchain->vk_ImageExtent.width, m_Swapchain->vk_ImageExtent.height, 1 },
+			TextureCreateInfo{ .format = vk::Format::eD32Sfloat,
+							   .aspectMask = vk::ImageAspectFlagBits::eDepth,
+							   .usage = vk::ImageUsageFlagBits::eDepthStencilAttachment,
+							   .sampleCount = m_Device->GetDeviceProperties().maxSampleCount }, 0);
+
+		m_DepthTexture->TransitionLayout({ .layout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
+											.accessFlag = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite,
+											.pipelineStage = vk::PipelineStageFlagBits::eEarlyFragmentTests
+			});
+
+		m_ColorTexture->Create(vk::Extent3D{ m_Swapchain->vk_ImageExtent.width, m_Swapchain->vk_ImageExtent.height, 1 },
+			TextureCreateInfo{ .format = m_Swapchain->vk_ImageFormat,
+							   .aspectMask = vk::ImageAspectFlagBits::eColor,
+							   .usage = vk::ImageUsageFlagBits::eColorAttachment,
+							   .sampleCount = m_Device->GetDeviceProperties().maxSampleCount }, 0);
 	}
 }
