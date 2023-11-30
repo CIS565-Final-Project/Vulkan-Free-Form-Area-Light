@@ -1,0 +1,74 @@
+#version 450
+
+#extension GL_EXT_mesh_shader : require
+
+struct Task
+{
+	int task_id;
+	vec3 color;
+	int division;
+	vec3 center;
+};
+
+taskPayloadSharedEXT Task OUT;
+
+layout(set = 1, binding = 0) uniform MeshletInfo {
+    uint Meshlet_Size;
+	uint Triangle_Count;
+};
+
+// A simple hash function
+float hash(int n) {
+    float a = float(n);
+    return fract(sin(a) * 43758.5453);
+}
+
+// Generate a random color from an integer
+vec3 randomColor(int seed) {
+    // Use the hash function to generate random values for each color channel
+    float r = hash(seed);
+    float g = hash(seed + 1);
+    float b = hash(seed + 2);
+
+    return vec3(r, g, b);
+}
+
+#define CURVE_NUM 2
+#define DIVISION 50
+
+const vec3 allCtrlPts[CURVE_NUM * 4] = vec3[](
+	vec3(-1.5, -0.5f, 5.0f),
+	vec3(1.5f, -0.5f, 5.0f),
+	vec3(10.5f, -0.5f, 5.0f),
+	vec3(1.5f, 2.5f, 5.0f),
+		
+		
+	vec3(1.5f, 2.5f, 5.0f),
+	vec3(-1.5f, 3.5f, 5.0f),
+	vec3(-2.5f, 2.5f, 5.0f),
+	vec3(-1.5f, -0.5f, 5.0f)
+);
+
+
+
+
+void main()
+{
+	vec3 center = vec3(0.f);
+
+	for(int i = 0; i < CURVE_NUM; i++)
+	{
+		vec3 u01 = mix(allCtrlPts[4 * i], allCtrlPts[4 * i + 1], 0.5f);
+		vec3 u12 = mix(allCtrlPts[4 * i + 1], allCtrlPts[4 * i + 2], 0.5f);
+		vec3 u23 = mix(allCtrlPts[4 * i + 2], allCtrlPts[4 * i + 3], 0.5f);
+		center += mix(mix(u01, u12, 0.5f), mix(u12, u23, 0.5f), 0.5f);
+	}
+	center /= CURVE_NUM;
+
+	OUT.task_id = int(gl_WorkGroupID.x);
+	OUT.color = randomColor(OUT.task_id);
+	OUT.division = DIVISION;
+	OUT.center = center;
+
+	EmitMeshTasksEXT(DIVISION, 1, 1);// use gl_WorkGroupID to index in mesh shader
+}
