@@ -118,15 +118,19 @@ void RenderLayer::OnAttach()
 	m_MaterialParamBuffer = mkU<VK_StagingBuffer>(*m_Device);
 	m_MaterialParamBuffer->CreateFromData(&roughness, sizeof(float), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
-	m_Scene = mkU<Scene>(); ;
-	m_Scene->AddMesh("meshes/plane.obj", "Plane");
-	m_Scene->AddMesh("meshes/wahoo.obj", "Wahoo", 
-	Transformation{
-		.position = {0, 2, 7},
-		.scale = {.5f, .5f, .5f}
+	m_Scene = mkU<Scene>();
+	//m_Scene->AddMesh("meshes/plane.obj", "Plane");
+	//m_Scene->AddMesh("meshes/wahoo.obj", "Wahoo", 
+	//Transformation{
+	//	.position = {0, 2, 7},
+	//	.scale = {.5f, .5f, .5f}
+	//});
+	m_Scene->AddMesh("meshes/station.obj", "station",
+		Transformation{
+			.position = {0, -30, 200},
+			.scale = {.05f, .05f, .05f}
 	});
-	//m_Scene->AddMesh("meshes/wahoo.obj");
-
+	
 	m_Scene->ComputeRenderData({
 		.MeshletMaxPrimCount = 32, 
 		.MeshletMaxVertexCount = 255
@@ -198,18 +202,18 @@ void RenderLayer::OnAttach()
 		}
 	);
 	
-	m_LightTexture->CreateFromFiles(
-		//image files
-		{
-			"images/white.png",
-		},
-		//createInfo
-		{
-			.format = vk::Format::eR8G8B8A8Unorm,
-			.usage = vk::ImageUsageFlagBits::eSampled,
-			.arrayLayer = 1
-		}
-	);
+	//m_LightTexture->CreateFromFiles(
+	//	//image files
+	//	{
+	//		"images/white.png",
+	//	},
+	//	//createInfo
+	//	{
+	//		.format = vk::Format::eR8G8B8A8Unorm,
+	//		.usage = vk::ImageUsageFlagBits::eSampled,
+	//		.arrayLayer = 1
+	//	}
+	//);
 	
 	m_LightTexture->TransitionLayout(
 		VK_ImageLayout{
@@ -504,7 +508,7 @@ void RenderLayer::OnImGui(double const& deltaTime)
 
 	ImGui::Begin("Model Window");
 	{
-		static uint32_t current_id = 1;
+		static uint32_t current_id = 0;
 
 		std::vector<MeshProxy>& meshes = m_Scene->GetMeshProxies();
 

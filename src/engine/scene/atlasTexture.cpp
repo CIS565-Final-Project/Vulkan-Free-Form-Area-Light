@@ -39,6 +39,7 @@ namespace VK_Renderer
 	void AtlasTexture2D::ComputeAtlas(std::vector<Material> const& materials)
 	{
 		Free();
+		if (materials.size() == 0) return;
 
 		m_FinishedAtlas.resize(materials.size());
 
