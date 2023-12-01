@@ -119,11 +119,16 @@ void RenderLayer::OnAttach()
 	m_MaterialParamBuffer->CreateFromData(&roughness, sizeof(float), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
 	m_Scene = mkU<Scene>();
-	//m_Scene->AddMesh("meshes/plane.obj", "Plane");
-	//m_Scene->AddMesh("meshes/wahoo.obj", "Wahoo", 
+	//m_Scene->AddMesh("meshes/plane_layers.obj", "Plane");
+	//m_Scene->AddMesh("meshes/Astartes.obj", "astartes", 
 	//Transformation{
-	//	.position = {0, 2, 7},
-	//	.scale = {.5f, .5f, .5f}
+	//	.position = {0, 2, 5},
+	//	.scale = {.01f, .01f, .01f}
+	//});
+	//m_Scene->AddMesh("meshes/wahoo.obj", "wahoo",
+	//	Transformation{
+	//		.position = {-3, 2, 5},
+	//		.scale = {.5f, .5f, .5f}
 	//});
 	m_Scene->AddMesh("meshes/station.obj", "station",
 		Transformation{
