@@ -4,26 +4,44 @@
 
 #define INV_PI 0.31830988618f
 #define LUT_SIZE 64.f
-#define MAX_LIGHT_VERTEX 5
+#define MAX_LIGHT_VERTEX 10
 #define MAX_BEZIER_CURVE 5
 #define MAX_STACK_SIZE 12
 #define EPS 1.0e-5
 #define MIN_THRESHOLD 0.01
 #define CLIP 1
+//struct
+struct LightInfo {
+	vec2 boundUV[4]; // use for texture
+	vec3 boundPositions[4]; //use for texture
+	vec3 lightVertex[MAX_LIGHT_VERTEX];	
+	int arraySize;
+	int lightType;//0: polygon 1: bezier
+	vec2 padding;
+};
+
 //uniform
 layout(set = 0, binding = 0) uniform CameraUBO {
 	vec4 pos;
     mat4 viewProjMat;
 } u_CamUBO;
+
 layout(set = 1, binding = 5) uniform sampler2D texSampler;
 layout(set = 1, binding = 6) uniform sampler2DArray ltSampler;
 layout(set = 1, binding = 7) uniform sampler2DArray compressedSampler;
+layout(set = 2, binding = 0) uniform LightCount{
+	uint lightCount;
+};
+layout(set = 2, binding = 1) buffer lightBuffer{
+	LightInfo lightInfos[];
+};
 
-layout(set = 2, binding = 0) uniform Roughness{
+layout(set = 3, binding = 0) uniform Roughness{
 	float u_Roughness;
 };
 
 //in
+
 layout (location = 0) in PerVertexData{
 	vec2 uv;
 	vec3 color;
@@ -34,28 +52,28 @@ layout (location = 0) in PerVertexData{
 //out
 layout (location = 0) out vec3 fs_Color;
 
-//lights
-float halfWidth = 1.5f;
-vec3 lights[5] = vec3[](
-	vec3(-halfWidth, -halfWidth + 1.0f, 5.0f),
-	vec3(halfWidth, -halfWidth + 1.0f, 5.0f ),
-	vec3(halfWidth, halfWidth + 1.0f, 5.0f ),
-	vec3(-halfWidth, halfWidth + 1.0f, 5.0f),
-	vec3(0.f)
-);
-vec3 allCtrlPts[8] = vec3[](
-	vec3(-1.5, -0.5f, 5.0f),
-	vec3(1.5f, -0.5f, 5.0f),
-	vec3(10.5f, -0.5f, 5.0f),
-	vec3(1.5f, 2.5f, 5.0f),
+// //lights
+// float halfWidth = 1.5f;
+// vec3 lights[5] = vec3[](
+// 	vec3(-halfWidth, -halfWidth + 1.0f, 5.0f),
+// 	vec3(halfWidth, -halfWidth + 1.0f, 5.0f ),
+// 	vec3(halfWidth, halfWidth + 1.0f, 5.0f ),
+// 	vec3(-halfWidth, halfWidth + 1.0f, 5.0f),
+// 	vec3(0.f)
+// );
+// vec3 allCtrlPts[8] = vec3[](
+// 	vec3(-1.5, -0.5f, 5.0f),
+// 	vec3(1.5f, -0.5f, 5.0f),
+// 	vec3(10.5f, -0.5f, 5.0f),
+// 	vec3(1.5f, 2.5f, 5.0f),
 		
 		
-	vec3(1.5f, 2.5f, 5.0f),
-	vec3(-1.5f, 3.5f, 5.0f),
-	vec3(-2.5f, 2.5f, 5.0f),
-	vec3(-1.5f, -0.5f, 5.0f)
+// 	vec3(1.5f, 2.5f, 5.0f),
+// 	vec3(-1.5f, 3.5f, 5.0f),
+// 	vec3(-2.5f, 2.5f, 5.0f),
+// 	vec3(-1.5f, -0.5f, 5.0f)
 		
-);
+// );
 
 
 mat3 LTCMatrix(vec3 V, vec3 N, float roughness){
@@ -79,7 +97,7 @@ mat3 BitMatrix(vec3 V, vec3 N){
 	return transpose(mat3(tangent,bitangent,N));
 }
 //v: bounding quad of the light vertices in LTC space (not normalized, i.e. not on hemisphere yet)
-void FetchLight(in vec3 v[4], vec3 lookup, out vec2 uv, out float lod){
+void FetchLight(const in vec3 v[4], const in vec2 uvs[4], vec3 lookup, out vec2 uv, out float lod){
 	//project shading point onto light plane
 	vec3 v1 = v[1] - v[0];
 	vec3 v2 = v[2] - v[0];
@@ -114,7 +132,7 @@ void FetchLight(in vec3 v[4], vec3 lookup, out vec2 uv, out float lod){
 
 	//OUTPUT
 	lod = log(2048.0 * dist / pow(A, 0.5)) / log(3.0);//magic
-	uv = vec2(0, 1) * barycentric.x + vec2(1,1) * barycentric.y + vec2(1,0) * barycentric.z + vec2(0,0) * barycentric.w;
+	uv = uvs[0] * barycentric.x + uvs[1] * barycentric.y + uvs[2] * barycentric.z + uvs[3] * barycentric.w;
 }
 
 
@@ -332,7 +350,10 @@ float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold
 	}
 	return res;
 }
-float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MAX_LIGHT_VERTEX], int arrSize, out vec2 uv, out float lod){
+float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos,const in LightInfo lightInfo, bool twoSided, out vec2 uv, out float lod){
+
+	vec3 lightVertex[MAX_LIGHT_VERTEX] = lightInfo.lightVertex;
+	int arrSize = lightInfo.arraySize;
 	//to tangent space
 	vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
 	vec3 tangent = normalize(V - N * dot(V,N));
@@ -363,33 +384,33 @@ float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, vec3 lightVertex[MA
 		vec3 p_j = clipedPos[0]; 
 		lookup += IntegrateEdge(p_i,p_j);
 	}
-	float res = abs(lookup.z);
-	lookup = (lookup.z < 0.f ? -lookup : lookup);
+
+	//two-sided
+	float res = lookup.z;
+	if(twoSided){
+		if(res < 0){
+			res = -res;
+			lookup = -lookup;
+		}
+	}else{
+		res = max(0.0,res);
+	}
 	//calculate fetch uv, lod
-	//******************
-	//Assuming it's a quad light!!!!!
-	vec3 lightBounds[4] = vec3[](
-		lightVertex[0],
-		lightVertex[1],
-		lightVertex[2],
-		lightVertex[3]
-	);
-	FetchLight(lightBounds,normalize(lookup),uv,lod);
-	//****************************
+	FetchLight(lightInfo.boundPositions,lightInfo.boundUV, normalize(lookup),uv,lod);
 	return res * 0.5 * INV_PI;
 }
-float IntegrateBezierD(vec3 V, vec3 N, vec3 shadePos, float roughness
-	,  int bezierNum, mat3 LTCMat){
-
+float IntegrateBezierD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, float roughness,const in LightInfo lightInfo, bool twoSided){
+	vec3 lightVertex[MAX_LIGHT_VERTEX] = lightInfo.lightVertex;
+	int arrSize = lightInfo.arraySize;
 	// to LTC Space
 	mat3 worldToLTC = LTCMat * BitMatrix(V,N);//transpose(mat3(tangent,bitangent,N)); //inverse rotation matrix
-
+	int bezierNum = arrSize/4;
 	for(int i = 0;i<bezierNum;++i){
 		int offset = i << 2;
-		allCtrlPts[offset + 0] = worldToLTC * (allCtrlPts[offset + 0] - shadePos);
-		allCtrlPts[offset + 1] = worldToLTC * (allCtrlPts[offset + 1] - shadePos);
-		allCtrlPts[offset + 2] = worldToLTC * (allCtrlPts[offset + 2] - shadePos);
-		allCtrlPts[offset + 3] = worldToLTC * (allCtrlPts[offset + 3] - shadePos);
+		lightVertex[offset + 0] = worldToLTC * (lightVertex[offset + 0] - shadePos);
+		lightVertex[offset + 1] = worldToLTC * (lightVertex[offset + 1] - shadePos);
+		lightVertex[offset + 2] = worldToLTC * (lightVertex[offset + 2] - shadePos);
+		lightVertex[offset + 3] = worldToLTC * (lightVertex[offset + 3] - shadePos);
 	}
 	//Integrate
 	float res = 0.0;
@@ -402,10 +423,10 @@ float IntegrateBezierD(vec3 V, vec3 N, vec3 shadePos, float roughness
 	for(int i = 0;i<bezierNum;++i){
 		int offset = i << 2;
 		vec3 tmpCtrlPts[4] = vec3[](
-			allCtrlPts[offset + 0],
-			allCtrlPts[offset + 1],
-			allCtrlPts[offset + 2],
-			allCtrlPts[offset + 3]
+			lightVertex[offset + 0],
+			lightVertex[offset + 1],
+			lightVertex[offset + 2],
+			lightVertex[offset + 3]
 		);
 #if CLIP
 		float ts[3];
@@ -530,7 +551,15 @@ float IntegrateBezierD(vec3 V, vec3 N, vec3 shadePos, float roughness
 	if(hasBegin && hasEnd){
 		res += IntegrateEdge(normalize(vEnd),normalize(vBegin)).z;
 	}
-	return max(0.0,res);
+	//two sided
+	if(twoSided){
+		if(res < 0){
+			res = -res;
+		}
+	}else{
+		res = max(0.0,res);
+	}
+	return res;
 }
 
 
@@ -561,16 +590,11 @@ vec3 GetNormal()
 void main(){
 
 	vec3 albedo = texture(compressedSampler, vec3(fragIn.uv, 0.0)).rgb;
+	fs_Color = vec3(0.f);
 
-	//fs_Color = texture(compressedSampler, vec3(fragIn.uv, 0.0)).rgb;
-	//
-	//return;
 	vec3 pos = fragIn.pos;
 	vec3 cameraPos = u_CamUBO.pos.xyz;
 	vec3 fs_norm = GetNormal();
-	
-	//fs_Color = fs_norm * 0.5f + 0.5f;
-	//return;
 
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
@@ -582,15 +606,25 @@ void main(){
 	float lod;
 	vec2 ltuv;
 
-	// float d = IntegrateD(LTCMat,V,N,pos,lights,4, ltuv, lod);
-	// fs_Color = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
-	// fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f));
-	// fs_Color += 0.1f;
-
 	// IntegrateBezier
-
-	float d = IntegrateBezierD(V, N, pos, roughness, 2, LTCMat);
-	fs_Color = vec3(d, d, d) *  albedo;
+	for(int i = 0;i< lightCount; ++i){
+		LightInfo lightInfo = lightInfos[i];
+		if(lightInfo.lightType == 0){
+			//polygon
+			float lod;
+		    vec2 ltuv;
+			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, true, ltuv, lod);
+			vec3 tmpCol = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+			//tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
+			//fs_Color += tmpCol;
+			fs_Color += vec3(d);
+		}else{
+			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, true);
+			fs_Color += vec3(d);
+		}
+	}
+	
+	fs_Color *=  albedo;
 	/*
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	float lod;

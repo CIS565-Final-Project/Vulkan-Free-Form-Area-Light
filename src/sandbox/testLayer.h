@@ -24,7 +24,7 @@ struct MeshletInfo;
 #include "scene/image.h"
 #include "scene/scene.h"
 #include "scene/perspectiveCamera.h"
-
+#include "scene/light.h"
 #include "scene/scene.h"
 
 struct MeshBufferSet {
@@ -76,8 +76,11 @@ protected:
 	uPtr<VK_Renderer::VK_StagingBuffer> m_CamBuffer;
 	uPtr<VK_Renderer::VK_StagingBuffer> m_MaterialParamBuffer;
 	uPtr<VK_Renderer::VK_StagingBuffer> m_ModelMatrixBuffer;
+	uPtr<VK_Renderer::VK_StagingBuffer> m_LightCountBuffer;
+	uPtr<VK_Renderer::VK_StagingBuffer> m_LightBuffer;
 
 	uPtr<VK_Renderer::Scene> m_Scene;
+	uPtr<VK_Renderer::SceneLight> m_SceneLight;
 
 	//uPtr<VK_Renderer::VK_DeviceBuffer> m_MeshletInfoBuffer;
 	//uPtr<VK_Renderer::VK_DeviceBuffer> m_TriangleBuffer;
@@ -97,6 +100,7 @@ protected:
 	uPtr<VK_Renderer::VK_Descriptor> m_LTCMeshShaderInputDescriptor;
 	uPtr<VK_Renderer::VK_Descriptor> m_LightMeshShaderInputDescriptor;
 	uPtr<VK_Renderer::VK_Descriptor> m_MaterialParamDescriptor;
+	uPtr<VK_Renderer::VK_Descriptor> m_LightDescriptor;
 
 	uPtr<MeshletInfo> m_LTCMeshletInfo;
 	uPtr<MeshletInfo> m_LightMeshletInfo;

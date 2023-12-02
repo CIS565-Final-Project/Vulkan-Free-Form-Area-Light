@@ -4,18 +4,14 @@
 
 struct Task
 {
-	int task_id;
+	int light_id;
+	int light_type;
 	vec3 color;
 	int division;
 	vec3 center;
 };
 
 taskPayloadSharedEXT Task OUT;
-
-layout(set = 1, binding = 0) uniform MeshletInfo {
-    uint Meshlet_Size;
-	uint Triangle_Count;
-};
 
 // A simple hash function
 float hash(int n) {
@@ -41,34 +37,63 @@ const vec3 allCtrlPts[CURVE_NUM * 4] = vec3[](
 	vec3(1.5f, -0.5f, 5.0f),
 	vec3(10.5f, -0.5f, 5.0f),
 	vec3(1.5f, 2.5f, 5.0f),
-		
-		
+			
 	vec3(1.5f, 2.5f, 5.0f),
 	vec3(-1.5f, 3.5f, 5.0f),
 	vec3(-2.5f, 2.5f, 5.0f),
 	vec3(-1.5f, -0.5f, 5.0f)
 );
 
+#define MAX_LIGHT_VERTEX 10
+struct LightInfo {
+	vec2 boundUV[4]; // use for texture
+	vec3 boundPositions[4]; //use for texture
+	vec3 lightVertex[MAX_LIGHT_VERTEX];	
+	int arraySize;
+	int lightType;//0: polygon 1: bezier
+	vec2 padding;
+};
 
+layout(set = 2, binding = 0) uniform LightCount{
+	uint lightCount;
+};
+layout(set = 2, binding = 1) buffer lightBuffer{
+	LightInfo lightInfos[];
+};
 
 
 void main()
 {
 	vec3 center = vec3(0.f);
-
-	for(int i = 0; i < CURVE_NUM; i++)
-	{
-		vec3 u01 = mix(allCtrlPts[4 * i], allCtrlPts[4 * i + 1], 0.5f);
-		vec3 u12 = mix(allCtrlPts[4 * i + 1], allCtrlPts[4 * i + 2], 0.5f);
-		vec3 u23 = mix(allCtrlPts[4 * i + 2], allCtrlPts[4 * i + 3], 0.5f);
-		center += mix(mix(u01, u12, 0.5f), mix(u12, u23, 0.5f), 0.5f);
+	uint boundaryCnt = 0;
+	if(gl_WorkGroupID.x < lightCount){
+		LightInfo lightInfo = lightInfos[gl_WorkGroupID.x];
+		if(lightInfo.lightType == 0){
+			//polygon
+			for(int j = 0;j<lightInfo.arraySize;++j){
+				center += lightInfo.lightVertex[j];
+			}
+			boundaryCnt = lightInfo.arraySize;
+			OUT.light_type = 0;
+			OUT.division = 1;
+		}else{
+			//bezier
+			for(int j = 0;j<lightInfo.arraySize;j+=4){
+				vec3 u01 = mix(lightInfo.lightVertex[j], lightInfo.lightVertex[j + 1], 0.5f);
+				vec3 u12 = mix(lightInfo.lightVertex[j + 1], lightInfo.lightVertex[j + 2], 0.5f);
+				vec3 u23 = mix(lightInfo.lightVertex[j + 2], lightInfo.lightVertex[j + 3], 0.5f);
+				center += mix(mix(u01, u12, 0.5f), mix(u12, u23, 0.5f), 0.5f);
+			}
+			boundaryCnt = lightInfo.arraySize/4;
+			OUT.light_type = 1;
+			OUT.division = DIVISION;
+		}
 	}
-	center /= CURVE_NUM;
 
-	OUT.task_id = int(gl_WorkGroupID.x);
-	OUT.color = randomColor(OUT.task_id);
-	OUT.division = DIVISION;
+	center /= boundaryCnt;
+	OUT.light_id = int(gl_WorkGroupID.x);
+	OUT.color = randomColor(OUT.light_id);
 	OUT.center = center;
 
-	EmitMeshTasksEXT(DIVISION, 1, 1);// use gl_WorkGroupID to index in mesh shader
+	EmitMeshTasksEXT(OUT.division, boundaryCnt, 1);// use gl_WorkGroupID to index in mesh shader
 }
