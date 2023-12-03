@@ -136,7 +136,7 @@ void RenderLayer::OnAttach()
 
 	//Add lights
 	m_SceneLight = mkU<SceneLight>();
-	float halfWidth = 1.5f;
+	float halfWidth = 2.0f;
 	std::vector<glm::vec3> polygon_verts = {
 		glm::vec3(-halfWidth, -halfWidth + 1.0f, -5.0f),
 		glm::vec3(halfWidth, -halfWidth + 1.0f, -5.0f),
@@ -714,11 +714,9 @@ void RenderLayer::OnImGui(double const& deltaTime)
 
 		if (modified)
 		{
-			area_light.SetRotation(glm::quat(euler));
-			area_light.SetPosition(area_light.m_Transform.position);
-			m_LightBuffer->Update(&(m_SceneLight->GetPackedLightInfo()[current_id]), sizeof(LightInfo) * current_id, sizeof(LightInfo));
-			//m_Scene->UpdateModelMatrix(current_id);
-			//m_ModelMatrixBuffer->Update(&m_Scene->GetModelMatries()[mesh.id], sizeof(ModelMatrix) * mesh.id, sizeof(ModelMatrix));
+			area_light.m_Transform.rotation = glm::quat(euler);
+			LightInfo updatedInfo = area_light.GetLightInfo();
+			m_LightBuffer->Update(&updatedInfo, sizeof(LightInfo) * current_id, sizeof(LightInfo));
 		}
 	}
 	ImGui::End();

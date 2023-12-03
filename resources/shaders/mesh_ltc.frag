@@ -617,7 +617,7 @@ void main(){
 			vec3 tmpCol = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 			//tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
 			//fs_Color += tmpCol;
-			fs_Color += vec3(d);
+			fs_Color += clamp(vec3(d),vec3(0.f),vec3(1.f));
 		}else{
 			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, true);
 			fs_Color += vec3(d);
@@ -625,6 +625,7 @@ void main(){
 	}
 	
 	fs_Color *=  albedo;
+	//fs_Color = clamp(fs_Color,vec3(0.f),vec3(1.f));
 	/*
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	float lod;

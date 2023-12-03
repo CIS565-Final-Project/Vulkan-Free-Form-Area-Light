@@ -4,52 +4,24 @@ namespace VK_Renderer
 	AreaLight::AreaLight(LIGHT_TYPE type, const std::vector<glm::vec3>& lightPts
 		, const std::array<glm::vec3, 4>& boundPositions
 		, const std::array<glm::vec2, 4>& boundUV)
+		:m_LightType(type), m_LightVertex(lightPts), m_BoundaryVertex(boundPositions), m_BoundaryUV(boundUV)
 	{
-		m_LightInfo.lightType = static_cast<int32_t>(type);
-		m_LightInfo.arraySize = lightPts.size();
-		assert(lightPts.size() <= MAX_LIGHT_VERTEX);
+	}
+	LightInfo AreaLight::GetLightInfo() const
+	{
+		LightInfo res;
+		res.lightType = static_cast<int32_t>(m_LightType);
+		res.arraySize = m_LightVertex.size();
+		assert(res.arraySize <= MAX_LIGHT_VERTEX);
+		glm::mat4 modelMatrix = m_Transform.GetTransformation();
 		for (int i = 0;i < 4;++i) {
-			m_LightInfo.boundUV[i] = boundUV[i];
-			m_LightInfo.boundPositions[i] = glm::vec4(boundPositions[i], 1.0);
+			res.boundUV[i] = m_BoundaryUV[i];
+			res.boundPositions[i] = modelMatrix * glm::vec4(m_BoundaryVertex[i], 1.0);
 		}
-		for (int i = 0;i < lightPts.size();++i) {
-			m_LightInfo.lightVertex[i] = glm::vec4(lightPts[i], 1.0);
+		for (int i = 0;i < m_LightVertex.size();++i) {
+			res.lightVertex[i] = modelMatrix * glm::vec4(m_LightVertex[i], 1.0);
 		}
-	}
-
-	void AreaLight::UpdateLightInfo()
-	{
-		glm::mat4 model = m_Transform.GetTransformation();
-		for (auto& ltVert : m_LightInfo.boundPositions) {
-			ltVert = model * ltVert;
-		}
-		for (auto& ltVert : m_LightInfo.lightVertex) {
-			ltVert = model * ltVert;
-		}
-	}
-	void AreaLight::Rotate(float const& angle, glm::vec3 const& axis)
-	{
-		m_Transform.Rotate(angle, axis);
-		UpdateLightInfo();
-	}
-	void AreaLight::SetRotation(const glm::quat& rot)
-	{
-		m_Transform.rotation = rot;
-		UpdateLightInfo();
-	}
-	void AreaLight::Translate(glm::vec3 const& translate)
-	{
-		m_Transform.Translate(translate);
-		UpdateLightInfo();
-	}
-	void AreaLight::SetPosition(const glm::vec3& pos)
-	{
-		m_Transform.position = pos;
-		UpdateLightInfo();
-	}
-	LightInfo AreaLight::getLightInfo() const
-	{
-		return m_LightInfo;
+		return res;
 	}
 
 	//--------------------
@@ -69,7 +41,7 @@ namespace VK_Renderer
 		auto n = m_AreaLights.size();
 		std::vector<LightInfo> ans(n);
 		for (auto i = 0;i < n;++i) {
-			ans[i] = m_AreaLights[i].getLightInfo();
+			ans[i] = m_AreaLights[i].GetLightInfo();
 		}
 		return ans;
 	}

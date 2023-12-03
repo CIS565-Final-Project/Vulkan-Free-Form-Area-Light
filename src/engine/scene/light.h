@@ -22,19 +22,18 @@ namespace VK_Renderer
 
 	class AreaLight {
 	private:
-		LightInfo m_LightInfo;
-		void UpdateLightInfo();
+		//LightInfo m_LightInfo;
+		LIGHT_TYPE m_LightType;
+		std::array<glm::vec3, 4> m_BoundaryVertex;
+		std::array<glm::vec2, 4> m_BoundaryUV;
+		std::vector<glm::vec3> m_LightVertex;
 	public:
 		Transformation m_Transform;
 		AreaLight(LIGHT_TYPE type, const std::vector<glm::vec3>& lightPts
 			, const std::array<glm::vec3, 4>& boundPositions = { glm::vec3(),glm::vec3(),glm::vec3(),glm::vec3() }
 			, const std::array<glm::vec2,4>& boundUV = { glm::vec2(0.f,1.f),glm::vec2(1.f,1.f),glm::vec2(1.f,0.f),glm::vec2(0.f,0.f) }
 		);
-		void Rotate(float const& angle, glm::vec3 const& axis);
-		void SetRotation(const glm::quat& rot);
-		void Translate(glm::vec3 const& translate);
-		void SetPosition(const glm::vec3& pos);
-		LightInfo getLightInfo()const;
+		LightInfo GetLightInfo()const;
 	};
 
 	class SceneLight {
