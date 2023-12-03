@@ -87,6 +87,8 @@ namespace VK_Renderer
 		// Recompute uvs
 		for (Vertex& v : m_Meshlets->GetVertices())
 		{
+			if (v.materialId.x < 0) continue;
+
 			TextureBlock2D const& atlas = m_AtlasTex2D->GetFinishedAtlas()[v.materialId.x];
 			glm::vec2 start = static_cast<glm::vec2>(atlas.start) / static_cast<glm::vec2>(m_AtlasTex2D->GetResolution());
 			glm::vec2 end = static_cast<glm::vec2>(atlas.start + glm::ivec2(atlas.width, atlas.height)) / static_cast<glm::vec2>(m_AtlasTex2D->GetResolution());

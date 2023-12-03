@@ -39,10 +39,11 @@ namespace VK_Renderer
 	void AtlasTexture2D::ComputeAtlas(std::vector<Material> const& materials)
 	{
 		Free();
+		if (materials.size() == 0) return;
 
 		m_FinishedAtlas.resize(materials.size());
 
-		TextureBlock2D init_atlas;
+		TextureBlock2D init_blocks;
 
 		std::vector<MaterialProxy> sorted_materials;
 
@@ -50,70 +51,79 @@ namespace VK_Renderer
 		{
 			glm::ivec3 const& dim = materials[i].GetTextures()[0].GetResolution();
 			
-			init_atlas.width += dim.x;
-			init_atlas.height += dim.y;
+			init_blocks.width += dim.x;
+			init_blocks.height += dim.y;
 
 			sorted_materials.emplace_back(i, dim.x * dim.y);
 		}
 		std::sort(sorted_materials.begin(), sorted_materials.end());
 
-		std::set<TextureBlock2D> avaliable_atlas;
-		avaliable_atlas.insert(init_atlas);
+		std::list<TextureBlock2D> avaliable_blocks;
+		avaliable_blocks.push_back(init_blocks);
+		
+		m_Resolution = glm::ivec2(0);
 
 		for (auto const& material_proxy : sorted_materials)
 		{
 			glm::ivec3 const& dim = materials[material_proxy.id].GetTextures()[0].GetResolution();
-			for (TextureBlock2D const& atlas : avaliable_atlas)
+			
+			std::list<TextureBlock2D>::iterator best_block_it = avaliable_blocks.end();
+			auto it = avaliable_blocks.begin();
+			glm::ivec2 min_end = m_Resolution + glm::ivec2(dim.x + 1, dim.y + 1);
+			for (; it != avaliable_blocks.end(); ++it)
 			{
-				if (atlas.width >= dim.x && atlas.height >= dim.y)
+				glm::ivec2 new_end = glm::max(m_Resolution, it->start + glm::ivec2{ dim.x, dim.y });
+				
+				if (it->width >= dim.x && it->height >= dim.y && 
+					(new_end.x * new_end.y < min_end.x * min_end.y))
 				{
-					// Step 1. Add a new atlas finished list
-					m_FinishedAtlas[material_proxy.id] = TextureBlock2D{
-						.start = atlas.start,
-						.width = static_cast<unsigned int>(dim.x),
-						.height = static_cast<unsigned int>(dim.y),
-					};
-					// compute some necessary data
-					glm::ivec2 end = atlas.start + glm::ivec2{ dim.x, dim.y };
-
-					unsigned int w = atlas.width - dim.x;
-					unsigned int h = atlas.height - dim.y;
-
-					// Step 2. Add splited atlas into aviable set
-					if (w > 0)
-					{
-						avaliable_atlas.insert(TextureBlock2D{
-							.start = atlas.start + glm::ivec2{0, dim.y},
-							.width = w,
-							.height = static_cast<unsigned int>(dim.y),
-							});
-					}
-					if (h > 0)
-					{
-						avaliable_atlas.insert(TextureBlock2D{
-							.start = atlas.start + glm::ivec2{dim.x, 0},
-							.width = static_cast<unsigned int>(dim.x),
-							.height = h,
-							});
-					}
-					if (w > 0 && h > 0)
-					{
-						avaliable_atlas.insert(TextureBlock2D{
-							.start = end,
-							.width = w,
-							.height = h,
-							});
-					}
-
-					// Step 3. update max extent
-					m_Resolution = glm::max(m_Resolution, end);
-
-					// Step 4. remove current atlas from aviable set
-					avaliable_atlas.erase(atlas);
-
-					break;
+					min_end = new_end;
+					best_block_it = it;
 				}
 			}
+			assert(best_block_it != avaliable_blocks.end());
+
+			// Step 1. Add a new atlas finished list
+			m_FinishedAtlas[material_proxy.id] = TextureBlock2D{
+				.start = best_block_it->start,
+				.width = static_cast<unsigned int>(dim.x),
+				.height = static_cast<unsigned int>(dim.y),
+			};
+			// compute some necessary data
+			glm::ivec2 end = best_block_it->start + glm::ivec2{ dim.x, dim.y };
+
+			unsigned int w = best_block_it->width - dim.x;
+			unsigned int h = best_block_it->height - dim.y;
+			// Step 2. Add splited atlas into aviable set
+			if (w > 0)
+			{
+				avaliable_blocks.push_back(TextureBlock2D{
+					.start = best_block_it->start + glm::ivec2{0, dim.y},
+					.width = w,
+					.height = static_cast<unsigned int>(dim.y),
+				});
+			}
+			if (h > 0)
+			{
+				avaliable_blocks.push_back(TextureBlock2D{
+					.start = best_block_it->start + glm::ivec2{dim.x, 0},
+					.width = static_cast<unsigned int>(dim.x),
+					.height = h,
+				});
+			}
+			if (w > 0 && h > 0)
+			{
+				avaliable_blocks.push_back(TextureBlock2D{
+					.start = end,
+					.width = w,
+					.height = h,
+				});
+			}
+			// Step 3. update max extent
+			m_Resolution = min_end;
+
+			// Step 4. remove current atlas from aviable set
+			avaliable_blocks.erase(best_block_it);
 		}
 
 		// copy texture data
@@ -135,11 +145,31 @@ namespace VK_Renderer
 				Image const& image = material.GetTextures()[k];
 				if (image.GetSize() > 0)
 				{
-					unsigned char const* data = reinterpret_cast<unsigned char*>(image.GetRawData());
-					for (uint32_t h = 0; h < atlas.height; ++h)
+					if (image.GetResolution().x == 1 && image.GetResolution().y == 1)
 					{
-						uint32_t copy_start = start + h * m_Resolution.x * m_Channels;
-						std::memcpy(m_Data.data() + layer_offset + copy_start, data + h * size, size);
+						// special case that texture is a 1x1 image
+						unsigned char const* data = reinterpret_cast<unsigned char*>(image.GetRawData());
+						for (uint32_t h = 0; h < atlas.height; ++h)
+						{
+							uint32_t copy_start = start + h * m_Resolution.x * m_Channels;
+							for (int pixel = 0; pixel < atlas.width; ++pixel)
+							{
+								*(m_Data.data() + layer_offset + copy_start + pixel * 3) = data[0];
+								*(m_Data.data() + layer_offset + copy_start + pixel * 3 + 1) = data[1];
+								*(m_Data.data() + layer_offset + copy_start + pixel * 3 + 2) = data[2];
+							}
+							//std::memset(m_Data.data() + layer_offset + copy_start, *data, size);
+							//std::memcpy(m_Data.data() + layer_offset + copy_start, data + h * size, size);
+						}
+					}
+					else
+					{
+						unsigned char const* data = reinterpret_cast<unsigned char*>(image.GetRawData());
+						for (uint32_t h = 0; h < atlas.height; ++h)
+						{
+							uint32_t copy_start = start + h * m_Resolution.x * m_Channels;
+							std::memcpy(m_Data.data() + layer_offset + copy_start, data + h * size, size);
+						}
 					}
 				}
 				

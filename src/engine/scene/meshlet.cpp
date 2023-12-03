@@ -51,6 +51,9 @@ namespace VK_Renderer
 						unordered_map[vertex] = m_Vertices.size();
 						triangles[i].back()[v] = m_Vertices.size();
 
+						glm::vec2 uv = vertex.z > 0 ? glm::vec2( mesh.m_UVs[2 * vertex.z],
+							mesh.m_UVs[2 * vertex.z + 1]) : glm::vec2(0.f, 0.f);
+
 						m_Vertices.push_back(Vertex{
 							.position = {mesh.m_Positions[3 * vertex.x],
 										 mesh.m_Positions[3 * vertex.x + 1],
@@ -60,8 +63,7 @@ namespace VK_Renderer
 									   mesh.m_Normals[3 * vertex.y + 1],
 									   mesh.m_Normals[3 * vertex.y + 2], 
 									   0.f},
-							.uv = {mesh.m_UVs[2 * vertex.z],
-								   mesh.m_UVs[2 * vertex.z + 1], 0.f, 0.f},
+							.uv = {uv.x, uv.y, 0.f, 0.f},
 							.materialId = {vertex.w + static_cast<int>(m_MaterialOffset), 0, 0, 0}
 						});
 					}

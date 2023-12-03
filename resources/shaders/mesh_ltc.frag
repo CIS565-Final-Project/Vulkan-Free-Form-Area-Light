@@ -591,7 +591,6 @@ void main(){
 
 	vec3 albedo = texture(compressedSampler, vec3(fragIn.uv, 0.0)).rgb;
 	fs_Color = vec3(0.f);
-
 	vec3 pos = fragIn.pos;
 	vec3 cameraPos = u_CamUBO.pos.xyz;
 	vec3 fs_norm = GetNormal();
@@ -599,9 +598,8 @@ void main(){
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
 	float roughness = texture(compressedSampler, vec3(fragIn.uv, 2.0)).r;
-	roughness = clamp(roughness - u_Roughness, 0.f, 1.f);
-	roughness = min(roughness , 0.99);//fix visual artifact when roughness is 1.0
-
+	//roughness = clamp(roughness - u_Roughness, 0.f, 1.f);
+	roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	float lod;
 	vec2 ltuv;
@@ -627,6 +625,9 @@ void main(){
 	fs_Color *=  albedo;
 	//fs_Color = clamp(fs_Color,vec3(0.f),vec3(1.f));
 	/*
+	float d = IntegrateBezierD(V, N, pos, roughness, 2, LTCMat);
+	fs_Color = vec3(d, d, d) *  albedo;
+	*/
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	float lod;
 	vec2 ltuv; 
@@ -634,5 +635,4 @@ void main(){
 	fs_Color = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 	fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f)) * albedo;
 	fs_Color += 0.1f;
-	*/
 }

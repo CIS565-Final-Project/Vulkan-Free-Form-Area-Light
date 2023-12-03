@@ -645,7 +645,7 @@ void RenderLayer::OnImGui(double const& deltaTime)
 
 	ImGui::Begin("Model Window");
 	{
-		static uint32_t current_id = 1;
+		static uint32_t current_id = 0;
 
 		std::vector<MeshProxy>& meshes = m_Scene->GetMeshProxies();
 
