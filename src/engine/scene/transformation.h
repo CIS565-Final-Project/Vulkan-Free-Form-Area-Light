@@ -26,12 +26,11 @@ namespace VK_Renderer
 		}
 		inline glm::mat4 GetTransformation() const
 		{
-			glm::mat4 result = glm::toMat4(rotation);
+			glm::mat4 const R = glm::toMat4(rotation);
+			glm::mat4 const T = glm::translate(glm::mat4(1.f), position);
+			glm::mat4 const S = glm::scale(glm::mat4(1.f), scale);
 
-			result = glm::scale(result, scale);
-			result = glm::translate(result, position);
-
-			return result;
+			return T * R * S;
 		}
 	public:
 		glm::quat rotation;

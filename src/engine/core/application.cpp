@@ -83,6 +83,8 @@ namespace MyCore
 
 	void Application::Run()
 	{
+		static uint32_t last_t = SDL_GetTicks();
+
 		b_IsRunning = true;
 		SDL_Event e;
 		while (b_IsRunning)
@@ -122,8 +124,11 @@ namespace MyCore
 				}
 			}
 			if (b_IsHidden) continue;
+
+			uint32_t current_t = SDL_GetTicks();
 			// compute delta time
-			double delta_t = 0.f;
+			double delta_t = 0.001 * static_cast<double>(current_t - last_t);
+			last_t = current_t;
 
 			m_ImGuiLayer->BeginFrame();
 			for (auto& layer : m_Layers)
