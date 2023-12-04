@@ -184,6 +184,7 @@ void RenderLayer::OnAttach()
 		});
 
 	m_LightTexture = mkU<VK_Texture2DArray>(*m_Device);
+	m_LightBlurTexture = mkU<VK_Texture2DArray>(*m_Device);
 
 	m_CompressedTexture = mkU<VK_Texture2DArray>(*m_Device);
 	m_CompressedTexture->CreateFromData(m_Scene->GetAtlasTex2D()->GetData().data(),
@@ -212,7 +213,7 @@ void RenderLayer::OnAttach()
 		.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
 		});
 
-	m_LightTexture->CreateFromFiles(
+	m_LightBlurTexture->CreateFromFiles(
 		//image files
 		{
 			"images/0.png",
@@ -231,7 +232,7 @@ void RenderLayer::OnAttach()
 			.usage = vk::ImageUsageFlagBits::eSampled,
 			.arrayLayer = 9
 		}
-		);
+	);
 
 	m_LightTexture->CreateFromFiles(
 		//image files
@@ -244,9 +245,16 @@ void RenderLayer::OnAttach()
 			.usage = vk::ImageUsageFlagBits::eSampled,
 			.arrayLayer = 1
 		}
-		);
+	);
 
 	m_LightTexture->TransitionLayout(
+		VK_ImageLayout{
+			.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+			.accessFlag = vk::AccessFlagBits::eShaderRead,
+			.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
+		});
+
+	m_LightBlurTexture->TransitionLayout(
 		VK_ImageLayout{
 			.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
 			.accessFlag = vk::AccessFlagBits::eShaderRead,
@@ -558,8 +566,8 @@ void RenderLayer::OnAttach()
 			.type = vk::DescriptorType::eCombinedImageSampler,
 			.stage = vk::ShaderStageFlagBits::eFragment,
 			.imageInfo = vk::DescriptorImageInfo{
-			.sampler = m_LightTexture->GetSampler(),
-			.imageView = m_LightTexture->GetImageView(),
+			.sampler = m_LightBlurTexture->GetSampler(),
+			.imageView = m_LightBlurTexture->GetImageView(),
 			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
 			}
 		},

@@ -67,6 +67,7 @@ protected:
 	uPtr<VK_Renderer::VK_Texture2DArray> m_CompressedTexture;
 
 	uPtr<VK_Renderer::VK_Texture2DArray> m_LightTexture;
+	uPtr<VK_Renderer::VK_Texture2DArray> m_LightBlurTexture;
 
 	uPtr<VK_Renderer::VK_PipelineInput> m_PipelineInput;
 	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderLightPipeline;
