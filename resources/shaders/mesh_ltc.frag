@@ -420,6 +420,7 @@ float IntegrateBezierD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, float roughne
 	}
 	//Integrate
 	float res = 0.0;
+	// vec3 lookup = vec3(0.f);
 	float threshold = roughness * roughness;
 	threshold = max(threshold * threshold * 0.05, MIN_THRESHOLD);
 	bool hasBegin = false;

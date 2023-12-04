@@ -154,6 +154,7 @@ void main()
 		vec3 v2 = BezierCurve(ctrlPts,  float(gl_WorkGroupID.x + 1) / float(IN.division));
 		v_out[0].uv = getInterpolatedUV(v0,lightInfo);
 		v_out[1].uv = IN.centerUV;
+		// v_out[1].uv = getInterpolatedUV(IN.center,lightInfo);
 		v_out[2].uv = getInterpolatedUV(v2,lightInfo);
 
 		gl_MeshVerticesEXT[0].gl_Position = u_CamUBO.viewProjMat * vec4(v0, 1.0f);
