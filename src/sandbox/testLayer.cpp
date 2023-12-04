@@ -14,6 +14,7 @@ struct CameraUBO
 {
 	glm::vec4 pos;
 	glm::mat4 viewProjMat;
+	std::array<glm::vec4, 6> planes;
 };
 
 struct MeshletInfo
@@ -93,7 +94,7 @@ RenderLayer::RenderLayer(std::string const& name,
 void RenderLayer::OnAttach()
 {
 	m_Camera = mkU<PerspectiveCamera>();
-	m_Camera->far = 500.f;
+	//m_Camera->far = 500.f;
 	m_Camera->m_Transform = Transformation{
 		.position = {0, 0, 15},
 	};
@@ -107,11 +108,14 @@ void RenderLayer::OnAttach()
 
 	m_Cmd = mkU<VK_CommandBuffer>(m_Device->GetGraphicsCommandPool()->AllocateCommandBuffers({ .level = vk::CommandBufferLevel::eSecondary }));
 
+	std::cout << sizeof(CameraUBO);
+
 	// Create Camera buffer
 	m_CamBuffer = mkU<VK_StagingBuffer>(*m_Device);
 	CameraUBO camera_ubo;
 	camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
 	camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+	camera_ubo.planes = m_Camera->GetPlanes();
 	m_CamBuffer->CreateFromData(&camera_ubo, sizeof(CameraUBO), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
 	// Create MaterialParam buffer
@@ -121,10 +125,11 @@ void RenderLayer::OnAttach()
 
 	m_Scene = mkU<Scene>(); ;
 	m_Scene->AddMesh("meshes/plane.obj", "Plane");
+
 	m_Scene->AddMesh("meshes/wahoo.obj", "Wahoo",
 		Transformation{
 			.position = {0, 2, 7},
-			.scale = {.5f, .5f, .5f}
+			.scale = {1.0f, 1.0f, 1.0f}
 		});
 	m_Scene->ComputeRenderData({
 		.MeshletMaxPrimCount = 32,
@@ -320,7 +325,7 @@ void RenderLayer::OnAttach()
 	m_CamDescriptor->Create({
 		VK_DescriptorBinding{
 			.type = vk::DescriptorType::eUniformBuffer,
-			.stage = vk::ShaderStageFlagBits::eMeshEXT | vk::ShaderStageFlagBits::eFragment,
+			.stage = vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT | vk::ShaderStageFlagBits::eFragment,
 			.bufferInfo = vk::DescriptorBufferInfo{
 				.buffer = m_CamBuffer->GetBuffer(),
 				.offset = 0,
@@ -618,6 +623,7 @@ void RenderLayer::OnAttach()
 
 	RecordCmd();
 	m_Engine->PushSecondaryCommandAll((*m_Cmd)[0]);
+	std::cout << sizeof(MeshletDescription) << std::endl;
 }
 
 void RenderLayer::OnDetech()
@@ -640,6 +646,14 @@ void RenderLayer::OnImGui(double const& deltaTime)
 	if (ImGui::DragFloat("Roughness", &v, 0.02f, 0.f, 1.f))
 	{
 		m_MaterialParamBuffer->Update(&v, 0, sizeof(float));
+	}
+	if (ImGui::DragFloat("Alpha", &m_Camera->alpha, 0.01f, 0.f, 1.f))
+	{
+		CameraUBO camera_ubo;
+		camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
+		camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+		camera_ubo.planes = m_Camera->GetPlanes();
+		m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 	}
 	ImGui::End();
 
@@ -740,6 +754,7 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 			CameraUBO camera_ubo;
 			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
 			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			camera_ubo.planes = m_Camera->GetPlanes();
 			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 		}
 		if (mouseState & SDL_BUTTON(SDL_BUTTON_MIDDLE))
@@ -751,6 +766,7 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 			CameraUBO camera_ubo;
 			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
 			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			camera_ubo.planes = m_Camera->GetPlanes();
 			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 		}
 		mouse_pre = mouse_cur;
@@ -769,6 +785,7 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 			CameraUBO camera_ubo;
 			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
 			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			camera_ubo.planes = m_Camera->GetPlanes();
 			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 		}
 		if (e.window.event == SDL_WINDOWEVENT_MAXIMIZED)
@@ -785,6 +802,7 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 			CameraUBO camera_ubo;
 			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
 			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			camera_ubo.planes = m_Camera->GetPlanes();
 			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 		}
 	}
