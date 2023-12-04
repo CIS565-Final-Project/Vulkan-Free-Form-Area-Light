@@ -9,6 +9,7 @@ struct Task
 	vec3 color;
 	int division;
 	vec3 center;
+	vec2 centerUV;
 };
 
 taskPayloadSharedEXT Task OUT;
@@ -32,18 +33,6 @@ vec3 randomColor(int seed) {
 #define CURVE_NUM 2
 #define DIVISION 50
 
-const vec3 allCtrlPts[CURVE_NUM * 4] = vec3[](
-	vec3(-1.5, -0.5f, 5.0f),
-	vec3(1.5f, -0.5f, 5.0f),
-	vec3(10.5f, -0.5f, 5.0f),
-	vec3(1.5f, 2.5f, 5.0f),
-			
-	vec3(1.5f, 2.5f, 5.0f),
-	vec3(-1.5f, 3.5f, 5.0f),
-	vec3(-2.5f, 2.5f, 5.0f),
-	vec3(-1.5f, -0.5f, 5.0f)
-);
-
 #define MAX_LIGHT_VERTEX 10
 struct LightInfo {
 	vec2 boundUV[4]; // use for texture
@@ -61,13 +50,34 @@ layout(set = 2, binding = 1) buffer lightBuffer{
 	LightInfo lightInfos[];
 };
 
+vec2 getInterpolatedUV(vec3 pt, const in LightInfo info){
+	//barycentric interpolation
+	//https://cgvr.informatik.uni-bremen.de/teaching/cg_literatur/barycentric_floater.pdf
+	float lenPv0 = length(info.boundPositions[0] - pt);
+	float lenPv1 = length(info.boundPositions[1] - pt);
+	float lenPv2 = length(info.boundPositions[2] - pt);
+	float lenPv3 = length(info.boundPositions[3] - pt);
+	float tan0 = tan(acos(dot(info.boundPositions[0] - pt, info.boundPositions[1] - pt)/(lenPv0 * lenPv1))*0.5);
+	float tan1 = tan(acos(dot(info.boundPositions[1] - pt, info.boundPositions[2] - pt)/(lenPv1 * lenPv2))*0.5);
+	float tan2 = tan(acos(dot(info.boundPositions[2] - pt, info.boundPositions[3] - pt)/(lenPv2 * lenPv3))*0.5);
+	float tan3 = tan(acos(dot(info.boundPositions[3] - pt, info.boundPositions[0] - pt)/(lenPv3 * lenPv0))*0.5);
+	vec4 barycentric = vec4(
+		(tan3 + tan0)/lenPv0,
+		(tan0 + tan1)/lenPv1,
+		(tan1 + tan2)/lenPv2,
+		(tan2 + tan3)/lenPv3
+	);
+	barycentric /= (barycentric.x + barycentric.y + barycentric.z + barycentric.w);
+	return info.boundUV[0] * barycentric.x + info.boundUV[1] * barycentric.y + info.boundUV[2] * barycentric.z + info.boundUV[3] * barycentric.w;
+}
 
 void main()
 {
-	vec3 center = vec3(0.f);
-	uint boundaryCnt = 0;
 	if(gl_WorkGroupID.x < lightCount){
+		vec3 center = vec3(0.f);
+		uint boundaryCnt = 0;
 		LightInfo lightInfo = lightInfos[gl_WorkGroupID.x];
+
 		if(lightInfo.lightType == 0){
 			//polygon
 			for(int j = 0;j<lightInfo.arraySize;++j){
@@ -88,12 +98,13 @@ void main()
 			OUT.light_type = 1;
 			OUT.division = DIVISION;
 		}
+		center /= boundaryCnt;
+		
+		OUT.centerUV = getInterpolatedUV(center,lightInfo);
+		OUT.light_id = int(gl_WorkGroupID.x);
+		OUT.color = randomColor(OUT.light_id);
+		OUT.center = center;
+
+		EmitMeshTasksEXT(OUT.division, boundaryCnt, 1);// use gl_WorkGroupID to index in mesh shader
 	}
-
-	center /= boundaryCnt;
-	OUT.light_id = int(gl_WorkGroupID.x);
-	OUT.color = randomColor(OUT.light_id);
-	OUT.center = center;
-
-	EmitMeshTasksEXT(OUT.division, boundaryCnt, 1);// use gl_WorkGroupID to index in mesh shader
 }

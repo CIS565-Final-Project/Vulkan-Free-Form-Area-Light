@@ -396,7 +396,13 @@ float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos,const in LightInfo l
 		res = max(0.0,res);
 	}
 	//calculate fetch uv, lod
-	FetchLight(lightInfo.boundPositions,lightInfo.boundUV, normalize(lookup),uv,lod);
+	//transform boundary to LTC
+	vec3 ltcBoundary[4];
+	for(int i = 0;i<4;++i){
+		ltcBoundary[i] = LTCMat * (lightInfo.boundPositions[i] - shadePos);
+	}
+
+	FetchLight(ltcBoundary,lightInfo.boundUV, normalize(lookup),uv,lod);
 	return res * 0.5 * INV_PI;
 }
 float IntegrateBezierD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, float roughness,const in LightInfo lightInfo, bool twoSided){
@@ -599,10 +605,13 @@ void main(){
 	vec3 N = normalize(fs_norm);
 	float roughness = texture(compressedSampler, vec3(fragIn.uv, 2.0)).r;
 	//roughness = clamp(roughness - u_Roughness, 0.f, 1.f);
-	roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
+	// roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
+
+	roughness = step(0.1f, roughness) * roughness; 
+
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
-	float lod;
-	vec2 ltuv;
+	//float lod;
+	//vec2 ltuv;
 
 	// IntegrateBezier
 	for(int i = 0;i< lightCount; ++i){
@@ -611,16 +620,18 @@ void main(){
 			//polygon
 			float lod;
 		    vec2 ltuv;
-			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, true, ltuv, lod);
+			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, false, ltuv, lod);
 			vec3 tmpCol = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
-			//tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
-			//fs_Color += tmpCol;
-			fs_Color += clamp(vec3(d),vec3(0.f),vec3(1.f));
+			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
+
+			fs_Color += tmpCol;
+			// fs_Color += clamp(vec3(d),vec3(0.f),vec3(1.f));
 		}else{
 			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, true);
-			fs_Color += vec3(d);
+			fs_Color += clamp(vec3(d), vec3(0.f), vec3(1.f));
 		}
 	}
 	
-	fs_Color *=  albedo;
+	// fs_Color *=  albedo;
+	fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f));
 }

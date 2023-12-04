@@ -31,7 +31,7 @@ namespace VK_Renderer
 		Transformation m_Transform;
 		AreaLight(LIGHT_TYPE type, const std::vector<glm::vec3>& lightPts
 			, const std::array<glm::vec3, 4>& boundPositions = { glm::vec3(),glm::vec3(),glm::vec3(),glm::vec3() }
-			, const std::array<glm::vec2,4>& boundUV = { glm::vec2(0.f,1.f),glm::vec2(1.f,1.f),glm::vec2(1.f,0.f),glm::vec2(0.f,0.f) }
+			, const std::array<glm::vec2,4>& boundUV = { glm::vec2(1.f,0.f),glm::vec2(0.f,0.f),glm::vec2(0.f,1.f),glm::vec2(1.f,1.f) }
 		);
 		LightInfo GetLightInfo()const;
 	};
