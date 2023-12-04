@@ -9,7 +9,7 @@
 #define MAX_STACK_SIZE 12
 #define EPS 1.0e-5
 #define MIN_THRESHOLD 0.01
-#define CLIP 0
+#define CLIP 1
 //struct
 struct LightInfo {
 	vec2 boundUV[4]; // use for texture
@@ -619,6 +619,8 @@ void main(){
 	//roughness = clamp(roughness - u_Roughness, 0.f, 1.f);
 	// roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
 
+	// roughness = u_Roughness;
+
 	roughness = step(0.1f, roughness) * roughness; 
 
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
@@ -632,7 +634,7 @@ void main(){
 			//polygon
 			float lod;
 		    vec2 ltuv;
-			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, false, ltuv, lod);
+			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, true, ltuv, lod);
 			vec3 tmpCol = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
 
