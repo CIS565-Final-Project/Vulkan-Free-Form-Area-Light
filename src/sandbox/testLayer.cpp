@@ -719,7 +719,7 @@ void RenderLayer::OnImGui(double const& deltaTime)
 		}
 		//assert(lightIdxs.size() > 0);
 		if (lightIdxs.size() > 0) {
-			if (ImGui::BeginCombo("##combo", lightIdxs[0].c_str()))
+			if (ImGui::BeginCombo("##combo", lightIdxs[current_id].c_str()))
 			{
 				for (int i = 0; i < lightIdxs.size(); ++i)
 				{
