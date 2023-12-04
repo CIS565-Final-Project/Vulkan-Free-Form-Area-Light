@@ -1,10 +1,10 @@
 #include "light.h"
 namespace VK_Renderer 
 {
-	AreaLight::AreaLight(LIGHT_TYPE type, const std::vector<glm::vec3>& lightPts
+	AreaLight::AreaLight(AreaLightCreateInfo const& createInfo, const std::vector<glm::vec3>& lightPts
 		, const std::array<glm::vec3, 4>& boundPositions
 		, const std::array<glm::vec2, 4>& boundUV)
-		:m_LightType(type), m_LightVertex(lightPts), m_BoundaryVertex(boundPositions), m_BoundaryUV(boundUV)
+		:m_LightType(createInfo.type), m_LightVertex(lightPts), m_Transform(createInfo.transform), m_BoundaryVertex(boundPositions), m_BoundaryUV(boundUV)
 	{
 	}
 	LightInfo AreaLight::GetLightInfo() const

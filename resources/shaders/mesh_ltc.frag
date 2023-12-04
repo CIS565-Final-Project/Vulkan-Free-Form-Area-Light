@@ -590,17 +590,17 @@ void CoordinateSystem(in vec3 normal, out vec3 tangent, out vec3 bitangent)
 
 vec3 GetNormal()
 {
-	vec3 normal = fragIn.normal;
+	vec3 normal = normalize(fragIn.normal);
 	vec3 nor = texture(compressedSampler, vec3(fragIn.uv, 1.0)).rgb;
 	
-	if(dot(nor, nor) > 0.f)
-	{
-		vec3 tangent;
-		vec3 bitangent;
-		CoordinateSystem(normal, tangent, bitangent);
-
-		normal = normalize(nor.x * tangent + nor.y * bitangent + nor.z * normal);
-	}
+	//if(dot(nor, nor) > 0.f)
+	//{
+	//	vec3 tangent;
+	//	vec3 bitangent;
+	//	CoordinateSystem(normal, tangent, bitangent);
+	//
+	//	normal = normalize(nor.x * tangent + nor.y * bitangent + nor.z * normal);
+	//}
 
 	return normal;
 }
@@ -616,16 +616,10 @@ void main(){
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
 	float roughness = texture(compressedSampler, vec3(fragIn.uv, 2.0)).r;
-	//roughness = clamp(roughness - u_Roughness, 0.f, 1.f);
-	// roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
-
-	// roughness = u_Roughness;
 
 	roughness = step(0.1f, roughness) * roughness; 
 
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
-	//float lod;
-	//vec2 ltuv;
 
 	// Multilight Integration
 	for(int i = 0;i< lightCount; ++i){
@@ -635,7 +629,7 @@ void main(){
 			float lod;
 		    vec2 ltuv;
 			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, true, ltuv, lod);
-			vec3 tmpCol = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+			vec3 tmpCol = vec3(d); //* mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
 
 			fs_Color += tmpCol;
@@ -653,7 +647,9 @@ void main(){
 			fs_Color += tmpCol;
 		}
 	}
-	
-	// fs_Color *=  albedo;
-	fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f));
+	//fs_Color =  fs_norm * 0.5f + 0.5f;
+	fs_Color *= albedo;
+	fs_Color = (fs_Color) / (fs_Color + 1.f);
+	//fs_Color * 1.1f;
+	//fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f));
 }
