@@ -167,9 +167,9 @@ void RenderLayer::OnAttach()
 	};
 	std::array<glm::vec3, 4> bezier_bound_verts = {
 		glm::vec3(-2.0f, -0.5f, 5.0f),
-		glm::vec3(2.0f, -0.5f, 5.0f),
-		glm::vec3(2.0f, 3.5f, 5.0f),
-		glm::vec3(-2.0f, 3.5f, 5.0f),
+		glm::vec3(7.0f, -0.5f, 5.0f),
+		glm::vec3(7.0f, 8.5f, 5.0f),
+		glm::vec3(-2.0f, 8.5f, 5.0f),
 	};
 	m_SceneLight->AddLight(AreaLight(LIGHT_TYPE::BEZIER,bezier_verts, bezier_bound_verts));
 	m_LightBuffer = mkU<VK_StagingBuffer>(*m_Device);
