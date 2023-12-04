@@ -236,7 +236,7 @@ void RenderLayer::OnAttach()
 	m_LightTexture->CreateFromFiles(
 		//image files
 		{
-			"images/white.png",
+			"images/0.png",
 		},
 		//createInfo
 		{
