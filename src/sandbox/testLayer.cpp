@@ -14,6 +14,7 @@ struct CameraUBO
 {
 	glm::vec4 pos;
 	glm::mat4 viewProjMat;
+	std::array<glm::vec4, 6> planes;
 };
 
 struct MeshletInfo
@@ -93,7 +94,7 @@ RenderLayer::RenderLayer(std::string const& name,
 void RenderLayer::OnAttach()
 {
 	m_Camera = mkU<PerspectiveCamera>();
-	m_Camera->far = 500.f;
+	//m_Camera->far = 500.f;
 	m_Camera->m_Transform = Transformation{
 		.position = {0, 0, 15},
 	};
@@ -112,31 +113,52 @@ void RenderLayer::OnAttach()
 	CameraUBO camera_ubo;
 	camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
 	camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+	camera_ubo.planes = m_Camera->GetPlanes();
 	m_CamBuffer->CreateFromData(&camera_ubo, sizeof(CameraUBO), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
 	// Create MaterialParam buffer
-	float roughness = 1.f;
+	float roughness = 0.f;
 	m_MaterialParamBuffer = mkU<VK_StagingBuffer>(*m_Device);
 	m_MaterialParamBuffer->CreateFromData(&roughness, sizeof(float), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
 	m_Scene = mkU<Scene>(); ;
-	m_Scene->AddMesh("meshes/plane.obj", "Plane");
-	m_Scene->AddMesh("meshes/wahoo.obj", "Wahoo",
+	m_Scene->AddMesh("meshes/plane.obj", "Plane",
 		Transformation{
-			.position = {0, 2, 7},
-			.scale = {.5f, .5f, .5f}
-		});
+			.position = {0, -1.5, 0}
+	});
+	//m_Scene->AddMesh("meshes/wahoo.obj", "Wahoo",
+	//	Transformation{
+	//		.position = {0, -1.5, 0},
+	//		.scale = {1, 1, 1}
+	//});
+	m_Scene->AddMesh("meshes/Astartes.obj", "Astartes",
+		Transformation{
+			.position = {0, -2, 0},
+			.scale = {0.03f, 0.03f, 0.03f}
+	});
 	m_Scene->ComputeRenderData({
 		.MeshletMaxPrimCount = 32,
 		.MeshletMaxVertexCount = 255
-		});
+	});
+	
+	// Create Buffers from meshlets
+	m_MeshletInfoBuffer = mkU<VK_DeviceBuffer>(*m_Device);
+	m_VertexIndicesBuffer = mkU<VK_DeviceBuffer>(*m_Device);
+	m_PrimitiveIndicesBuffer = mkU<VK_DeviceBuffer>(*m_Device);
+	m_VertexBuffer = mkU<VK_DeviceBuffer>(*m_Device);
+
+	m_MeshletInfoBuffer->CreateFromData(m_Scene->GetMeshlets()->GetMeshletInfos().data(), sizeof(MeshletDescription) * m_Scene->GetMeshlets()->GetMeshletInfos().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_VertexIndicesBuffer->CreateFromData(m_Scene->GetMeshlets()->GetVertexIndices().data(), sizeof(uint32_t) * m_Scene->GetMeshlets()->GetVertexIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_PrimitiveIndicesBuffer->CreateFromData(m_Scene->GetMeshlets()->GetPrimitiveIndices().data(), sizeof(uint8_t) * m_Scene->GetMeshlets()->GetPrimitiveIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+	m_VertexBuffer->CreateFromData(m_Scene->GetMeshlets()->GetVertices().data(), sizeof(Vertex) * m_Scene->GetMeshlets()->GetVertices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+
 	m_ModelMatrixBuffer = mkU<VK_StagingBuffer>(*m_Device);
 	m_ModelMatrixBuffer->CreateFromData(m_Scene->GetModelMatries().data(), m_Scene->GetModelMatries().size() * sizeof(ModelMatrix), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
 
 
 	//Add lights
 	m_SceneLight = mkU<SceneLight>();
-	float halfWidth = 2.0f;
+	float halfWidth = 15.0f;
 	std::vector<glm::vec3> polygon_verts = {
 		glm::vec3(-halfWidth, -halfWidth + 1.0f, -5.0f),
 		glm::vec3(halfWidth, -halfWidth + 1.0f, -5.0f),
@@ -149,7 +171,17 @@ void RenderLayer::OnAttach()
 		glm::vec3(halfWidth, halfWidth + 1.0f, -5.0f),
 		glm::vec3(-halfWidth, halfWidth + 1.0f, -5.0f),
 	};
-	m_SceneLight->AddLight( AreaLight(LIGHT_TYPE::POLYGON,polygon_verts,bound_verts) );
+	m_SceneLight->AddLight(AreaLight{
+		AreaLightCreateInfo{
+			.type = LIGHT_TYPE::POLYGON,
+			.transform = Transformation{
+				.rotation = glm::quat({glm::radians(90.f), 0, 0}),
+				.position = {0, 3, 0}
+			}
+		}, 
+		polygon_verts, 
+		bound_verts }
+	);
 	std::vector<glm::vec3> bezier_verts = {
 		glm::vec3(-1.5, -0.5f, 5.0f),
 		glm::vec3(1.5f, -0.5f, 5.0f),
@@ -160,7 +192,19 @@ void RenderLayer::OnAttach()
 		glm::vec3(-2.5f, 2.5f, 5.0f),
 		glm::vec3(-1.5f, -0.5f, 5.0f)
 	};
-	m_SceneLight->AddLight(AreaLight(LIGHT_TYPE::BEZIER,bezier_verts));
+	std::array<glm::vec3, 4> bezier_bound_verts = {
+		glm::vec3(-5.0f, -1.f, 5.0f),
+		glm::vec3(4.0f, -1.f, 5.0f),
+		glm::vec3(4.0f, 8.f, 5.0f),
+		glm::vec3(-5.0f, 8.f, 5.0f),
+	};
+	m_SceneLight->AddLight(AreaLight{ 
+		AreaLightCreateInfo{
+			.type = LIGHT_TYPE::BEZIER
+		},
+		bezier_verts, 
+		bezier_bound_verts 
+	});
 	m_LightBuffer = mkU<VK_StagingBuffer>(*m_Device);
 	std::vector<LightInfo> lightBufferData = m_SceneLight->GetPackedLightInfo();
 	m_LightBuffer->CreateFromData(lightBufferData.data(), lightBufferData.size() * sizeof(LightInfo), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
@@ -169,14 +213,11 @@ void RenderLayer::OnAttach()
 	int light_count = lightBufferData.size();
    	m_LightCountBuffer->CreateFromData(&light_count, sizeof(int), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
-
 	Mesh lightMesh;
 	lightMesh.LoadMeshFromFile("meshes/lightQuad.obj");
 
 	m_LTCTexture = mkU<VK_Texture2D>(*m_Device);
-	//m_LTCTexture->CreateFromFile("images/wahoo.bmp", { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
 	m_LTCTexture->CreateFromFile("images/ltc.dds", { .format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
-	// m_LTCTexture->CreateFromFile("images/wall.jpg", { .format = vk::Format::eR8G8B8A8Unorm, .usage = vk::ImageUsageFlagBits::eSampled });
 	m_LTCTexture->TransitionLayout(VK_ImageLayout{
 		.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
 		.accessFlag = vk::AccessFlagBits::eShaderRead,
@@ -199,13 +240,7 @@ void RenderLayer::OnAttach()
 			.usage = vk::ImageUsageFlagBits::eSampled,
 			.arrayLayer = 4
 		}
-		);
-
-	m_CompressedTexture->TransitionLayout(VK_ImageLayout{
-		.layout = vk::ImageLayout::eTransferDstOptimal,
-		.accessFlag = vk::AccessFlagBits::eMemoryWrite,
-		.pipelineStage = vk::PipelineStageFlagBits::eTransfer,
-		});
+	);
 
 	m_CompressedTexture->TransitionLayout(VK_ImageLayout{
 		.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
@@ -274,21 +309,8 @@ void RenderLayer::OnAttach()
 		}
 	}
 
-	//m_LTCMeshletInfo = mkU<MeshletInfo>(32, static_cast<uint32_t>(ltcMesh.GetTriangleCounts()));
-	// m_LightMeshletInfo = mkU<MeshletInfo>(32, static_cast<uint32_t>(lightMesh.GetTriangleCounts()));
-	// TEMP hardcode for beier curve
 	m_LightMeshletInfo = mkU<MeshletInfo>(32, 100);
 
-	// Create Buffers from meshlets
-	m_MeshletInfoBuffer = mkU<VK_DeviceBuffer>(*m_Device);
-	m_VertexIndicesBuffer = mkU<VK_DeviceBuffer>(*m_Device);
-	m_PrimitiveIndicesBuffer = mkU<VK_DeviceBuffer>(*m_Device);
-	m_VertexBuffer = mkU<VK_DeviceBuffer>(*m_Device);
-
-	m_MeshletInfoBuffer->CreateFromData(m_Scene->GetMeshlets()->GetMeshletInfos().data(), sizeof(MeshletDescription) * m_Scene->GetMeshlets()->GetMeshletInfos().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
-	m_VertexIndicesBuffer->CreateFromData(m_Scene->GetMeshlets()->GetVertexIndices().data(), sizeof(uint32_t) * m_Scene->GetMeshlets()->GetVertexIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
-	m_PrimitiveIndicesBuffer->CreateFromData(m_Scene->GetMeshlets()->GetPrimitiveIndices().data(), sizeof(uint8_t) * m_Scene->GetMeshlets()->GetPrimitiveIndices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
-	m_VertexBuffer->CreateFromData(m_Scene->GetMeshlets()->GetVertices().data(), sizeof(Vertex) * m_Scene->GetMeshlets()->GetVertices().size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
 	// Create Buffers
 
 	auto generateMeshBufferSet = [=](MeshBufferSet& bufferSet, std::vector<TriangleInfo>& tris, Mesh& mesh, uPtr<MeshletInfo>& meshletInfo) -> void {
@@ -304,8 +326,6 @@ void RenderLayer::OnAttach()
 		bufferSet.m_NormalBuffer->CreateFromData(mesh.m_Normals.data(), sizeof(Float) * mesh.m_Normals.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
 		bufferSet.m_UVBuffer->CreateFromData(mesh.m_UVs.data(), sizeof(Float) * mesh.m_UVs.size(), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
 	};
-
-	//generateMeshBufferSet(m_LTCMeshBufferSet, ltcTriangles, ltcMesh, m_LTCMeshletInfo);
 
 	generateMeshBufferSet(m_LightMeshBufferSet, lightTriangles, lightMesh, m_LightMeshletInfo);
 
@@ -328,7 +348,7 @@ void RenderLayer::OnAttach()
 	m_CamDescriptor->Create({
 		VK_DescriptorBinding{
 			.type = vk::DescriptorType::eUniformBuffer,
-			.stage = vk::ShaderStageFlagBits::eMeshEXT | vk::ShaderStageFlagBits::eFragment,
+			.stage = vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT | vk::ShaderStageFlagBits::eFragment,
 			.bufferInfo = vk::DescriptorBufferInfo{
 				.buffer = m_CamBuffer->GetBuffer(),
 				.offset = 0,
@@ -361,151 +381,6 @@ void RenderLayer::OnAttach()
 		}
 	);
 
-	auto generateDescriptorBinds = [](MeshBufferSet& bufferSet) -> std::vector<VK_DescriptorBinding> {
-		return {
-			VK_DescriptorBinding{
-				.type = vk::DescriptorType::eUniformBuffer,
-				.stage = vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT,
-				.bufferInfo = vk::DescriptorBufferInfo{
-					.buffer = bufferSet.m_MeshletInfoBuffer->GetBuffer(),
-					.offset = 0,
-					.range = bufferSet.m_MeshletInfoBuffer->GetSize()
-				}
-			},
-			VK_DescriptorBinding{
-				.type = vk::DescriptorType::eStorageBuffer,
-				.stage = vk::ShaderStageFlagBits::eMeshEXT,
-				.bufferInfo = vk::DescriptorBufferInfo{
-					.buffer = bufferSet.m_TriangleBuffer->GetBuffer(),
-					.offset = 0,
-					.range = bufferSet.m_TriangleBuffer->GetSize()
-				}
-			},
-			VK_DescriptorBinding{
-				.type = vk::DescriptorType::eStorageBuffer,
-				.stage = vk::ShaderStageFlagBits::eMeshEXT,
-				.bufferInfo = vk::DescriptorBufferInfo{
-					.buffer = bufferSet.m_PositionBuffer->GetBuffer(),
-					.offset = 0,
-					.range = bufferSet.m_PositionBuffer->GetSize()
-				}
-			},
-			VK_DescriptorBinding{
-				.type = vk::DescriptorType::eStorageBuffer,
-				.stage = vk::ShaderStageFlagBits::eMeshEXT,
-				.bufferInfo = vk::DescriptorBufferInfo{
-					.buffer = bufferSet.m_NormalBuffer->GetBuffer(),
-					.offset = 0,
-					.range = bufferSet.m_NormalBuffer->GetSize()
-				}
-			},
-			VK_DescriptorBinding{
-				.type = vk::DescriptorType::eStorageBuffer,
-				.stage = vk::ShaderStageFlagBits::eMeshEXT,
-				.bufferInfo = vk::DescriptorBufferInfo{
-					.buffer = bufferSet.m_UVBuffer->GetBuffer(),
-					.offset = 0,
-					.range = bufferSet.m_UVBuffer->GetSize()
-				}
-			},
-		};
-	};
-
-	//std::vector<VK_DescriptorBinding> ltcMeshShaderDescriptorSet = generateDescriptorBinds(m_LTCMeshBufferSet);
-
-	//std::vector<VK_DescriptorBinding> bindings{
-	//	VK_DescriptorBinding{
-	//			.type = vk::DescriptorType::eStorageBuffer,
-	//			.stage = vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT,
-	//			.bufferInfo = vk::DescriptorBufferInfo{
-	//				.buffer = m_MeshletInfoBuffer->GetBuffer(),
-	//				.offset = 0,
-	//				.range = m_MeshletInfoBuffer->GetSize()
-	//			}
-	//	},
-	//	VK_DescriptorBinding{
-	//			.type = vk::DescriptorType::eStorageBuffer,
-	//			.stage = vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT,
-	//			.bufferInfo = vk::DescriptorBufferInfo{
-	//				.buffer = m_ModelMatrixBuffer->GetBuffer(),
-	//				.offset = 0,
-	//				.range = m_ModelMatrixBuffer->GetSize()
-	//			}
-	//	},
-	//	VK_DescriptorBinding{
-	//			.type = vk::DescriptorType::eStorageBuffer,
-	//			.stage = vk::ShaderStageFlagBits::eMeshEXT,
-	//			.bufferInfo = vk::DescriptorBufferInfo{
-	//				.buffer = m_VertexIndicesBuffer->GetBuffer(),
-	//				.offset = 0,
-	//				.range = m_VertexIndicesBuffer->GetSize()
-	//			}
-	//	},
-	//	VK_DescriptorBinding{
-	//			.type = vk::DescriptorType::eStorageBuffer,
-	//			.stage = vk::ShaderStageFlagBits::eMeshEXT,
-	//			.bufferInfo = vk::DescriptorBufferInfo{
-	//				.buffer = m_PrimitiveIndicesBuffer->GetBuffer(),
-	//				.offset = 0,
-	//				.range = m_PrimitiveIndicesBuffer->GetSize()
-	//			}
-	//	},
-	//	VK_DescriptorBinding{
-	//			.type = vk::DescriptorType::eStorageBuffer,
-	//			.stage = vk::ShaderStageFlagBits::eMeshEXT,
-	//			.bufferInfo = vk::DescriptorBufferInfo{
-	//				.buffer = m_VertexBuffer->GetBuffer(),
-	//				.offset = 0,
-	//				.range = m_VertexBuffer->GetSize()
-	//			}
-	//	},
-	//	VK_DescriptorBinding{
-	//		.type = vk::DescriptorType::eCombinedImageSampler,
-	//		.stage = vk::ShaderStageFlagBits::eFragment,
-	//		.imageInfo = vk::DescriptorImageInfo{
-	//			.sampler = m_LTCTexture->GetSampler(),
-	//			.imageView = m_LTCTexture->GetImageView(),
-	//			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-	//		}
-	//	},
-	//	VK_DescriptorBinding{
-	//		.type = vk::DescriptorType::eCombinedImageSampler,
-	//		.stage = vk::ShaderStageFlagBits::eFragment,
-	//		.imageInfo = vk::DescriptorImageInfo{
-	//		.sampler = m_LightTexture->GetSampler(),
-	//		.imageView = m_LightTexture->GetImageView(),
-	//		.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-	//		}
-	//	},
-	//	VK_DescriptorBinding{
-	//		.type = vk::DescriptorType::eCombinedImageSampler,
-	//		.stage = vk::ShaderStageFlagBits::eFragment,
-	//		.imageInfo = vk::DescriptorImageInfo{
-	//			.sampler = m_CompressedTexture->GetSampler(),
-	//			.imageView = m_CompressedTexture->GetImageView(),
-	//			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-	//		}
-	//	},
-	//};
-
-	//bindings.push_back(
-	//});
-	//bindings.push_back(
-	//});
-	//m_LTCMeshShaderInputDescriptor->Create(ltcMeshShaderDescriptorSet);
-	//ltcMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
-	//	.type = vk::DescriptorType::eCombinedImageSampler,
-	//	.stage = vk::ShaderStageFlagBits::eFragment,
-	//	.imageInfo = vk::DescriptorImageInfo{
-	//		.sampler = m_Texture->GetSampler(),
-	//		.imageView = m_Texture->GetImageView(),
-	//		.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
-	//	}
-	//});
-	
-	//m_LTCMeshShaderInputDescriptor->Create(ltcMeshShaderDescriptorSet);
-	//m_LTCMeshShaderInputDescriptor = mkU<VK_Descriptor>(*m_Device);
-	//m_LTCMeshShaderInputDescriptor->Create(bindings);
 	m_LTCMeshShaderInputDescriptor = mkU<VK_Descriptor>(*m_Device);
 	m_LTCMeshShaderInputDescriptor->Create({
 		VK_DescriptorBinding{
@@ -583,6 +458,56 @@ void RenderLayer::OnAttach()
 		}
 	);
 
+	auto generateDescriptorBinds = [](MeshBufferSet& bufferSet) -> std::vector<VK_DescriptorBinding> {
+		return {
+			VK_DescriptorBinding{
+				.type = vk::DescriptorType::eUniformBuffer,
+				.stage = vk::ShaderStageFlagBits::eTaskEXT | vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = bufferSet.m_MeshletInfoBuffer->GetBuffer(),
+					.offset = 0,
+					.range = bufferSet.m_MeshletInfoBuffer->GetSize()
+				}
+			},
+			VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = bufferSet.m_TriangleBuffer->GetBuffer(),
+					.offset = 0,
+					.range = bufferSet.m_TriangleBuffer->GetSize()
+				}
+			},
+			VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = bufferSet.m_PositionBuffer->GetBuffer(),
+					.offset = 0,
+					.range = bufferSet.m_PositionBuffer->GetSize()
+				}
+			},
+			VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = bufferSet.m_NormalBuffer->GetBuffer(),
+					.offset = 0,
+					.range = bufferSet.m_NormalBuffer->GetSize()
+				}
+			},
+			VK_DescriptorBinding{
+				.type = vk::DescriptorType::eStorageBuffer,
+				.stage = vk::ShaderStageFlagBits::eMeshEXT,
+				.bufferInfo = vk::DescriptorBufferInfo{
+					.buffer = bufferSet.m_UVBuffer->GetBuffer(),
+					.offset = 0,
+					.range = bufferSet.m_UVBuffer->GetSize()
+				}
+			},
+		};
+	};
+
 	std::vector<VK_DescriptorBinding> lightMeshShaderDescriptorSet = generateDescriptorBinds(m_LightMeshBufferSet);
 	
 	lightMeshShaderDescriptorSet.push_back(VK_DescriptorBinding{
@@ -626,6 +551,7 @@ void RenderLayer::OnAttach()
 
 	RecordCmd();
 	m_Engine->PushSecondaryCommandAll((*m_Cmd)[0]);
+	std::cout << sizeof(MeshletDescription) << std::endl;
 }
 
 void RenderLayer::OnDetech()
@@ -634,7 +560,18 @@ void RenderLayer::OnDetech()
 
 void RenderLayer::OnUpdate(double const& deltaTime)
 {
-	
+	if (true)
+	{
+		static float time = 0.f;
+
+		time += deltaTime;
+		static int id = 1;
+		m_MaterialParamBuffer->Update(&time, 0, sizeof(float));
+		AreaLight& area_light = *m_SceneLight->GetLight(id);
+		area_light.m_Transform.RotateAround({ 0, 0, 0 }, { 0, deltaTime, 0 });
+		LightInfo updatedInfo = area_light.GetLightInfo();
+		m_LightBuffer->Update(&updatedInfo, sizeof(LightInfo) * id, sizeof(LightInfo));
+	}
 }
 
 void RenderLayer::OnRender(double const& deltaTime)
@@ -645,9 +582,17 @@ void RenderLayer::OnImGui(double const& deltaTime)
 {
 	static float v = 1.f;
 	ImGui::Begin("Test Window");
-	if (ImGui::DragFloat("Roughness", &v, 0.02f, 0.f, 1.f))
+	//if (ImGui::DragFloat("Roughness", &v, 0.02f, 0.f, 1.f))
+	//{
+	//	m_MaterialParamBuffer->Update(&v, 0, sizeof(float));
+	//}
+	if (ImGui::DragFloat("Alpha", &m_Camera->alpha, 0.01f, 0.f, 1.f))
 	{
-		m_MaterialParamBuffer->Update(&v, 0, sizeof(float));
+		CameraUBO camera_ubo;
+		camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
+		camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+		camera_ubo.planes = m_Camera->GetPlanes();
+		m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 	}
 	ImGui::End();
 
@@ -699,7 +644,7 @@ void RenderLayer::OnImGui(double const& deltaTime)
 		}
 		//assert(lightIdxs.size() > 0);
 		if (lightIdxs.size() > 0) {
-			if (ImGui::BeginCombo("##combo", lightIdxs[0].c_str()))
+			if (ImGui::BeginCombo("##combo", lightIdxs[current_id].c_str()))
 			{
 				for (int i = 0; i < lightIdxs.size(); ++i)
 				{
@@ -713,12 +658,12 @@ void RenderLayer::OnImGui(double const& deltaTime)
 			}
 		}
 
-
 		bool modified = false;
 		AreaLight& area_light = *m_SceneLight->GetLight(current_id);
 		glm::vec3 euler = glm::eulerAngles(area_light.m_Transform.rotation);
 		modified |= ImGui::DragFloat3("Position", &area_light.m_Transform.position[0], 0.1f, -200.f, 200.f);
 		modified |= ImGui::DragFloat3("Rotation", &euler[0], 0.1f, -2.f * glm::pi<float>(), 2.f * glm::pi<float>());
+		modified |= ImGui::DragFloat3("Scale", &area_light.m_Transform.scale[0], 0.1f, 0.1f, 3.f);
 
 		if (modified)
 		{
@@ -748,6 +693,7 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 			CameraUBO camera_ubo;
 			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
 			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			camera_ubo.planes = m_Camera->GetPlanes();
 			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 		}
 		if (mouseState & SDL_BUTTON(SDL_BUTTON_MIDDLE))
@@ -759,6 +705,7 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 			CameraUBO camera_ubo;
 			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
 			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			camera_ubo.planes = m_Camera->GetPlanes();
 			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 		}
 		mouse_pre = mouse_cur;
@@ -777,6 +724,7 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 			CameraUBO camera_ubo;
 			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
 			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			camera_ubo.planes = m_Camera->GetPlanes();
 			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 		}
 		if (e.window.event == SDL_WINDOWEVENT_MAXIMIZED)
@@ -793,6 +741,7 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 			CameraUBO camera_ubo;
 			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
 			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			camera_ubo.planes = m_Camera->GetPlanes();
 			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
 		}
 	}

@@ -23,11 +23,12 @@ struct Vertex
 
 struct MeshletDescription
 {
+	vec4 boundingSphere; // center: xyz, radius: w
+	uint modelId;
 	uint vertexCount;
 	uint primCount;
 	uint vertexBegin;
 	uint primBegin;
-	uint modelId;
 };
 
 struct ModelMatrix
@@ -39,6 +40,7 @@ struct ModelMatrix
 layout(set = 0, binding = 0) uniform CameraUBO {
 	vec4 pos;
     mat4 viewProjMat;
+	vec4 planes[6];  // normal: xyz, distance: w
 } u_CamUBO;
 
 layout(set = 1, binding = 0) buffer MeshletInfos {

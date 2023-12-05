@@ -21,11 +21,14 @@ namespace VK_Renderer
 
 	struct MeshletDescription
 	{
+		glm::vec4 boudningSphere{ 0 };
+		uint32_t modelId;
 		uint32_t vertexCount{ 0 };
 		uint32_t primCount{ 0 };
 		uint32_t vertexBegin{ 0 };
 		uint32_t primBegin{ 0 };
-		uint32_t modelId;
+		uint32_t padding[3];
+
 		void Reset()
 		{
 			vertexCount = 0;
@@ -47,6 +50,10 @@ namespace VK_Renderer
 		void Append(Mesh const& mesh, uint32_t const& modelId);
 
 		inline std::vector<Vertex>& GetVertices() { return m_Vertices; }
+
+	protected:
+		static void ComputeBoundingSphere(MeshletDescription& meshletDesc, 
+											std::vector<glm::vec3> const & vertices);
 
 	protected:
 		uint16_t m_MaxPrimitiveCount;

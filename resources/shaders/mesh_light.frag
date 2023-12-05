@@ -5,8 +5,8 @@
 
 layout (location = 0) in PerVertexData
 {
+	float polygon;
 	vec2 uv;
-	//vec3 color;
 } fragIn;
 
 
@@ -16,8 +16,12 @@ layout(set = 1, binding = 5) uniform sampler2DArray u_Texture;
 
 void main()
 {
-	fs_Color = texture(u_Texture, vec3(fragIn.uv, 0.f)).rgb;
-	//  fs_Color = fragIn.color;
-
-	// fs_Color = vec3(fragIn.uv, 0.0);
+	if(fragIn.polygon > 0.f)
+	{
+		fs_Color = vec3(1.f);
+	}
+	else
+	{
+		fs_Color = texture(u_Texture, vec3(fragIn.uv, 0.f)).rgb;
+	}
 }

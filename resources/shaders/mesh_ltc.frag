@@ -314,8 +314,8 @@ vec3 IntegrateEdge(vec3 p_i, vec3 p_j){
 	return res * theta;
 }
 vec2 tStack[MAX_STACK_SIZE];
-float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold){
-	float res = 0.0;
+vec3 IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold){
+	vec3 res = vec3(0.f);
 	int stackTop = 0;
 	tStack[stackTop++] = vec2(tStart,tEnd);
 	while(stackTop!=0){
@@ -337,11 +337,11 @@ float IntegrateBezier(vec3 ctrlPts[4], float tStart, float tEnd, float threshold
 		v1 = normalize(v1);
 		v2 = normalize(v2);
 
-		float I01 = IntegrateEdge(v0,v1).z;
-		float I12 = IntegrateEdge(v1,v2).z;
-		float I20 = IntegrateEdge(v2,v0).z;
+		vec3 I01 = IntegrateEdge(v0,v1);
+		vec3 I12 = IntegrateEdge(v1,v2);
+		vec3 I20 = IntegrateEdge(v2,v0);
 
-		if(!isLine || (abs(I01 + I12 + I20) >= threshold && stackTop<(MAX_STACK_SIZE -2))){
+		if(!isLine || (abs(I01.z + I12.z + I20.z) >= threshold && stackTop<(MAX_STACK_SIZE -2))){
 			tStack[stackTop++] = vec2(tMin, tMid);
 			tStack[stackTop++] = vec2(tMid, tMax);
 		}else{
@@ -358,9 +358,9 @@ float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos,const in LightInfo l
 	vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
 	vec3 tangent = normalize(V - N * dot(V,N));
 	vec3 bitangent = cross(N,tangent);
-	LTCMat = LTCMat * transpose(mat3(tangent,bitangent,N)); //inverse rotation matrix
+	mat3 worldToLTC = LTCMat * transpose(mat3(tangent,bitangent,N)); //inverse rotation matrix
 	for(int i = 0;i<arrSize;++i){
-		lightVertex[i] = LTCMat * (lightVertex[i] - shadePos);
+		lightVertex[i] = worldToLTC * (lightVertex[i] - shadePos);
 	}
 	
 	//clip lightVertex
@@ -399,13 +399,13 @@ float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos,const in LightInfo l
 	//transform boundary to LTC
 	vec3 ltcBoundary[4];
 	for(int i = 0;i<4;++i){
-		ltcBoundary[i] = LTCMat * (lightInfo.boundPositions[i] - shadePos);
+		ltcBoundary[i] = worldToLTC * (lightInfo.boundPositions[i] - shadePos);
 	}
 
 	FetchLight(ltcBoundary,lightInfo.boundUV, normalize(lookup),uv,lod);
 	return res * 0.5 * INV_PI;
 }
-float IntegrateBezierD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, float roughness,const in LightInfo lightInfo, bool twoSided){
+float IntegrateBezierD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, float roughness,const in LightInfo lightInfo, bool twoSided, out vec2 uv, out float lod){
 	vec3 lightVertex[MAX_LIGHT_VERTEX] = lightInfo.lightVertex;
 	int arrSize = lightInfo.arraySize;
 	// to LTC Space
@@ -419,7 +419,8 @@ float IntegrateBezierD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, float roughne
 		lightVertex[offset + 3] = worldToLTC * (lightVertex[offset + 3] - shadePos);
 	}
 	//Integrate
-	float res = 0.0;
+	// float res = 0.0;
+	vec3 lookup = vec3(0.f);
 	float threshold = roughness * roughness;
 	threshold = max(threshold * threshold * 0.05, MIN_THRESHOLD);
 	bool hasBegin = false;
@@ -446,7 +447,7 @@ float IntegrateBezierD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, float roughne
 			switch(tCnt){
 				case 0:
 				{
-					res += IntegrateBezier(tmpCtrlPts,0,1,threshold);
+					lookup += IntegrateBezier(tmpCtrlPts,0,1,threshold);
 					break;
 				}
 				case 1:
@@ -454,16 +455,16 @@ float IntegrateBezierD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, float roughne
 					t0 = ts[0];
 					if(BezierCurve(tmpCtrlPts,0.5 * t0).z > 0){
 						//start point above plane
-						res += IntegrateBezier(tmpCtrlPts,0,t0,threshold);
+						lookup += IntegrateBezier(tmpCtrlPts,0,t0,threshold);
 						hasEnd = true;
 						vEnd = BezierCurve(tmpCtrlPts,t0);
 					}else{
 						//start point below plane
-						res += IntegrateBezier(tmpCtrlPts,t0,1,threshold);
+						lookup += IntegrateBezier(tmpCtrlPts,t0,1,threshold);
 						if(hasEnd){
 							vec3 v0 = BezierCurve(tmpCtrlPts,t0);
 							hasEnd = false;
-							res += IntegrateEdge(normalize(vEnd),normalize(v0)).z;
+							lookup += IntegrateEdge(normalize(vEnd),normalize(v0));
 						}else{
 							vBegin = BezierCurve(tmpCtrlPts,t0);
 							hasBegin = true;									
@@ -480,27 +481,27 @@ float IntegrateBezierD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, float roughne
 						//0->t0
 						if(hasEnd){
 							vec3 v0 = BezierCurve(tmpCtrlPts,t0);
-							res += IntegrateEdge(normalize(vEnd),normalize(v0)).z;
+							lookup += IntegrateEdge(normalize(vEnd),normalize(v0));
 							hasEnd = false;
 						}else{
 							hasBegin = true;
 							vBegin = BezierCurve(tmpCtrlPts,t0);
 						}
 						//t0->t1
-						res += IntegrateBezier(tmpCtrlPts,t0,t1,threshold);
+						lookup += IntegrateBezier(tmpCtrlPts,t0,t1,threshold);
 						//t1->1
 						hasEnd = true;
 						vEnd = BezierCurve(tmpCtrlPts,t1);
 					}else{
 						//mid point below plane
 						//0->t0
-						res += IntegrateBezier(tmpCtrlPts,0,t0,threshold);
+						lookup += IntegrateBezier(tmpCtrlPts,0,t0,threshold);
 						//t0->t1
 						vec3 v0 = BezierCurve(tmpCtrlPts,t0);
 						vec3 v1 = BezierCurve(tmpCtrlPts,t1);
-						res += IntegrateEdge(normalize(v0),normalize(v1)).z;
+						lookup += IntegrateEdge(normalize(v0),normalize(v1));
 						//t1->1
-						res += IntegrateBezier(tmpCtrlPts,t1,1,threshold);
+						lookup += IntegrateBezier(tmpCtrlPts,t1,1,threshold);
 					}
 					break;
 				}
@@ -513,29 +514,29 @@ float IntegrateBezierD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, float roughne
 						//0->t0
 						if(hasEnd){
 							vec3 v0 = BezierCurve(tmpCtrlPts,t0);
-							res += IntegrateEdge(normalize(vEnd),normalize(v0)).z;
+							lookup += IntegrateEdge(normalize(vEnd),normalize(v0));
 							hasEnd = false;
 						}else{
 							hasBegin = true;
 							vBegin = BezierCurve(tmpCtrlPts,t0);
 						}
 						//t0->t1
-						res += IntegrateBezier(tmpCtrlPts,t0,t1,threshold);
+						lookup += IntegrateBezier(tmpCtrlPts,t0,t1,threshold);
 						//t1->t2
 						vec3 v1 = BezierCurve(tmpCtrlPts,t1);
 						vec3 v2 = BezierCurve(tmpCtrlPts,t2);
-						res += IntegrateEdge(normalize(v1),normalize(v2)).z;
+						lookup += IntegrateEdge(normalize(v1),normalize(v2));
 						//t2->1
-						res += IntegrateBezier(tmpCtrlPts,t2,1,threshold);
+						lookup += IntegrateBezier(tmpCtrlPts,t2,1,threshold);
 					}else{
 						//0->t0
-						res += IntegrateBezier(tmpCtrlPts,0,t0,threshold);
+						lookup += IntegrateBezier(tmpCtrlPts,0,t0,threshold);
 						//t0->t1
 						vec3 v0 = BezierCurve(tmpCtrlPts,t0);
 						vec3 v1 = BezierCurve(tmpCtrlPts,t1);
-						res += IntegrateEdge(normalize(v0),normalize(v1)).z;
+						lookup += IntegrateEdge(normalize(v0),normalize(v1));
 						//t1->t2
-						res += IntegrateBezier(tmpCtrlPts,t1,t2,threshold);
+						lookup += IntegrateBezier(tmpCtrlPts,t1,t2,threshold);
 						//t2->1
 						hasEnd = true;
 						vEnd = BezierCurve(tmpCtrlPts,t2);
@@ -551,21 +552,32 @@ float IntegrateBezierD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos, float roughne
 			//entire curve below plane, do nothing
 		}
 #else
-		res += IntegrateBezier(tmpCtrlPts,0,1,threshold);
+		lookup += IntegrateBezier(tmpCtrlPts,0,1,threshold);
 #endif
 	}
 	if(hasBegin && hasEnd){
-		res += IntegrateEdge(normalize(vEnd),normalize(vBegin)).z;
+		lookup += IntegrateEdge(normalize(vEnd),normalize(vBegin));
 	}
+
 	//two sided
+	float res = lookup.z;
 	if(twoSided){
-		if(res < 0){
+		if(lookup.z < 0){
 			res = -res;
+			lookup = - lookup;
 		}
 	}else{
 		res = max(0.0,res);
 	}
-	return res;
+
+	vec3 ltcBoundary[4];
+	for(int i = 0;i<4;++i){
+		ltcBoundary[i] = worldToLTC * (lightInfo.boundPositions[i] - shadePos);
+	}
+
+	FetchLight(ltcBoundary,lightInfo.boundUV, normalize(lookup),uv,lod);
+
+	return res* 0.5 * INV_PI;
 }
 
 
@@ -578,17 +590,17 @@ void CoordinateSystem(in vec3 normal, out vec3 tangent, out vec3 bitangent)
 
 vec3 GetNormal()
 {
-	vec3 normal = fragIn.normal;
+	vec3 normal = normalize(fragIn.normal);
 	vec3 nor = texture(compressedSampler, vec3(fragIn.uv, 1.0)).rgb;
 	
-	if(dot(nor, nor) > 0.f)
-	{
-		vec3 tangent;
-		vec3 bitangent;
-		CoordinateSystem(normal, tangent, bitangent);
-
-		normal = normalize(nor.x * tangent + nor.y * bitangent + nor.z * normal);
-	}
+	//if(dot(nor, nor) > 0.f)
+	//{
+	//	vec3 tangent;
+	//	vec3 bitangent;
+	//	CoordinateSystem(normal, tangent, bitangent);
+	//
+	//	normal = normalize(nor.x * tangent + nor.y * bitangent + nor.z * normal);
+	//}
 
 	return normal;
 }
@@ -604,34 +616,40 @@ void main(){
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
 	float roughness = texture(compressedSampler, vec3(fragIn.uv, 2.0)).r;
-	//roughness = clamp(roughness - u_Roughness, 0.f, 1.f);
-	// roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
 
 	roughness = step(0.1f, roughness) * roughness; 
 
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
-	//float lod;
-	//vec2 ltuv;
 
-	// IntegrateBezier
+	// Multilight Integration
 	for(int i = 0;i< lightCount; ++i){
 		LightInfo lightInfo = lightInfos[i];
 		if(lightInfo.lightType == 0){
 			//polygon
 			float lod;
 		    vec2 ltuv;
-			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, false, ltuv, lod);
-			vec3 tmpCol = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, true, ltuv, lod);
+			vec3 tmpCol = vec3(d); //* mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
 
 			fs_Color += tmpCol;
 			// fs_Color += clamp(vec3(d),vec3(0.f),vec3(1.f));
 		}else{
-			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, true);
-			fs_Color += clamp(vec3(d), vec3(0.f), vec3(1.f));
+			// Bezier
+			float lod;
+		    vec2 ltuv;
+			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, true, ltuv, lod);
+			// fs_Color += clamp(vec3(d), vec3(0.f), vec3(1.f));
+
+			vec3 tmpCol = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
+
+			fs_Color += tmpCol;
 		}
 	}
-	
-	// fs_Color *=  albedo;
-	fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f));
+	//fs_Color =  fs_norm * 0.5f + 0.5f;
+	fs_Color *= albedo;
+	fs_Color = (fs_Color) / (fs_Color + 1.f);
+	//fs_Color * 1.1f;
+	//fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f));
 }

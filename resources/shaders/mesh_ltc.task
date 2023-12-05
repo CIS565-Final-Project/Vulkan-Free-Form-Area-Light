@@ -10,17 +10,34 @@ struct Task
 
 struct MeshletDescription
 {
+	vec4 boundingSphere;
+	uint modelId;
 	uint vertexCount;
 	uint primCount;
 	uint vertexBegin;
 	uint primBegin;
-	uint modelId;
+};
+
+struct ModelMatrix
+{
+	mat4 model;
+	mat4 invModel;
 };
 
 taskPayloadSharedEXT Task OUT;
 
+layout(set = 0, binding = 0) uniform CameraUBO {
+	vec4 pos;
+    mat4 viewProjMat;
+	vec4 planes[6];
+} u_CamUBO;
+
 layout(set = 1, binding = 0) buffer MeshletInfos {
     MeshletDescription meshlets[];
+};
+
+layout(set = 1, binding = 1) buffer ModelMatries {
+    ModelMatrix modelMatrix[];
 };
 
 // A simple hash function
@@ -39,10 +56,33 @@ vec3 randomColor(int seed) {
     return vec3(r, g, b);
 }
 
+bool IsSphereOutsidePlane(in vec4 boundingSphere, in vec4 plane) {
+    float distanceFromPlane = dot(plane.xyz, boundingSphere.xyz) + plane.w;
+    return distanceFromPlane < -boundingSphere.w;
+}
+
+bool IsOutsideViewFrustum(in vec4 boundingSphere)
+{
+	for(int i = 0; i < 6; ++i)
+	{
+		if(IsSphereOutsidePlane(boundingSphere, u_CamUBO.planes[i]))
+			return true;
+	}
+	return false;
+}
+
 void main()
 {
 	OUT.task_id = int(gl_WorkGroupID.x);
 	OUT.color = randomColor(OUT.task_id);
 
-	EmitMeshTasksEXT(meshlets[gl_WorkGroupID.x].primCount, 1, 1);// use gl_WorkGroupID to index in mesh shader
+	MeshletDescription meshlet = meshlets[OUT.task_id];
+
+	vec4 bounding_sphere = meshlet.boundingSphere;
+	mat4 model = modelMatrix[meshlet.modelId].model;
+	bounding_sphere.xyz = (model * vec4(bounding_sphere.xyz, 1.f)).xyz;
+	bounding_sphere.w *= max(model[0][0], max(model[1][1], model[2][2]));
+	
+	if(!IsOutsideViewFrustum(bounding_sphere))
+		EmitMeshTasksEXT(meshlets[gl_WorkGroupID.x].primCount, 1, 1);// use gl_WorkGroupID to index in mesh shader
 }

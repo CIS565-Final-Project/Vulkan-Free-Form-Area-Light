@@ -78,10 +78,12 @@ namespace VK_Renderer
 		// TODO: Step 1.2 - Clustering Vertices and Triangles
 
 		// Step 2 - Assemble meshlets
-		MeshletDescription meshlet{.vertexBegin = static_cast<uint32_t>(m_VertexIndices.size()),
+		MeshletDescription meshlet{ .modelId = modelId,
+									.vertexBegin = static_cast<uint32_t>(m_VertexIndices.size()),
 									.primBegin  = static_cast<uint32_t>(m_PrimitiveIndices.size()), 
-									.modelId = modelId};
+									};
 		std::unordered_map<uint32_t, uint8_t> meshlet_vertices;
+		std::vector<glm::vec3> vertices_in_meshlet;
 
 		for (size_t i = 0; i < triangles.size(); ++i)
 		{
@@ -104,6 +106,8 @@ namespace VK_Renderer
 						m_VertexIndices.push_back(tri[v]);
 						m_PrimitiveIndices.push_back(meshlet.vertexCount);
 						meshlet_vertices[tri[v]] = meshlet.vertexCount;
+						
+						vertices_in_meshlet.push_back(m_Vertices[tri[v]].position);
 
 						++meshlet.vertexCount;
 					}
@@ -118,18 +122,24 @@ namespace VK_Renderer
 				if (meshlet.primCount >= m_MaxPrimitiveCount ||
 					meshlet.vertexCount >= m_MaxVertexCount)
 				{
+					ComputeBoundingSphere(meshlet, vertices_in_meshlet);
+
 					m_MeshletInfos.push_back(meshlet);
 					meshlet.Reset();
 					meshlet.primBegin = m_PrimitiveIndices.size();
 					meshlet.vertexBegin = m_VertexIndices.size();
 					meshlet.modelId = modelId;
-
+					meshlet.boudningSphere = glm::vec4(modelId);
 					meshlet_vertices.clear();
+					vertices_in_meshlet.clear();
 				}
 			}
 		}
 
-		if (meshlet.primCount > 0) m_MeshletInfos.push_back(meshlet);
+		if (meshlet.primCount > 0) {
+			ComputeBoundingSphere(meshlet, vertices_in_meshlet);
+			m_MeshletInfos.push_back(meshlet);
+		}
 
 		// Load textures
 		//m_Materials.reserve(m_Materials.size() + mesh.GetMaterialCounts());
@@ -167,5 +177,54 @@ namespace VK_Renderer
 								 sizeof(uint8_t) * m_PrimitiveIndices.size() + 
 								 sizeof(uint32_t) * m_VertexIndices.size());
 		*/
+	}
+
+	void Meshlets::ComputeBoundingSphere(MeshletDescription& meshletDesc,
+											std::vector<glm::vec3> const& vertices)
+	{
+		// Ritter's Bounding Sphere Algorithm
+		glm::vec3 const& p0 = vertices[0];
+
+		// find P1
+		float max_dist = -1.f;
+		glm::vec3 const* p1_ptr = nullptr;
+		for (glm::vec3 const& p : vertices)
+		{
+			float dist = glm::distance(p0, p);
+			if (dist > max_dist)
+			{
+				max_dist = dist;
+				p1_ptr = &p;
+			}
+		}
+		// find P2
+		max_dist = -1.f;
+		glm::vec3 const* p2_ptr = nullptr;
+		for (glm::vec3 const& p : vertices)
+		{
+			float dist = glm::distance(p, *p1_ptr);
+			if (dist > max_dist)
+			{
+				max_dist = dist;
+				p2_ptr = &p;
+			}
+		}
+
+		// compute center and radius
+		
+		glm::vec3 center = (*p1_ptr + *p2_ptr) / 2.f;
+		float radius = max_dist / 2.f;
+
+		for (glm::vec3 const& p : vertices)
+		{
+			float dist = glm::distance(p, center);
+			if (dist > radius)
+			{
+				radius = (radius + dist) / 2.f;
+				center = center * 0.5f + p * 0.5f;
+			}
+		}
+
+		meshletDesc.boudningSphere = glm::vec4(center, radius);
 	}
 }
