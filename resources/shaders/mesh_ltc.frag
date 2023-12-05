@@ -97,7 +97,7 @@ mat3 BitMatrix(vec3 V, vec3 N){
 	return transpose(mat3(tangent,bitangent,N));
 }
 //v: bounding quad of the light vertices in LTC space (not normalized, i.e. not on hemisphere yet)
-void FetchLight(const in vec3 v[4], const in vec2 uvs[4], vec3 lookup, out vec2 uv, out float lod){
+void FetchLight(vec3 v[4],  vec2 uvs[4], vec3 lookup, out vec2 uv, out float lod){
 	//project shading point onto light plane
 	vec3 v1 = v[1] - v[0];
 	vec3 v2 = v[2] - v[0];
@@ -616,8 +616,11 @@ void main(){
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
 	float roughness = texture(compressedSampler, vec3(fragIn.uv, 2.0)).r;
-
+	//roughness = clamp(roughness - u_Roughness, 0.f, 1.f);
+	// roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
+	roughness = u_Roughness;
 	roughness = step(0.1f, roughness) * roughness; 
+	roughness = 0.9;
 
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 
@@ -629,21 +632,17 @@ void main(){
 			float lod;
 		    vec2 ltuv;
 			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, true, ltuv, lod);
-			vec3 tmpCol = vec3(d); //* mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+			vec3 tmpCol = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
 
 			fs_Color += tmpCol;
 			// fs_Color += clamp(vec3(d),vec3(0.f),vec3(1.f));
 		}else{
-			// Bezier
 			float lod;
 		    vec2 ltuv;
-			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, true, ltuv, lod);
-			// fs_Color += clamp(vec3(d), vec3(0.f), vec3(1.f));
-
+			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, false, ltuv, lod);
 			vec3 tmpCol = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
-
 			fs_Color += tmpCol;
 		}
 	}

@@ -2,6 +2,8 @@
 //also defined in light shaders
 #define MAX_LIGHT_VERTEX 10 
 #include "transformation.h"
+#include "material.h"
+#include "atlasTexture.h"
 #include <vector>
 #include <array>
 namespace VK_Renderer
@@ -40,15 +42,19 @@ namespace VK_Renderer
 			, const std::array<glm::vec2,4>& boundUV = { glm::vec2(1.f,0.f),glm::vec2(0.f,0.f),glm::vec2(0.f,1.f),glm::vec2(1.f,1.f) }
 		);
 		LightInfo GetLightInfo()const;
+		friend class SceneLight;
 	};
 
 	class SceneLight {
 	private:
 		std::vector<AreaLight> m_AreaLights;
+		std::vector<MaterialInfo> m_MaterialInfos;
 	public:
 		AreaLight* GetLight(size_t idx);
-		void AddLight(const AreaLight& lt);
+		void AddLight(const AreaLight& lt, const MaterialInfo& ltTextureInfo);
 		std::vector<LightInfo> GetPackedLightInfo()const;
 		inline uint32_t GetLightCount()const { return m_AreaLights.size(); };
+		inline uint32_t GetLightTextureArrayLayer()const { return m_MaterialInfos[0].texPath.size();};
+		AtlasTexture2D GetLightTexture();
 	};
 }

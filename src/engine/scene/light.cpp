@@ -24,6 +24,7 @@ namespace VK_Renderer
 		return res;
 	}
 
+
 	//--------------------
 	//SceneLight
 	//--------------------
@@ -32,9 +33,10 @@ namespace VK_Renderer
 		if (idx > m_AreaLights.size())return nullptr;
 		return &m_AreaLights[idx];
 	}
-	void SceneLight::AddLight(const AreaLight& lt)
+	void SceneLight::AddLight(const AreaLight& lt, const MaterialInfo& ltTextureInfo)
 	{
 		m_AreaLights.emplace_back(lt);
+		m_MaterialInfos.emplace_back(ltTextureInfo);
 	}
 	std::vector<LightInfo> SceneLight::GetPackedLightInfo() const
 	{
@@ -42,6 +44,33 @@ namespace VK_Renderer
 		std::vector<LightInfo> ans(n);
 		for (auto i = 0;i < n;++i) {
 			ans[i] = m_AreaLights[i].GetLightInfo();
+		}
+		return ans;
+	}
+	AtlasTexture2D SceneLight::GetLightTexture()
+	{
+		// Load textures
+		std::vector<Material> materails;
+
+		for (auto const& info : m_MaterialInfos)
+		{
+			materails.push_back(Material(info));
+		}
+
+		AtlasTexture2D ans(materails);
+		//update light uvs
+		auto& texBlocks = ans.GetFinishedAtlas();
+		for (int i = 0;i < texBlocks.size();++i) {
+			TextureBlock2D const& atlas = texBlocks[i];
+			glm::vec2 start = static_cast<glm::vec2>(atlas.start) / static_cast<glm::vec2>(ans.GetResolution());
+			glm::vec2 end = static_cast<glm::vec2>(atlas.start + glm::ivec2(atlas.width, atlas.height)) / static_cast<glm::vec2>(ans.GetResolution());
+
+			for (int j = 0;j < 4;++j) {
+				glm::vec2 uv = m_AreaLights[i].m_BoundaryUV[j];
+				uv = glm::mix(start, end, uv);
+				m_AreaLights[i].m_BoundaryUV[j] = uv;
+			}
+
 		}
 		return ans;
 	}
