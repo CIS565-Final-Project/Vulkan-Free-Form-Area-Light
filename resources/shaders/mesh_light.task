@@ -45,10 +45,10 @@ struct LightInfo {
 	float padding;
 };
 
-layout(set = 2, binding = 0) uniform LightCount{
+layout(set = 1, binding = 0) uniform LightCount{
 	uint lightCount;
 };
-layout(set = 2, binding = 1) buffer lightBuffer{
+layout(set = 1, binding = 1) buffer lightBuffer{
 	LightInfo lightInfos[];
 };
 

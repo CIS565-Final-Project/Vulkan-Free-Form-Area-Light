@@ -5,8 +5,6 @@
 
 using namespace MyCore;
 
-struct MeshletInfo;
-
 #include "renderEngine/renderEngine.h"
 #include "renderEngine/instance.h"
 #include "renderEngine/graphicsPipeline.h"
@@ -38,9 +36,7 @@ struct MeshBufferSet {
 class RenderLayer : public Layer
 {
 public:
-	RenderLayer(std::string const& name, 
-				std::string const&& meshFile, 
-				std::string const&& textureFile);
+	RenderLayer(std::string const& name);
 
 public:
 	virtual void OnAttach() override;
@@ -54,10 +50,11 @@ public:
 
 	void RecordCmd();
 private:
-	void SetupScene();
-	void SetupBuffers();
+	void LoadScene();
+	void GenBuffers();
+	void GenTextures();
 	void CreateDescriptors();
-	void BindDescriptors();
+	void CreateGraphicsPipeline();
 
 protected:
 	VK_Renderer::VK_RenderEngine* m_Engine;
@@ -67,14 +64,10 @@ protected:
 	uPtr<VK_Renderer::PerspectiveCamera> m_Camera;
 	uPtr<VK_Renderer::VK_CommandBuffer> m_Cmd;
 	
-	uPtr<VK_Renderer::VK_Texture2D> m_LTCTexture;
-	
+	uPtr<VK_Renderer::VK_Texture2D> m_DDSTexture;	
 	uPtr<VK_Renderer::VK_Texture2DArray> m_CompressedTexture;
-
-	uPtr<VK_Renderer::VK_Texture2DArray> m_LightTexture;
 	uPtr<VK_Renderer::VK_Texture2DArray> m_LightBlurTexture;
 
-	uPtr<VK_Renderer::VK_PipelineInput> m_PipelineInput;
 	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderLightPipeline;
 
 	uPtr<VK_Renderer::VK_GraphicsPipeline> m_MeshShaderLTCPipeline;
@@ -88,15 +81,6 @@ protected:
 	uPtr<VK_Renderer::Scene> m_Scene;
 	uPtr<VK_Renderer::SceneLight> m_SceneLight;
 
-	//uPtr<VK_Renderer::VK_DeviceBuffer> m_MeshletInfoBuffer;
-	//uPtr<VK_Renderer::VK_DeviceBuffer> m_TriangleBuffer;
-	//uPtr<VK_Renderer::VK_DeviceBuffer> m_PositionBuffer;
-	//uPtr<VK_Renderer::VK_DeviceBuffer> m_NormalBuffer;
-	//uPtr<VK_Renderer::VK_DeviceBuffer> m_UVBuffer;
-
-	MeshBufferSet m_LTCMeshBufferSet;
-	MeshBufferSet m_LightMeshBufferSet;
-
 	uPtr<VK_Renderer::VK_DeviceBuffer> m_MeshletInfoBuffer;
 	uPtr<VK_Renderer::VK_DeviceBuffer> m_VertexIndicesBuffer;
 	uPtr<VK_Renderer::VK_DeviceBuffer> m_PrimitiveIndicesBuffer;
@@ -104,13 +88,6 @@ protected:
 
 	uPtr<VK_Renderer::VK_Descriptor> m_CamDescriptor;
 	uPtr<VK_Renderer::VK_Descriptor> m_LTCMeshShaderInputDescriptor;
-	uPtr<VK_Renderer::VK_Descriptor> m_LightMeshShaderInputDescriptor;
 	uPtr<VK_Renderer::VK_Descriptor> m_MaterialParamDescriptor;
 	uPtr<VK_Renderer::VK_Descriptor> m_LightDescriptor;
-
-	uPtr<MeshletInfo> m_LTCMeshletInfo;
-	uPtr<MeshletInfo> m_LightMeshletInfo;
-
-	std::string m_MeshFile;
-	std::string m_TextureFile;
 };

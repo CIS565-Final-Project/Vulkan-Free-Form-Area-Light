@@ -38,8 +38,8 @@ layout(set = 2, binding = 1) buffer lightBuffer{
 	LightInfo lightInfos[];
 };
 
-layout(set = 3, binding = 0) uniform Roughness{
-	float u_Roughness;
+layout(set = 3, binding = 0) uniform MaterialParam{
+	vec4 materialParam;
 };
 
 //in
@@ -53,29 +53,6 @@ layout (location = 0) in PerVertexData{
 
 //out
 layout (location = 0) out vec4 fs_Color;
-
-// //lights
-// float halfWidth = 1.5f;
-// vec3 lights[5] = vec3[](
-// 	vec3(-halfWidth, -halfWidth + 1.0f, 5.0f),
-// 	vec3(halfWidth, -halfWidth + 1.0f, 5.0f ),
-// 	vec3(halfWidth, halfWidth + 1.0f, 5.0f ),
-// 	vec3(-halfWidth, halfWidth + 1.0f, 5.0f),
-// 	vec3(0.f)
-// );
-// vec3 allCtrlPts[8] = vec3[](
-// 	vec3(-1.5, -0.5f, 5.0f),
-// 	vec3(1.5f, -0.5f, 5.0f),
-// 	vec3(10.5f, -0.5f, 5.0f),
-// 	vec3(1.5f, 2.5f, 5.0f),
-		
-		
-// 	vec3(1.5f, 2.5f, 5.0f),
-// 	vec3(-1.5f, 3.5f, 5.0f),
-// 	vec3(-2.5f, 2.5f, 5.0f),
-// 	vec3(-1.5f, -0.5f, 5.0f)
-		
-// );
 
 
 mat3 LTCMatrix(vec3 V, vec3 N, float roughness){
@@ -625,11 +602,7 @@ void main(){
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
 	float roughness = texture(compressedSampler, vec3(fragIn.uv, 2.0)).r;
-	//roughness = clamp(roughness - u_Roughness, 0.f, 1.f);
-	// roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
-	roughness = u_Roughness;
-	//roughness = step(0.1f, roughness) * roughness; 
-	//roughness = 0.1;
+	roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
 
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 
@@ -642,7 +615,7 @@ void main(){
 			//polygon
 			float lod;
 		    vec2 ltuv;
-			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, true, ltuv, lod);; //* lightInfo.amplitude;
+			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, true, ltuv, lod); //* lightInfo.amplitude;
 			vec3 tmpCol = d * mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
 

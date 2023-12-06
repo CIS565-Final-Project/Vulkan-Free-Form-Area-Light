@@ -12,16 +12,16 @@ layout (location = 0) in PerVertexData
 
 layout (location = 0) out vec4 fs_Color;
 
-layout(set = 1, binding = 5) uniform sampler2DArray u_Texture;
+layout(set = 1, binding = 2) uniform sampler2DArray u_LightTextures;
 
 void main()
 {
 	if(fragIn.polygon > 0.f)
 	{
-		fs_Color = vec4(1.f);
+		fs_Color = texture(u_LightTextures, vec3(fragIn.uv, 0.f)).rgba;
 	}
 	else
 	{
-		fs_Color = texture(u_Texture, vec3(fragIn.uv, 0.f)).rgba;
+		fs_Color = texture(u_LightTextures, vec3(fragIn.uv, 0.f)).rgba;
 	}
 }

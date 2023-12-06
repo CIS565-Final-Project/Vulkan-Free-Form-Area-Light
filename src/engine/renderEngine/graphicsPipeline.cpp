@@ -3,11 +3,12 @@
 
 #include "device.h"
 #include "pipelineInput.h"
+#include "renderPass.h"
 
 namespace VK_Renderer
 {
-	VK_GraphicsPipeline::VK_GraphicsPipeline(const VK_Device& device)
-		: m_Device(device)
+	VK_GraphicsPipeline::VK_GraphicsPipeline(const VK_Device& device, VK_RenderPass const& renderPass)
+		: m_Device(device), m_RenderPass(renderPass)
 	{
 	}
 
@@ -142,5 +143,49 @@ namespace VK_Renderer
 		}
 		vk_UniquePipeline = std::move(result.value);
 		vk_Pipeline = vk_UniquePipeline.get();
+	}
+	void VK_GraphicsPipeline::CreateMeshPipeline(MeshPipelineCreateInfo const& createInfo)
+	{
+		// Create required shader stages
+		auto task_shader = ReadFile(createInfo.taskShaderPath);
+		auto mesh_shader = ReadFile(createInfo.meshShaderPath);
+		auto frag_shader = ReadFile(createInfo.fragShaderPath);
+
+		vk::UniqueShaderModule task_module = m_Device.GetDevice().createShaderModuleUnique(vk::ShaderModuleCreateInfo{
+			.codeSize = task_shader.size(),
+			.pCode = reinterpret_cast<const uint32_t*>(task_shader.data())
+			});
+		vk::UniqueShaderModule mesh_module = m_Device.GetDevice().createShaderModuleUnique(vk::ShaderModuleCreateInfo{
+			.codeSize = mesh_shader.size(),
+			.pCode = reinterpret_cast<const uint32_t*>(mesh_shader.data())
+			});
+		vk::UniqueShaderModule frag_module = m_Device.GetDevice().createShaderModuleUnique(vk::ShaderModuleCreateInfo{
+			.codeSize = frag_shader.size(),
+			.pCode = reinterpret_cast<const uint32_t*>(frag_shader.data())
+			});
+
+		std::vector<vk::PipelineShaderStageCreateInfo> shader_stages
+		{
+			vk::PipelineShaderStageCreateInfo{
+				.stage = vk::ShaderStageFlagBits::eTaskEXT,
+				.module = task_module.get(),
+				.pName = "main"
+			},
+			vk::PipelineShaderStageCreateInfo{
+				.stage = vk::ShaderStageFlagBits::eMeshEXT,
+				.module = mesh_module.get(),
+				.pName = "main"
+			},
+			vk::PipelineShaderStageCreateInfo{
+				.stage = vk::ShaderStageFlagBits::eFragment,
+				.module = frag_module.get(),
+				.pName = "main"
+			},
+		};
+
+		VK_PipelineInput input;
+		input.SetupPipelineVertexInputCreateInfo();
+
+		CreatePipeline({ .renderPass = m_RenderPass.GetRenderPass() }, shader_stages, input, createInfo.descriptorSetsLayout);
 	}
 }

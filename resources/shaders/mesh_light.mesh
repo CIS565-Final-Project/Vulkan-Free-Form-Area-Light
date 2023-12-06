@@ -16,39 +16,10 @@ struct Task
 	vec2 centerUV;
 };
 
-struct TriangleInfo
-{
-	ivec4 pId;
-    ivec4 nId;
-    ivec4 uvId;
-};
-
-
 layout(set = 0, binding = 0) uniform CameraUBO {
 	vec4 pos;
     mat4 viewProjMat;
 } u_CamUBO;
-
-layout(set = 1, binding = 0) uniform MeshletInfo {
-    uint Meshlet_Size;
-	uint Triangle_Count;
-};
-
-layout(set = 1, binding = 1) buffer Triangles {
-   TriangleInfo triangle[];
-};
-
-layout(set = 1, binding = 2) buffer Positions {
-    float positions[];
-};
-
-layout(set = 1, binding = 3) buffer Normals {
-    float normals[];
-};
-
-layout(set = 1, binding = 4) buffer UVs {
-    float uvs[];
-};
 
 taskPayloadSharedEXT Task IN;
 
@@ -87,13 +58,12 @@ struct LightInfo {
 	float padding;
 };
 
-layout(set = 2, binding = 0) uniform LightCount{
+layout(set = 1, binding = 0) uniform LightCount{
 	uint lightCount;
 };
-layout(set = 2, binding = 1) buffer lightBuffer{
+layout(set = 1, binding = 1) buffer lightBuffer{
 	LightInfo lightInfos[];
 };
-
 
 vec3 BezierCurve(const vec3 ctrlPts[4], float t){
 	vec3 u01 = mix(ctrlPts[0], ctrlPts[1], t);

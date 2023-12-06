@@ -6,6 +6,7 @@ namespace VK_Renderer
 {
 	class VK_Device;
 	class VK_PipelineInput;
+	class VK_RenderPass;
 
 	struct GraphicspipelineCreateInfo
 	{
@@ -14,10 +15,18 @@ namespace VK_Renderer
 
 	};
 
+	struct MeshPipelineCreateInfo
+	{
+		std::vector<vk::DescriptorSetLayout> const& descriptorSetsLayout;
+		std::string const& taskShaderPath{ "" };
+		std::string const& meshShaderPath;
+		std::string const& fragShaderPath;
+	};
+
 	class VK_GraphicsPipeline
 	{
 	public:
-		VK_GraphicsPipeline(const VK_Device& device);
+		VK_GraphicsPipeline(VK_Device const& device, VK_RenderPass const& renderPass);
 
 		~VK_GraphicsPipeline();
 
@@ -28,8 +37,11 @@ namespace VK_Renderer
 									const VK_PipelineInput& pipelineInput, 
 									std::vector<vk::DescriptorSetLayout> const& descripotrSetLayouts);
 
+		void CreateMeshPipeline(MeshPipelineCreateInfo const& createInfo);
+
 	protected:
-		const VK_Device& m_Device;
+		VK_Device const& m_Device;
+		VK_RenderPass const& m_RenderPass;
 
 		vk::UniquePipelineLayout vk_UniqueLayout;
 		vk::UniquePipeline vk_UniquePipeline;
