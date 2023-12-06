@@ -86,10 +86,10 @@ namespace VK_Renderer
 
 		// Color Blend State
 		vk::PipelineColorBlendAttachmentState color_blend_attachment{
-			.blendEnable = vk::False,
+			.blendEnable = vk::True,
 
-			.srcColorBlendFactor = vk::BlendFactor::eOne,
-			.dstColorBlendFactor = vk::BlendFactor::eZero,
+			.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha,
+			.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha,
 			.colorBlendOp = vk::BlendOp::eAdd,
 
 			.srcAlphaBlendFactor = vk::BlendFactor::eOne,

@@ -1,5 +1,7 @@
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
+
 set(ENGINE_INDLUDE_DIR "${CMAKE_SOURCE_DIR}/src/engine")
 
 file(GLOB_RECURSE exe_Sources

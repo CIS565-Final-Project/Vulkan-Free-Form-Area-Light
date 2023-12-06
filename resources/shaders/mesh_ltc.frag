@@ -50,7 +50,7 @@ layout (location = 0) in PerVertexData{
 } fragIn;
 
 //out
-layout (location = 0) out vec3 fs_Color;
+layout (location = 0) out vec4 fs_Color;
 
 // //lights
 // float halfWidth = 1.5f;
@@ -593,22 +593,29 @@ vec3 GetNormal()
 	vec3 normal = normalize(fragIn.normal);
 	vec3 nor = texture(compressedSampler, vec3(fragIn.uv, 1.0)).rgb;
 	
-	//if(dot(nor, nor) > 0.f)
-	//{
-	//	vec3 tangent;
-	//	vec3 bitangent;
-	//	CoordinateSystem(normal, tangent, bitangent);
-	//
-	//	normal = normalize(nor.x * tangent + nor.y * bitangent + nor.z * normal);
-	//}
+	if(dot(nor, nor) > 0.f)
+	{
+		vec3 tangent;
+		vec3 bitangent;
+		CoordinateSystem(normal, tangent, bitangent);
+	
+		normal = normalize(nor.x * tangent + nor.y * bitangent + nor.z * normal);
+	}
 
 	return normal;
 }
 
 void main(){
 
-	vec3 albedo = texture(compressedSampler, vec3(fragIn.uv, 0.0)).rgb;
-	fs_Color = vec3(0.f);
+	vec4 albedo = texture(compressedSampler, vec3(fragIn.uv, 0.0)).rgba;
+	fs_Color = vec4(0.f);
+	//albedo.a *= albedo.a;//smoothstep( 0.1f, 0.8f, albedo.a);
+	//if(albedo.a < 0.2f) discard;
+	//fs_Color = albedo;
+	//return;
+
+	if(albedo.a < 0.01f) discard;
+
 	vec3 pos = fragIn.pos;
 	vec3 cameraPos = u_CamUBO.pos.xyz;
 	vec3 fs_norm = GetNormal();
@@ -632,7 +639,7 @@ void main(){
 			vec3 tmpCol = vec3(d); //* mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
 
-			fs_Color += tmpCol;
+			fs_Color += vec4(tmpCol, 0.f);
 			// fs_Color += clamp(vec3(d),vec3(0.f),vec3(1.f));
 		}else{
 			// Bezier
@@ -644,12 +651,13 @@ void main(){
 			vec3 tmpCol = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
 
-			fs_Color += tmpCol;
+			fs_Color += vec4(tmpCol, 0.f);
 		}
 	}
 	//fs_Color =  fs_norm * 0.5f + 0.5f;
+	fs_Color.a = 1.f;
 	fs_Color *= albedo;
-	fs_Color = (fs_Color) / (fs_Color + 1.f);
+	fs_Color.xyz = (fs_Color.xyz) / (fs_Color.xyz + 1.f);
 	//fs_Color * 1.1f;
 	//fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f));
 }

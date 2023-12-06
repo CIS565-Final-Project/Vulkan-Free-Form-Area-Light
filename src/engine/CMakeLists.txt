@@ -2,6 +2,7 @@ set(ENGINE_INDLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/")
 
 # Engine Lib
 add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
+add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
 
 file(GLOB_RECURSE Engine_Sources
 	"${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
