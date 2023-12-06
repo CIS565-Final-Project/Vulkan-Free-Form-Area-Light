@@ -171,16 +171,24 @@ void RenderLayer::OnAttach()
 		glm::vec3(halfWidth, halfWidth + 1.0f, -5.0f),
 		glm::vec3(-halfWidth, halfWidth + 1.0f, -5.0f),
 	};
+	glm::vec4 boundSphere;
+	for (int i = 0;i < 4;++i) {
+		boundSphere += glm::vec4(bound_verts[i], 0);
+	}
+	boundSphere /= 4.f;
+	boundSphere.w = 20.f;
 	m_SceneLight->AddLight(AreaLight{
 		AreaLightCreateInfo{
 			.type = LIGHT_TYPE::POLYGON,
+			.boundSphere = boundSphere,
 			.transform = Transformation{
 				//.rotation = glm::quat({glm::radians(90.f), 0, 0}),
 				//.position = {0, 3, 0}
-			}
+			},
+			.boundPositions = bound_verts,
 		},
-		polygon_verts,
-		bound_verts }
+		polygon_verts
+		}
 		,
 		MaterialInfo{
 		 .texPath = {
@@ -212,12 +220,19 @@ void RenderLayer::OnAttach()
 		glm::vec3(4.0f, 8.f, 5.0f),
 		glm::vec3(-5.0f, 8.f, 5.0f),
 	};
+	glm::vec4 bezier_bound_sphere;
+	for (int i = 0;i < 4;++i) {
+		bezier_bound_sphere += glm::vec4(bezier_bound_verts[i],0);
+	}
+	bezier_bound_sphere /= 4.f;
+	bezier_bound_sphere.w = 20.f;
 	m_SceneLight->AddLight(AreaLight{ 
 		AreaLightCreateInfo{
-			.type = LIGHT_TYPE::BEZIER
+			.type = LIGHT_TYPE::BEZIER,
+			.boundSphere = bezier_bound_sphere,
+			.boundPositions = bezier_bound_verts,
 		},
-		bezier_verts, 
-		bezier_bound_verts 
+		bezier_verts
 	},
 	MaterialInfo{
 	 .texPath = {
@@ -623,10 +638,10 @@ void RenderLayer::OnImGui(double const& deltaTime)
 {
 	static float v = 1.f;
 	ImGui::Begin("Test Window");
-	//if (ImGui::DragFloat("Roughness", &v, 0.02f, 0.f, 1.f))
-	//{
-	//	m_MaterialParamBuffer->Update(&v, 0, sizeof(float));
-	//}
+	if (ImGui::DragFloat("Roughness", &v, 0.02f, 0.f, 1.f))
+	{
+		m_MaterialParamBuffer->Update(&v, 0, sizeof(float));
+	}
 	if (ImGui::DragFloat("Alpha", &m_Camera->alpha, 0.01f, 0.f, 1.f))
 	{
 		CameraUBO camera_ubo;
@@ -703,6 +718,7 @@ void RenderLayer::OnImGui(double const& deltaTime)
 		AreaLight& area_light = *m_SceneLight->GetLight(current_id);
 		glm::vec3 euler = glm::eulerAngles(area_light.m_Transform.rotation);
 		modified |= ImGui::DragFloat3("Position", &area_light.m_Transform.position[0], 0.1f, -200.f, 200.f);
+		modified |= ImGui::DragFloat("Amplitude", &area_light.m_Amplitude, 0.1f, 0.f, 20.f);
 		modified |= ImGui::DragFloat3("Rotation", &euler[0], 0.1f, -2.f * glm::pi<float>(), 2.f * glm::pi<float>());
 		modified |= ImGui::DragFloat3("Scale", &area_light.m_Transform.scale[0], 0.1f, 0.1f, 3.f);
 
@@ -869,4 +885,20 @@ void RenderLayer::RecordCmd()
 
 		cmd.End();
 	}
+}
+
+void RenderLayer::SetupScene()
+{
+}
+
+void RenderLayer::SetupBuffers()
+{
+}
+
+void RenderLayer::CreateDescriptors()
+{
+}
+
+void RenderLayer::BindDescriptors()
+{
 }

@@ -53,6 +53,11 @@ public:
 	virtual bool OnEvent(SDL_Event const&);
 
 	void RecordCmd();
+private:
+	void SetupScene();
+	void SetupBuffers();
+	void CreateDescriptors();
+	void BindDescriptors();
 
 protected:
 	VK_Renderer::VK_RenderEngine* m_Engine;

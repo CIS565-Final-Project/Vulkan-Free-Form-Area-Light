@@ -2,11 +2,17 @@
 namespace VK_Renderer 
 {
 	AreaLight::AreaLight(AreaLightCreateInfo const& createInfo, const std::vector<glm::vec3>& lightPts
-		, const std::array<glm::vec3, 4>& boundPositions
-		, const std::array<glm::vec2, 4>& boundUV)
-		:m_LightType(createInfo.type), m_LightVertex(lightPts), m_Transform(createInfo.transform), m_BoundaryVertex(boundPositions), m_BoundaryUV(boundUV)
-	{
-	}
+		//, const std::array<glm::vec3, 4>& boundPositions
+		//, const std::array<glm::vec2, 4>& boundUV
+	)
+		:m_LightType(createInfo.type), m_LightVertex(lightPts)
+		, m_Transform(createInfo.transform)
+		, m_BoundaryVertex(createInfo.boundPositions)
+		, m_BoundaryUV(createInfo.boundUV)
+		, m_BoundarySphere(createInfo.boundSphere)
+		, m_Amplitude(createInfo.amplitude)
+	{}
+
 	LightInfo AreaLight::GetLightInfo() const
 	{
 		LightInfo res;
@@ -20,6 +26,16 @@ namespace VK_Renderer
 		}
 		for (int i = 0;i < m_LightVertex.size();++i) {
 			res.lightVertex[i] = modelMatrix * glm::vec4(m_LightVertex[i], 1.0);
+		}
+		res.amplitude = m_Amplitude;
+		{
+			glm::vec4 transformedSphereCenter = modelMatrix * glm::vec4(m_BoundarySphere.x,m_BoundarySphere.y,m_BoundarySphere.z, 1.0);
+			res.boundSphere = glm::vec4(transformedSphereCenter);
+			float maxScale = 0.f;
+			for (int i = 0;i < 3;++i) {
+				maxScale = std::max(maxScale, abs(modelMatrix[i][i]));
+			}
+			res.boundSphere.w = m_BoundarySphere.w * maxScale;
 		}
 		return res;
 	}
