@@ -79,10 +79,12 @@ vec3 randomColor(int seed) {
 struct LightInfo {
 	vec2 boundUV[4]; // use for texture
 	vec3 boundPositions[4]; //use for texture
+	vec4 boundSphere;
 	vec3 lightVertex[MAX_LIGHT_VERTEX];	
 	int arraySize;
 	int lightType;//0: polygon 1: bezier
-	vec2 padding;
+	float amplitude;
+	float padding;
 };
 
 layout(set = 2, binding = 0) uniform LightCount{

@@ -14,10 +14,12 @@
 struct LightInfo {
 	vec2 boundUV[4]; // use for texture
 	vec3 boundPositions[4]; //use for texture
+	vec4 boundSphere;
 	vec3 lightVertex[MAX_LIGHT_VERTEX];	
 	int arraySize;
 	int lightType;//0: polygon 1: bezier
-	vec2 padding;
+	float amplitude;
+	float padding;
 };
 
 //uniform
@@ -26,8 +28,8 @@ layout(set = 0, binding = 0) uniform CameraUBO {
     mat4 viewProjMat;
 } u_CamUBO;
 
-layout(set = 1, binding = 5) uniform sampler2D texSampler;
-layout(set = 1, binding = 6) uniform sampler2DArray ltSampler;
+layout(set = 1, binding = 5) uniform sampler2D LTCSampler;
+layout(set = 1, binding = 6) uniform sampler2DArray lightAtlasTexture;
 layout(set = 1, binding = 7) uniform sampler2DArray compressedSampler;
 layout(set = 2, binding = 0) uniform LightCount{
 	uint lightCount;
@@ -81,7 +83,7 @@ mat3 LTCMatrix(vec3 V, vec3 N, float roughness){
 	vec2 uv = vec2(roughness, 2 * theta * INV_PI);
 	//reproject uv to 64x64 texture eg. for roughness = 1, u should be 63.5/64;
 	uv = uv * (LUT_SIZE - 1)/LUT_SIZE  + 0.5 / LUT_SIZE;
-	vec4 ltcVal = texture(texSampler, uv);
+	vec4 ltcVal = texture(LTCSampler, uv);
 	
 	mat3 res = mat3(
 		vec3(1,0,ltcVal.y),
@@ -97,7 +99,7 @@ mat3 BitMatrix(vec3 V, vec3 N){
 	return transpose(mat3(tangent,bitangent,N));
 }
 //v: bounding quad of the light vertices in LTC space (not normalized, i.e. not on hemisphere yet)
-void FetchLight(const in vec3 v[4], const in vec2 uvs[4], vec3 lookup, out vec2 uv, out float lod){
+void FetchLight(vec3 v[4],  vec2 uvs[4], vec3 lookup, out vec2 uv, out float lod){
 	//project shading point onto light plane
 	vec3 v1 = v[1] - v[0];
 	vec3 v2 = v[2] - v[0];
@@ -623,41 +625,42 @@ void main(){
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
 	float roughness = texture(compressedSampler, vec3(fragIn.uv, 2.0)).r;
-
-	roughness = step(0.1f, roughness) * roughness; 
+	//roughness = clamp(roughness - u_Roughness, 0.f, 1.f);
+	// roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
+	roughness = u_Roughness;
+	//roughness = step(0.1f, roughness) * roughness; 
+	//roughness = 0.1;
 
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 
 	// Multilight Integration
 	for(int i = 0;i< lightCount; ++i){
 		LightInfo lightInfo = lightInfos[i];
+		bool clipBySphere = (lightInfo.boundSphere.w > 0) && (dot(pos - lightInfo.boundSphere.xyz, pos - lightInfo.boundSphere.xyz) > (lightInfo.boundSphere.w * lightInfo.boundSphere.w));
+		if(clipBySphere)continue;
 		if(lightInfo.lightType == 0){
 			//polygon
 			float lod;
 		    vec2 ltuv;
-			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, true, ltuv, lod);
-			vec3 tmpCol = vec3(d); //* mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, true, ltuv, lod);; //* lightInfo.amplitude;
+			vec3 tmpCol = d * mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
 
 			fs_Color += vec4(tmpCol, 0.f);
 			// fs_Color += clamp(vec3(d),vec3(0.f),vec3(1.f));
 		}else{
-			// Bezier
 			float lod;
 		    vec2 ltuv;
-			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, true, ltuv, lod);
-			// fs_Color += clamp(vec3(d), vec3(0.f), vec3(1.f));
-
-			vec3 tmpCol = d * mix(texture(ltSampler,vec3(ltuv,ceil(lod))).xyz, texture(ltSampler,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, false, ltuv, lod);// * lightInfo.amplitude;
+			vec3 tmpCol = d * mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
-
-			fs_Color += vec4(tmpCol, 0.f);
+			fs_Color += vec4(tmpCol,0);
 		}
 	}
 	//fs_Color =  fs_norm * 0.5f + 0.5f;
 	fs_Color.a = 1.f;
 	fs_Color *= albedo;
-	fs_Color.xyz = (fs_Color.xyz) / (fs_Color.xyz + 1.f);
+	//fs_Color = (fs_Color) / (fs_Color + 1.f);
 	//fs_Color * 1.1f;
 	//fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f));
 }

@@ -131,11 +131,11 @@ void RenderLayer::OnAttach()
 	//		.position = {0, -1.5, 0},
 	//		.scale = {1, 1, 1}
 	//});
-	m_Scene->AddMesh("meshes/Astartes.obj", "Astartes",
-		Transformation{
-			.position = {0, -2, 0},
-			.scale = {0.03f, 0.03f, 0.03f}
-	});
+	//m_Scene->AddMesh("meshes/Astartes.obj", "Astartes",
+	//	Transformation{
+	//		.position = {0, -2, 0},
+	//		.scale = {0.03f, 0.03f, 0.03f}
+	//});
 	m_Scene->ComputeRenderData({
 		.MeshletMaxPrimCount = 32,
 		.MeshletMaxVertexCount = 255
@@ -158,7 +158,7 @@ void RenderLayer::OnAttach()
 
 	//Add lights
 	m_SceneLight = mkU<SceneLight>();
-	float halfWidth = 15.0f;
+	float halfWidth = 1.0f;
 	std::vector<glm::vec3> polygon_verts = {
 		glm::vec3(-halfWidth, -halfWidth + 1.0f, -5.0f),
 		glm::vec3(halfWidth, -halfWidth + 1.0f, -5.0f),
@@ -171,16 +171,38 @@ void RenderLayer::OnAttach()
 		glm::vec3(halfWidth, halfWidth + 1.0f, -5.0f),
 		glm::vec3(-halfWidth, halfWidth + 1.0f, -5.0f),
 	};
+	glm::vec4 boundSphere;
+	for (int i = 0;i < 4;++i) {
+		boundSphere += glm::vec4(bound_verts[i], 0);
+	}
+	boundSphere /= 4.f;
+	boundSphere.w = 20.f;
 	m_SceneLight->AddLight(AreaLight{
 		AreaLightCreateInfo{
 			.type = LIGHT_TYPE::POLYGON,
+			.boundSphere = boundSphere,
 			.transform = Transformation{
-				.rotation = glm::quat({glm::radians(90.f), 0, 0}),
-				.position = {0, 3, 0}
+				//.rotation = glm::quat({glm::radians(90.f), 0, 0}),
+				//.position = {0, 3, 0}
+			},
+			.boundPositions = bound_verts,
+		},
+		polygon_verts
+		}
+		,
+		MaterialInfo{
+		 .texPath = {
+			"images/nvidia0.png",
+			"images/nvidia1.png",
+			"images/nvidia2.png",
+			"images/nvidia3.png",
+			"images/nvidia4.png",
+			"images/nvidia5.png",
+			"images/nvidia6.png",
+			"images/nvidia7.png",
+			"images/nvidia8.png",
 			}
-		}, 
-		polygon_verts, 
-		bound_verts }
+		}
 	);
 	std::vector<glm::vec3> bezier_verts = {
 		glm::vec3(-1.5, -0.5f, 5.0f),
@@ -198,20 +220,34 @@ void RenderLayer::OnAttach()
 		glm::vec3(4.0f, 8.f, 5.0f),
 		glm::vec3(-5.0f, 8.f, 5.0f),
 	};
+	glm::vec4 bezier_bound_sphere;
+	for (int i = 0;i < 4;++i) {
+		bezier_bound_sphere += glm::vec4(bezier_bound_verts[i],0);
+	}
+	bezier_bound_sphere /= 4.f;
+	bezier_bound_sphere.w = 20.f;
 	m_SceneLight->AddLight(AreaLight{ 
 		AreaLightCreateInfo{
-			.type = LIGHT_TYPE::BEZIER
+			.type = LIGHT_TYPE::BEZIER,
+			.boundSphere = bezier_bound_sphere,
+			.boundPositions = bezier_bound_verts,
 		},
-		bezier_verts, 
-		bezier_bound_verts 
-	});
-	m_LightBuffer = mkU<VK_StagingBuffer>(*m_Device);
-	std::vector<LightInfo> lightBufferData = m_SceneLight->GetPackedLightInfo();
-	m_LightBuffer->CreateFromData(lightBufferData.data(), lightBufferData.size() * sizeof(LightInfo), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
-	auto idx = lightBufferData.size() * sizeof(LightInfo);
-	m_LightCountBuffer = mkU<VK_StagingBuffer>(*m_Device);
-	int light_count = lightBufferData.size();
-   	m_LightCountBuffer->CreateFromData(&light_count, sizeof(int), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
+		bezier_verts
+	},
+	MaterialInfo{
+	 .texPath = {
+		"images/0.png",
+		"images/1.png",
+		"images/2.png",
+		"images/3.png",
+		"images/4.png",
+		"images/5.png",
+		"images/6.png",
+		"images/7.png",
+		"images/8.png",
+		}
+	}
+	);	
 
 	Mesh lightMesh;
 	lightMesh.LoadMeshFromFile("meshes/lightQuad.obj");
@@ -223,9 +259,6 @@ void RenderLayer::OnAttach()
 		.accessFlag = vk::AccessFlagBits::eShaderRead,
 		.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
 		});
-
-	m_LightTexture = mkU<VK_Texture2DArray>(*m_Device);
-	m_LightBlurTexture = mkU<VK_Texture2DArray>(*m_Device);
 
 	m_CompressedTexture = mkU<VK_Texture2DArray>(*m_Device);
 	m_CompressedTexture->CreateFromData(m_Scene->GetAtlasTex2D()->GetData().data(),
@@ -248,27 +281,39 @@ void RenderLayer::OnAttach()
 		.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
 		});
 
-	m_LightBlurTexture->CreateFromFiles(
-		//image files
+
+	
+	m_LightBlurTexture = mkU<VK_Texture2DArray>(*m_Device);
+
+	//m_CompressedTexture->CreateFromData(m_Scene->GetAtlasTex2D()->GetData().data(),
+	//	m_Scene->GetAtlasTex2D()->GetSize(),
+	//	{
+	//		.width = static_cast<uint32_t>(m_Scene->GetAtlasTex2D()->GetResolution().x),
+	//		.height = static_cast<uint32_t>(m_Scene->GetAtlasTex2D()->GetResolution().y),
+	//		.depth = 1,
+	//	},
+	//	{
+	//		.format = vk::Format::eR8G8B8A8Unorm,
+	//		.usage = vk::ImageUsageFlagBits::eSampled,
+	//		.arrayLayer = 4
+	//	}
+	//	);
+	AtlasTexture2D compressedLightTex = m_SceneLight->GetLightTexture();
+	m_LightBlurTexture->CreateFromData(
+		compressedLightTex.GetData().data(),
+		compressedLightTex.GetSize(),
 		{
-			"images/0.png",
-			"images/1.png",
-			"images/2.png",
-			"images/3.png",
-			"images/4.png",
-			"images/5.png",
-			"images/6.png",
-			"images/7.png",
-			"images/8.png"
+			.width = static_cast<uint32_t>(compressedLightTex.GetResolution().x),
+			.height = static_cast<uint32_t>(compressedLightTex.GetResolution().y),
+			.depth = 1
 		},
-		//createInfo
 		{
 			.format = vk::Format::eR8G8B8A8Unorm,
 			.usage = vk::ImageUsageFlagBits::eSampled,
-			.arrayLayer = 9
+			.arrayLayer = m_SceneLight->GetLightTextureArrayLayer()
 		}
 	);
-
+	m_LightTexture = mkU<VK_Texture2DArray>(*m_Device);
 	m_LightTexture->CreateFromFiles(
 		//image files
 		{
@@ -281,6 +326,8 @@ void RenderLayer::OnAttach()
 			.arrayLayer = 1
 		}
 	);
+
+
 
 	m_LightTexture->TransitionLayout(
 		VK_ImageLayout{
@@ -310,6 +357,15 @@ void RenderLayer::OnAttach()
 	}
 
 	m_LightMeshletInfo = mkU<MeshletInfo>(32, 100);
+
+	m_LightBuffer = mkU<VK_StagingBuffer>(*m_Device);
+	std::vector<LightInfo> lightBufferData = m_SceneLight->GetPackedLightInfo();
+	m_LightBuffer->CreateFromData(lightBufferData.data(), lightBufferData.size() * sizeof(LightInfo), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive);
+
+	auto idx = lightBufferData.size() * sizeof(LightInfo);
+	m_LightCountBuffer = mkU<VK_StagingBuffer>(*m_Device);
+	int light_count = lightBufferData.size();
+	m_LightCountBuffer->CreateFromData(&light_count, sizeof(int), vk::BufferUsageFlagBits::eUniformBuffer, vk::SharingMode::eExclusive);
 
 	// Create Buffers
 
@@ -514,8 +570,8 @@ void RenderLayer::OnAttach()
 		.type = vk::DescriptorType::eCombinedImageSampler,
 		.stage = vk::ShaderStageFlagBits::eFragment,
 		.imageInfo = vk::DescriptorImageInfo{
-			.sampler = m_LightTexture->GetSampler(),
-			.imageView = m_LightTexture->GetImageView(),
+			.sampler = m_LightBlurTexture->GetSampler(),
+			.imageView = m_LightBlurTexture->GetImageView(),
 			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
 		}
 	});
@@ -560,7 +616,7 @@ void RenderLayer::OnDetech()
 
 void RenderLayer::OnUpdate(double const& deltaTime)
 {
-	if (true)
+	if (false)
 	{
 		static float time = 0.f;
 
@@ -582,10 +638,10 @@ void RenderLayer::OnImGui(double const& deltaTime)
 {
 	static float v = 1.f;
 	ImGui::Begin("Test Window");
-	//if (ImGui::DragFloat("Roughness", &v, 0.02f, 0.f, 1.f))
-	//{
-	//	m_MaterialParamBuffer->Update(&v, 0, sizeof(float));
-	//}
+	if (ImGui::DragFloat("Roughness", &v, 0.02f, 0.f, 1.f))
+	{
+		m_MaterialParamBuffer->Update(&v, 0, sizeof(float));
+	}
 	if (ImGui::DragFloat("Alpha", &m_Camera->alpha, 0.01f, 0.f, 1.f))
 	{
 		CameraUBO camera_ubo;
@@ -662,6 +718,7 @@ void RenderLayer::OnImGui(double const& deltaTime)
 		AreaLight& area_light = *m_SceneLight->GetLight(current_id);
 		glm::vec3 euler = glm::eulerAngles(area_light.m_Transform.rotation);
 		modified |= ImGui::DragFloat3("Position", &area_light.m_Transform.position[0], 0.1f, -200.f, 200.f);
+		modified |= ImGui::DragFloat("Amplitude", &area_light.m_Amplitude, 0.1f, 0.f, 20.f);
 		modified |= ImGui::DragFloat3("Rotation", &euler[0], 0.1f, -2.f * glm::pi<float>(), 2.f * glm::pi<float>());
 		modified |= ImGui::DragFloat3("Scale", &area_light.m_Transform.scale[0], 0.1f, 0.1f, 3.f);
 
@@ -828,4 +885,20 @@ void RenderLayer::RecordCmd()
 
 		cmd.End();
 	}
+}
+
+void RenderLayer::SetupScene()
+{
+}
+
+void RenderLayer::SetupBuffers()
+{
+}
+
+void RenderLayer::CreateDescriptors()
+{
+}
+
+void RenderLayer::BindDescriptors()
+{
 }
