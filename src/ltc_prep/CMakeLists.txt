@@ -12,6 +12,6 @@ add_library(LTCPrep
 target_include_directories(LTCPrep PUBLIC ${HEADER})
 target_link_libraries(LTCPrep
 PUBLIC 
-	Engine
+	ExternalLibs
 )
 

@@ -65,6 +65,7 @@ protected:
 	uPtr<VK_Renderer::VK_CommandBuffer> m_Cmd;
 	
 	uPtr<VK_Renderer::VK_Texture2D> m_DDSTexture;	
+	uPtr<VK_Renderer::VK_Texture2D> m_DDSAmpFresnel;
 	uPtr<VK_Renderer::VK_Texture2DArray> m_CompressedTexture;
 	uPtr<VK_Renderer::VK_Texture2DArray> m_LightBlurTexture;
 

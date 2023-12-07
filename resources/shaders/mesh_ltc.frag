@@ -29,7 +29,7 @@ layout(set = 0, binding = 0) uniform CameraUBO {
 } u_CamUBO;
 
 layout(set = 1, binding = 5) uniform sampler2D LTCSampler;
-layout(set = 1, binding = 6) uniform sampler2DArray lightAtlasTexture;
+layout(set = 1, binding = 6) uniform sampler2D LTCAmpSampler;
 layout(set = 1, binding = 7) uniform sampler2DArray compressedSampler;
 layout(set = 2, binding = 0) uniform LightCount{
 	uint lightCount;
@@ -37,6 +37,8 @@ layout(set = 2, binding = 0) uniform LightCount{
 layout(set = 2, binding = 1) buffer lightBuffer{
 	LightInfo lightInfos[];
 };
+
+layout(set = 2, binding = 2) uniform sampler2DArray lightAtlasTexture;
 
 layout(set = 3, binding = 0) uniform MaterialParam{
 	vec4 materialParam;
@@ -54,7 +56,15 @@ layout (location = 0) in PerVertexData{
 //out
 layout (location = 0) out vec4 fs_Color;
 
+//Tool function
+vec2 GetFrenselTerm(vec3 V, vec3 N, float roughness){
+	float theta = acos(max(dot(V,N),0));
+	vec2 uv = vec2(roughness, 2 * theta * INV_PI);
+	//reproject uv to 64x64 texture eg. for roughness = 1, u should be 63.5/64;
+	uv = uv * (LUT_SIZE - 1)/LUT_SIZE  + 0.5 / LUT_SIZE;
 
+	return texture(LTCAmpSampler, uv).xy;
+}
 mat3 LTCMatrix(vec3 V, vec3 N, float roughness){
 	float theta = acos(max(dot(V,N),0));
 	vec2 uv = vec2(roughness, 2 * theta * INV_PI);
@@ -62,10 +72,15 @@ mat3 LTCMatrix(vec3 V, vec3 N, float roughness){
 	uv = uv * (LUT_SIZE - 1)/LUT_SIZE  + 0.5 / LUT_SIZE;
 	vec4 ltcVal = texture(LTCSampler, uv);
 	
+	//mat3 res = mat3(
+	//	vec3(1,0,ltcVal.y),
+	//	vec3(0,ltcVal.z,0),
+	//	vec3(ltcVal.w,0,ltcVal.x)
+	//);
 	mat3 res = mat3(
-		vec3(1,0,ltcVal.y),
-		vec3(0,ltcVal.z,0),
-		vec3(ltcVal.w,0,ltcVal.x)
+		vec3(ltcVal.x,0,ltcVal.z),
+		vec3(0,1,0),
+		vec3(ltcVal.y,0,ltcVal.w)
 	);
 	//ltc
 	return res;
@@ -75,6 +90,7 @@ mat3 BitMatrix(vec3 V, vec3 N){
 	vec3 bitangent = cross(N,tangent);
 	return transpose(mat3(tangent,bitangent,N));
 }
+
 //v: bounding quad of the light vertices in LTC space (not normalized, i.e. not on hemisphere yet)
 void FetchLight(vec3 v[4],  vec2 uvs[4], vec3 lookup, out vec2 uv, out float lod){
 	//project shading point onto light plane
@@ -602,9 +618,18 @@ void main(){
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
 	float roughness = texture(compressedSampler, vec3(fragIn.uv, 2.0)).r;
-	roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
+	
+	//roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
+	roughness = materialParam.x;
+	float metallic = materialParam.y;
 
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
+	vec2 fresnelWeight = GetFrenselTerm(V,N,roughness);
+	mat3 I = mat3(
+		1,0,0,
+		0,1,0,
+		0,0,1
+	);
 
 	// Multilight Integration
 	for(int i = 0;i< lightCount; ++i){
@@ -615,24 +640,42 @@ void main(){
 			//polygon
 			float lod;
 		    vec2 ltuv;
-			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, true, ltuv, lod); //* lightInfo.amplitude;
-			vec3 tmpCol = d * mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
-			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
 
-			fs_Color += vec4(tmpCol, 0.f);
-			// fs_Color += clamp(vec3(d),vec3(0.f),vec3(1.f));
+			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, true, ltuv, lod) * lightInfo.amplitude;
+			float F = max(fresnelWeight.x, 0.001);
+			vec3 spec = vec3(d * (F + fresnelWeight.y/F - fresnelWeight.y));
+			//apply light texture
+			spec *= mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+			spec = clamp(spec,vec3(0.f),vec3(1.f));
+
+			d = IntegrateD(I, V, N, pos, lightInfo, true, ltuv, lod) * lightInfo.amplitude;
+			//apply light texture
+			vec3 diffuse = d * mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+			diffuse = clamp(diffuse,vec3(0.f),vec3(1.f));
+
+			fs_Color += vec4(mix(diffuse, spec ,vec3(metallic)), 0.f) ;
 		}else{
 			float lod;
 		    vec2 ltuv;
-			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, false, ltuv, lod);// * lightInfo.amplitude;
-			vec3 tmpCol = d * mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
-			tmpCol = clamp(tmpCol,vec3(0.f),vec3(1.f));
-			fs_Color += vec4(tmpCol,0);
+			
+			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, false, ltuv, lod) * lightInfo.amplitude;
+			float F = max(fresnelWeight.x, 0.001);
+			vec3 spec = vec3(d * (F + fresnelWeight.y/F - fresnelWeight.y));
+			//apply texture
+			spec *= mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+			spec = clamp(spec,vec3(0.f),vec3(1.f));
+
+			d = IntegrateBezierD(I, V, N, pos, roughness, lightInfo, false, ltuv, lod) * lightInfo.amplitude;
+			//apply light texture
+			vec3 diffuse = d * mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
+			diffuse = clamp(diffuse,vec3(0.f),vec3(1.f));
+
+			fs_Color += vec4(mix(diffuse, spec ,vec3(metallic)), 0.f) ;
 		}
 	}
 	//fs_Color =  fs_norm * 0.5f + 0.5f;
 	fs_Color.a = 1.f;
-	fs_Color *= albedo;
+	//fs_Color *= albedo;
 	//fs_Color = (fs_Color) / (fs_Color + 1.f);
 	//fs_Color * 1.1f;
 	//fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f));

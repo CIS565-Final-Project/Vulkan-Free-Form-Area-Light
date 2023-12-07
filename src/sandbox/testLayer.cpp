@@ -46,6 +46,7 @@ void RenderLayer::OnAttach()
 	m_LightBlurTexture = mkU<VK_Texture2DArray>(*m_Device);
 	m_CompressedTexture = mkU<VK_Texture2DArray>(*m_Device);
 	m_DDSTexture = mkU<VK_Texture2D>(*m_Device);
+	m_DDSAmpFresnel = mkU<VK_Texture2D>(*m_Device);
 	GenTextures();
 
 	// Generate Buffers
@@ -509,6 +510,7 @@ void RenderLayer::GenBuffers()
 
 void RenderLayer::GenTextures()
 {
+	
 	// Load dds image for LTC
 	m_DDSTexture->CreateFromFile("images/ltc.dds", { .format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
 	m_DDSTexture->TransitionLayout(VK_ImageLayout{
@@ -516,7 +518,13 @@ void RenderLayer::GenTextures()
 		.accessFlag = vk::AccessFlagBits::eShaderRead,
 		.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
 	});
-
+	m_DDSAmpFresnel->CreateFromFile("images/ltc_amp.dds", { .format = vk::Format::eR32G32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
+	m_DDSAmpFresnel->TransitionLayout(VK_ImageLayout{
+	.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+	.accessFlag = vk::AccessFlagBits::eShaderRead,
+	.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
+	});
+	
 	// Scene Compress textures
 	
 	m_CompressedTexture->CreateFromData(m_Scene->GetAtlasTex2D()->GetData().data(),
@@ -680,8 +688,8 @@ void RenderLayer::CreateDescriptors()
 			.type = vk::DescriptorType::eCombinedImageSampler,
 			.stage = vk::ShaderStageFlagBits::eFragment,
 			.imageInfo = vk::DescriptorImageInfo{
-			.sampler = m_LightBlurTexture->GetSampler(),
-			.imageView = m_LightBlurTexture->GetImageView(),
+			.sampler = m_DDSAmpFresnel->GetSampler(),
+			.imageView = m_DDSAmpFresnel->GetImageView(),
 			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
 			}
 		},
