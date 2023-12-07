@@ -32,6 +32,8 @@ namespace VK_Renderer
 		Transformation transform = {};
 		std::array<glm::vec3, 4> boundPositions = { glm::vec3(),glm::vec3(),glm::vec3(),glm::vec3() };
 		std::array<glm::vec2, 4> boundUV = { glm::vec2(1.f,0.f),glm::vec2(0.f,0.f),glm::vec2(0.f,1.f),glm::vec2(1.f,1.f) };
+		std::vector<glm::vec3> lightVertex;
+		MaterialInfo lightMaterial;
 	};
 
 	class AreaLight {
@@ -45,7 +47,9 @@ namespace VK_Renderer
 	public:
 		float m_Amplitude;
 		Transformation m_Transform;
-		AreaLight(AreaLightCreateInfo const & createInfo, const std::vector<glm::vec3>& lightPts);
+		MaterialInfo m_LightMaterial;
+		AreaLight(AreaLightCreateInfo const & createInfo);
+		AreaLight(const std::string& objfile); //only for quad light
 		LightInfo GetLightInfo()const;
 		friend class SceneLight;
 	};
@@ -56,10 +60,10 @@ namespace VK_Renderer
 		std::vector<MaterialInfo> m_MaterialInfos;
 	public:
 		AreaLight* GetLight(size_t idx);
-		void AddLight(const AreaLight& lt, const MaterialInfo& ltTextureInfo);
-		std::vector<LightInfo> GetPackedLightInfo()const;
+		void AddLight(const AreaLight& lt);
 		inline uint32_t GetLightCount()const { return m_AreaLights.size(); };
 		inline uint32_t GetLightTextureArrayLayer()const { return m_MaterialInfos[0].texPath.size();};
+		std::vector<LightInfo> GetPackedLightInfo();
 		AtlasTexture2D GetLightTexture();
 	};
 }

@@ -406,21 +406,8 @@ void RenderLayer::LoadScene()
 	}
 	boundSphere /= 4.f;
 	boundSphere.w = 20.f;
-	m_SceneLight->AddLight(AreaLight{
-		AreaLightCreateInfo{
-			.type = LIGHT_TYPE::POLYGON,
-			.boundSphere = boundSphere,
-			.transform = Transformation{
-				//.rotation = glm::quat({glm::radians(90.f), 0, 0}),
-				//.position = {0, 3, 0}
-			},
-			.boundPositions = bound_verts,
-		},
-		polygon_verts
-		}
-		,
-		MaterialInfo{
-		 .texPath = {
+	MaterialInfo polygon_mat = MaterialInfo{
+		.texPath = {
 			"images/nvidia0.png",
 			"images/nvidia1.png",
 			"images/nvidia2.png",
@@ -430,9 +417,25 @@ void RenderLayer::LoadScene()
 			"images/nvidia6.png",
 			"images/nvidia7.png",
 			"images/nvidia8.png",
-			}
 		}
-	);
+	};
+	//AreaLight polygon_light(
+	//	AreaLightCreateInfo{
+	//		.type = LIGHT_TYPE::POLYGON,
+	//		.boundSphere = boundSphere,
+	//		.transform = Transformation{
+	//		//.rotation = glm::quat({glm::radians(90.f), 0, 0}),
+	//		//.position = {0, 3, 0}
+	//		},
+	//		.boundPositions = bound_verts,
+	//		.lightVertex = polygon_verts,
+	//		.lightMaterial = polygon_mat
+	//	}
+	//);
+	AreaLight polygon_light("meshes/lightQuad.obj");
+	polygon_light.m_LightMaterial = polygon_mat;
+	m_SceneLight->AddLight(polygon_light);
+
 	std::vector<glm::vec3> bezier_verts = {
 		glm::vec3(-1.5, -0.5f, 5.0f),
 		glm::vec3(1.5f, -0.5f, 5.0f),
@@ -455,28 +458,28 @@ void RenderLayer::LoadScene()
 	}
 	bezier_bound_sphere /= 4.f;
 	bezier_bound_sphere.w = 20.f;
+	MaterialInfo bezier_mat = MaterialInfo{
+		.texPath = {
+			"images/0.png",
+			"images/1.png",
+			"images/2.png",
+			"images/3.png",
+			"images/4.png",
+			"images/5.png",
+			"images/6.png",
+			"images/7.png",
+			"images/8.png",
+		}
+	};
 	m_SceneLight->AddLight(AreaLight{ 
 		AreaLightCreateInfo{
 			.type = LIGHT_TYPE::BEZIER,
 			.boundSphere = bezier_bound_sphere,
 			.boundPositions = bezier_bound_verts,
-		},
-		bezier_verts
-	},
-	MaterialInfo{
-	 .texPath = {
-		"images/0.png",
-		"images/1.png",
-		"images/2.png",
-		"images/3.png",
-		"images/4.png",
-		"images/5.png",
-		"images/6.png",
-		"images/7.png",
-		"images/8.png",
+			.lightVertex = bezier_verts,
+			.lightMaterial = bezier_mat
 		}
-	}
-	);
+	});
 }
 
 void RenderLayer::GenBuffers()
