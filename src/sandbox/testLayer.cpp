@@ -47,6 +47,7 @@ void RenderLayer::OnAttach()
 	m_LightBlurTexture = mkU<VK_Texture2DArray>(*m_Device);
 	m_CompressedTexture = mkU<VK_Texture2DArray>(*m_Device);
 	m_DDSTexture = mkU<VK_Texture2D>(*m_Device);
+	m_DDSAmpFresnel = mkU<VK_Texture2D>(*m_Device);
 	GenTextures();
 
 	// Generate Buffers
@@ -406,25 +407,28 @@ void RenderLayer::LoadScene()
 	}
 	boundSphere /= 4.f;
 	boundSphere.w = 20.f;
-	m_SceneLight->AddLight(AreaLight{
-		AreaLightCreateInfo{
-			.type = LIGHT_TYPE::POLYGON,
-			.boundSphere = boundSphere,
-			.transform = Transformation{
-				//.rotation = glm::quat({glm::radians(90.f), 0, 0}),
-				//.position = {0, 3, 0}
-			},
-			.boundPositions = bound_verts,
-		},
-		polygon_verts
+	MaterialInfo polygon_mat = MaterialInfo{
+		.texPath = {
+			"images/cyberpunk.jpg",
 		}
-		,
-		MaterialInfo{
-		 .texPath = {
-			"images/cyberpunk.jpg"
-			}
-		}
-	);
+	};
+	//AreaLight polygon_light(
+	//	AreaLightCreateInfo{
+	//		.type = LIGHT_TYPE::POLYGON,
+	//		.boundSphere = boundSphere,
+	//		.transform = Transformation{
+	//		//.rotation = glm::quat({glm::radians(90.f), 0, 0}),
+	//		//.position = {0, 3, 0}
+	//		},
+	//		.boundPositions = bound_verts,
+	//		.lightVertex = polygon_verts,
+	//		.lightMaterial = polygon_mat
+	//	}
+	//);
+	AreaLight polygon_light("meshes/lightQuad.obj");
+	polygon_light.m_LightMaterial = polygon_mat;
+	m_SceneLight->AddLight(polygon_light);
+
 	std::vector<glm::vec3> bezier_verts = {
 		glm::vec3(-1.5, -0.5f, 5.0f),
 		glm::vec3(1.5f, -0.5f, 5.0f),
@@ -447,20 +451,20 @@ void RenderLayer::LoadScene()
 	}
 	bezier_bound_sphere /= 4.f;
 	bezier_bound_sphere.w = 20.f;
+	MaterialInfo bezier_mat = MaterialInfo{
+		.texPath = {
+			"images/test_image.jpg",
+		}
+	};
 	m_SceneLight->AddLight(AreaLight{ 
 		AreaLightCreateInfo{
 			.type = LIGHT_TYPE::BEZIER,
 			.boundSphere = bezier_bound_sphere,
 			.boundPositions = bezier_bound_verts,
-		},
-		bezier_verts
-	},
-	MaterialInfo{
-	 .texPath = {
-		"images/test_image.jpg"
+			.lightVertex = bezier_verts,
+			.lightMaterial = bezier_mat
 		}
-	}
-	);
+	});
 }
 
 void RenderLayer::GenBuffers()
@@ -494,6 +498,7 @@ void RenderLayer::GenBuffers()
 
 void RenderLayer::GenTextures()
 {
+	
 	// Load dds image for LTC
 	m_DDSTexture->CreateFromFile("images/ltc.dds", { .format = vk::Format::eR32G32B32A32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
 	m_DDSTexture->TransitionLayout(VK_ImageLayout{
@@ -501,7 +506,13 @@ void RenderLayer::GenTextures()
 		.accessFlag = vk::AccessFlagBits::eShaderRead,
 		.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
 	});
-
+	m_DDSAmpFresnel->CreateFromFile("images/ltc_amp.dds", { .format = vk::Format::eR32G32Sfloat, .usage = vk::ImageUsageFlagBits::eSampled });
+	m_DDSAmpFresnel->TransitionLayout(VK_ImageLayout{
+	.layout = vk::ImageLayout::eShaderReadOnlyOptimal,
+	.accessFlag = vk::AccessFlagBits::eShaderRead,
+	.pipelineStage = vk::PipelineStageFlagBits::eFragmentShader,
+	});
+	
 	// Scene Compress textures
 	
 	m_CompressedTexture->CreateFromData(m_Scene->GetAtlasTex2D()->GetData().data(),
@@ -665,8 +676,8 @@ void RenderLayer::CreateDescriptors()
 			.type = vk::DescriptorType::eCombinedImageSampler,
 			.stage = vk::ShaderStageFlagBits::eFragment,
 			.imageInfo = vk::DescriptorImageInfo{
-			.sampler = m_LightBlurTexture->GetSampler(),
-			.imageView = m_LightBlurTexture->GetImageView(),
+			.sampler = m_DDSAmpFresnel->GetSampler(),
+			.imageView = m_DDSAmpFresnel->GetImageView(),
 			.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal
 			}
 		},

@@ -4,7 +4,7 @@
 
 namespace LTCFit {
 	float ComputeError(const LTC& ltc, const BRDF& brdf, const glm::vec3& V, const float alpha);
-	void ComputeAverageValues(const BRDF& brdf, const glm::vec3& V, const float alpha, glm::vec3& avg_dir, float& avg_n, float avg_fresnel);
+	void ComputeAverageValues(const BRDF& brdf, const glm::vec3& V, const float alpha, glm::vec3& avg_dir, float& avg_n, float& avg_fresnel);
 	struct LTCFitter {
 		LTC& m_ltc;
 		const BRDF& m_brdf;

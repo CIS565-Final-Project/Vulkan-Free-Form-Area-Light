@@ -21,8 +21,9 @@ target_include_directories(Engine
 PUBLIC
 	${ENGINE_INDLUDE_DIR}
 )
-target_link_libraries(Engine
+target_link_libraries(Engine PUBLIC
     ExternalLibs
+	LTCPrep
 	CudaHelperLib
 )
 target_precompile_headers(Engine PUBLIC
