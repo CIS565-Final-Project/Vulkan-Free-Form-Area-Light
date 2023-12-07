@@ -90,6 +90,13 @@ mat3 BitMatrix(vec3 V, vec3 N){
 	vec3 bitangent = cross(N,tangent);
 	return transpose(mat3(tangent,bitangent,N));
 }
+vec3 Fresnel(vec3 V, vec3 N, vec3 albedo, float metallic, float roughness){
+	vec3 R = mix(vec3(0.04f), albedo, metallic);
+    float cos = max(dot(V,N),0);
+    return R + (max(vec3(1.0-roughness),R)-R)*pow(1-cos,5);
+}
+
+
 
 //v: bounding quad of the light vertices in LTC space (not normalized, i.e. not on hemisphere yet)
 void FetchLight(vec3 v[4],  vec2 uvs[4], vec3 lookup, out vec2 uv, out float lod){
@@ -618,13 +625,13 @@ void main(){
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
 	float roughness = texture(compressedSampler, vec3(fragIn.uv, 2.0)).r;
-	
 	//roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
 	roughness = materialParam.x;
 	float metallic = materialParam.y;
 
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	vec2 fresnelWeight = GetFrenselTerm(V,N,roughness);
+	vec3 F0 = Fresnel(V,N,albedo.xyz,metallic,roughness);
 	mat3 I = mat3(
 		1,0,0,
 		0,1,0,
@@ -651,9 +658,9 @@ void main(){
 			d = IntegrateD(I, V, N, pos, lightInfo, true, ltuv, lod) * lightInfo.amplitude;
 			//apply light texture
 			vec3 diffuse = d * mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
-			diffuse = clamp(diffuse,vec3(0.f),vec3(1.f));
+			diffuse = clamp(diffuse,vec3(0.f),vec3(1.f)) * (1-metallic);
 
-			fs_Color += vec4(mix(diffuse, spec ,vec3(metallic)), 0.f) ;
+			fs_Color += vec4(mix(diffuse, spec, F0), 0.f);
 		}else{
 			float lod;
 		    vec2 ltuv;
@@ -668,9 +675,9 @@ void main(){
 			d = IntegrateBezierD(I, V, N, pos, roughness, lightInfo, false, ltuv, lod) * lightInfo.amplitude;
 			//apply light texture
 			vec3 diffuse = d * mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
-			diffuse = clamp(diffuse,vec3(0.f),vec3(1.f));
+			diffuse = clamp(diffuse,vec3(0.f),vec3(1.f)) * (1-metallic);
 
-			fs_Color += vec4(mix(diffuse, spec ,vec3(metallic)), 0.f) ;
+			fs_Color += vec4(mix(diffuse, spec, F0), 0.f);
 		}
 	}
 	//fs_Color =  fs_norm * 0.5f + 0.5f;
