@@ -166,7 +166,7 @@ namespace VK_Renderer
 		assert(res.arraySize <= MAX_LIGHT_VERTEX);
 		glm::mat4 modelMatrix = m_Transform.GetTransformation();
 		for (int i = 0;i < 4;++i) {
-			res.boundUV[i] = m_BoundaryUV[i];
+			res.boundUV[i] = glm::mix(m_UV00, m_UV11, m_BoundaryUV[i]);
 			res.boundPositions[i] = modelMatrix * glm::vec4(m_BoundaryVertex[i], 1.0);
 		}
 		for (int i = 0;i < m_LightVertex.size();++i) {
@@ -201,10 +201,6 @@ namespace VK_Renderer
 	std::vector<LightInfo> SceneLight::GetPackedLightInfo()
 	{
 		auto n = m_AreaLights.size();
-		std::vector<LightInfo> ans(n);
-		for (auto i = 0;i < n;++i) {
-			ans[i] = m_AreaLights[i].GetLightInfo();
-		}
 
 		//update light inform after atlas
 		auto compressedTex = GetLightTexture();//update light uvs
@@ -214,12 +210,13 @@ namespace VK_Renderer
 			glm::vec2 start = static_cast<glm::vec2>(atlas.start) / static_cast<glm::vec2>(compressedTex.GetResolution());
 			glm::vec2 end = static_cast<glm::vec2>(atlas.start + glm::ivec2(atlas.width, atlas.height)) / static_cast<glm::vec2>(compressedTex.GetResolution());
 
-			for (int j = 0;j < 4;++j) {
-				glm::vec2 uv = ans[i].boundUV[j];
-				uv = glm::mix(start, end, uv);
-				ans[i].boundUV[j] = uv;
-			}
+			m_AreaLights[i].m_UV00 = start;
+			m_AreaLights[i].m_UV11 = end;
+		}
 
+		std::vector<LightInfo> ans(n);
+		for (auto i = 0;i < n;++i) {
+			ans[i] = m_AreaLights[i].GetLightInfo();
 		}
 
 		return ans;

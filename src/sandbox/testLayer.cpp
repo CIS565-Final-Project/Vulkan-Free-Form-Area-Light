@@ -409,15 +409,7 @@ void RenderLayer::LoadScene()
 	boundSphere.w = 20.f;
 	MaterialInfo polygon_mat = MaterialInfo{
 		.texPath = {
-			"images/nvidia0.png",
-			"images/nvidia1.png",
-			"images/nvidia2.png",
-			"images/nvidia3.png",
-			"images/nvidia4.png",
-			"images/nvidia5.png",
-			"images/nvidia6.png",
-			"images/nvidia7.png",
-			"images/nvidia8.png",
+			"images/cyberpunk.jpg",
 		}
 	};
 	//AreaLight polygon_light(
@@ -461,15 +453,7 @@ void RenderLayer::LoadScene()
 	bezier_bound_sphere.w = 20.f;
 	MaterialInfo bezier_mat = MaterialInfo{
 		.texPath = {
-			"images/0.png",
-			"images/1.png",
-			"images/2.png",
-			"images/3.png",
-			"images/4.png",
-			"images/5.png",
-			"images/6.png",
-			"images/7.png",
-			"images/8.png",
+			"images/test_image.jpg",
 		}
 	};
 	m_SceneLight->AddLight(AreaLight{ 

@@ -44,6 +44,8 @@ namespace VK_Renderer
 		std::array<glm::vec2, 4> m_BoundaryUV;
 		std::vector<glm::vec3> m_LightVertex;
 		glm::vec4 m_BoundarySphere;
+		glm::vec2 m_UV00 = { 0,0 };
+		glm::vec2 m_UV11 = { 1,1 };
 	public:
 		float m_Amplitude;
 		Transformation m_Transform;
