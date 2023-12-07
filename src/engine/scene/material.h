@@ -18,6 +18,8 @@ namespace VK_Renderer
 		void Free();
 		void Load(MaterialInfo const& info);
 
+		void AddImage(Image const&& image);
+
 	protected:
 		DeclareWithGetFunc(protected, std::vector <Image>, m, Textures, const);
 	};

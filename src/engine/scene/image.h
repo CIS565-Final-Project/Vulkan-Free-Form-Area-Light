@@ -6,6 +6,9 @@ namespace VK_Renderer
 	{
 	public:
 		Image() {}
+		Image(void* data,
+			uint32_t const& size,
+			glm::ivec3 const& resolution);
 		Image(std::string const& file);
 		Image(const Image& img);
 		Image(Image&& img);

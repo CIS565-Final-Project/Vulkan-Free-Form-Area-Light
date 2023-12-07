@@ -40,6 +40,7 @@ void RenderLayer::OnAttach()
 	// Load Scene
 	m_Scene = mkU<Scene>();
 	m_SceneLight = mkU<SceneLight>();
+	m_SceneLight->SetBlurLayerCount(9);
 	LoadScene();
 
 	// Generate textures
@@ -420,15 +421,7 @@ void RenderLayer::LoadScene()
 		,
 		MaterialInfo{
 		 .texPath = {
-			"images/nvidia0.png",
-			"images/nvidia1.png",
-			"images/nvidia2.png",
-			"images/nvidia3.png",
-			"images/nvidia4.png",
-			"images/nvidia5.png",
-			"images/nvidia6.png",
-			"images/nvidia7.png",
-			"images/nvidia8.png",
+			"images/cyberpunk.jpg"
 			}
 		}
 	);
@@ -464,15 +457,7 @@ void RenderLayer::LoadScene()
 	},
 	MaterialInfo{
 	 .texPath = {
-		"images/0.png",
-		"images/1.png",
-		"images/2.png",
-		"images/3.png",
-		"images/4.png",
-		"images/5.png",
-		"images/6.png",
-		"images/7.png",
-		"images/8.png",
+		"images/test_image.jpg"
 		}
 	}
 	);
@@ -552,7 +537,7 @@ void RenderLayer::GenTextures()
 		{
 			.format = vk::Format::eR8G8B8A8Unorm,
 			.usage = vk::ImageUsageFlagBits::eSampled,
-			.arrayLayer = m_SceneLight->GetLightTextureArrayLayer()
+			.arrayLayer = m_SceneLight->GetBlurLayerCount()
 		}
 	);
 

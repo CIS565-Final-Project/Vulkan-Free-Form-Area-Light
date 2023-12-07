@@ -59,7 +59,9 @@ namespace VK_Renderer
 		void AddLight(const AreaLight& lt, const MaterialInfo& ltTextureInfo);
 		std::vector<LightInfo> GetPackedLightInfo()const;
 		inline uint32_t GetLightCount()const { return m_AreaLights.size(); };
-		inline uint32_t GetLightTextureArrayLayer()const { return m_MaterialInfos[0].texPath.size();};
 		AtlasTexture2D GetLightTexture();
+
+	protected:
+		DeclareWithGetSetFunc(protected, uint8_t, m, BlurLayerCount, const);
 	};
 }

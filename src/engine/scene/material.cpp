@@ -21,4 +21,8 @@ namespace VK_Renderer
 			if(info.texPath[i].size() > 0) m_Textures[i].LoadFromFile(info.texPath[i]);
 		}
 	}
+	void Material::AddImage(Image const&& image)
+	{
+		m_Textures.emplace_back(std::move(image));
+	}
 }
