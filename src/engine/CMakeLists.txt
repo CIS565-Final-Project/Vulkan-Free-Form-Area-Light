@@ -24,6 +24,7 @@ PUBLIC
 target_link_libraries(Engine PUBLIC
     ExternalLibs
 	LTCPrep
+	CudaHelperLib
 )
 target_precompile_headers(Engine PUBLIC
   "pch.h"

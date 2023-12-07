@@ -604,7 +604,7 @@ void main(){
 
 	vec4 albedo = texture(compressedSampler, vec3(fragIn.uv, 0.0)).rgba;
 	fs_Color = vec4(0.f);
-	//albedo.a *= albedo.a;//smoothstep( 0.1f, 0.8f, albedo.a);
+
 	//if(albedo.a < 0.2f) discard;
 	//fs_Color = albedo;
 	//return;

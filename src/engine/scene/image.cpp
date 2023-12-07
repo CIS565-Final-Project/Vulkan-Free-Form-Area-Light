@@ -1,6 +1,7 @@
 #include "image.h"
 
 #include <stb_image.h>
+
 #include <dds.h>
 #include <iostream>
 namespace VK_Renderer
@@ -9,7 +10,12 @@ namespace VK_Renderer
     {
         LoadFromFile(file);
     }
-
+    Image::Image(void* data,
+                uint32_t const& size,
+                glm::ivec3 const& resolution)
+        : m_RawData(data), m_Size(size), m_Resolution(resolution)
+    {
+    }
     Image::Image(const Image& img)
         :m_Size(img.m_Size), m_Resolution(img.GetResolution())
     {

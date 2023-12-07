@@ -40,6 +40,7 @@ void RenderLayer::OnAttach()
 	// Load Scene
 	m_Scene = mkU<Scene>();
 	m_SceneLight = mkU<SceneLight>();
+	m_SceneLight->SetBlurLayerCount(9);
 	LoadScene();
 
 	// Generate textures
@@ -563,7 +564,7 @@ void RenderLayer::GenTextures()
 		{
 			.format = vk::Format::eR8G8B8A8Unorm,
 			.usage = vk::ImageUsageFlagBits::eSampled,
-			.arrayLayer = m_SceneLight->GetLightTextureArrayLayer()
+			.arrayLayer = m_SceneLight->GetBlurLayerCount()
 		}
 	);
 

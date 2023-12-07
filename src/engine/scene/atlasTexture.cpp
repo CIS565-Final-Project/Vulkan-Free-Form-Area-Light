@@ -158,8 +158,6 @@ namespace VK_Renderer
 								*(m_Data.data() + layer_offset + copy_start + pixel * 3 + 1) = data[1];
 								*(m_Data.data() + layer_offset + copy_start + pixel * 3 + 2) = data[2];
 							}
-							//std::memset(m_Data.data() + layer_offset + copy_start, *data, size);
-							//std::memcpy(m_Data.data() + layer_offset + copy_start, data + h * size, size);
 						}
 					}
 					else
