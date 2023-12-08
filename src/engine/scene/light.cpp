@@ -88,75 +88,75 @@ namespace VK_Renderer
 		, m_LightMaterial(createInfo.lightMaterial)
 	{}
 
-	AreaLight::AreaLight(const std::string& objfile)
-		:m_LightType(LIGHT_TYPE::POLYGON)
-		,m_Amplitude(1.f)
-	{
-		tinyobj::ObjReaderConfig reader_config;
-		reader_config.triangulate = false;
+	//AreaLight::AreaLight(const std::string& objfile)
+	//	:m_LightType(LIGHT_TYPE::POLYGON)
+	//	,m_Amplitude(1.f)
+	//{
+	//	tinyobj::ObjReaderConfig reader_config;
+	//	reader_config.triangulate = false;
 
-		tinyobj::ObjReader reader;
+	//	tinyobj::ObjReader reader;
 
-		if (!reader.ParseFromFile(objfile.c_str(), reader_config)) {
-			if (!reader.Error().empty()) {
-				std::cerr << "TinyObjReader: " << reader.Error();
-			}
-			exit(1);
-		}
+	//	if (!reader.ParseFromFile(objfile.c_str(), reader_config)) {
+	//		if (!reader.Error().empty()) {
+	//			std::cerr << "TinyObjReader: " << reader.Error();
+	//		}
+	//		exit(1);
+	//	}
 
-		if (!reader.Warning().empty()) {
-			std::cout << "TinyObjReader: " << reader.Warning();
-		}
+	//	if (!reader.Warning().empty()) {
+	//		std::cout << "TinyObjReader: " << reader.Warning();
+	//	}
 
-		auto& shapes = reader.GetShapes();
+	//	auto& shapes = reader.GetShapes();
 
-		auto& attrib = reader.GetAttrib();
-		int vertexCnt = attrib.vertices.size() / 3;
-		assert(vertexCnt == 4);
-		std::vector<glm::vec3> tmpVertex(vertexCnt);
-		std::memcpy(tmpVertex.data(), attrib.vertices.data(), attrib.vertices.size() * sizeof(tinyobj::real_t));
+	//	auto& attrib = reader.GetAttrib();
+	//	int vertexCnt = attrib.vertices.size() / 3;
+	//	assert(vertexCnt == 4);
+	//	std::vector<glm::vec3> tmpVertex(vertexCnt);
+	//	std::memcpy(tmpVertex.data(), attrib.vertices.data(), attrib.vertices.size() * sizeof(tinyobj::real_t));
 
-		int geomCnt = shapes.size();
-		assert(geomCnt == 1);
-		int faceCnt = shapes[0].mesh.num_face_vertices.size();
-		assert(faceCnt == 1);
-		int faceVertCnt = shapes[0].mesh.num_face_vertices[0];
-		assert(faceVertCnt == 4);
-		std::vector<int> vertexMap(faceVertCnt);
-		std::vector<int> uvMap(faceVertCnt);
-		for (int i = 0;i < faceVertCnt;++i) {
-			tinyobj::index_t idx = shapes[0].mesh.indices[i];
-			vertexMap[i] = idx.vertex_index;
-			uvMap[i] = idx.texcoord_index;
-		}
+	//	int geomCnt = shapes.size();
+	//	assert(geomCnt == 1);
+	//	int faceCnt = shapes[0].mesh.num_face_vertices.size();
+	//	assert(faceCnt == 1);
+	//	int faceVertCnt = shapes[0].mesh.num_face_vertices[0];
+	//	assert(faceVertCnt == 4);
+	//	std::vector<int> vertexMap(faceVertCnt);
+	//	std::vector<int> uvMap(faceVertCnt);
+	//	for (int i = 0;i < faceVertCnt;++i) {
+	//		tinyobj::index_t idx = shapes[0].mesh.indices[i];
+	//		vertexMap[i] = idx.vertex_index;
+	//		uvMap[i] = idx.texcoord_index;
+	//	}
 
-		//remap vertex back
-		m_LightVertex.resize(vertexCnt);
-		for (int i = 0;i < 4;++i) {
-			m_LightVertex[vertexMap[i]] = tmpVertex[i];
-			m_BoundaryVertex[vertexMap[i]] = tmpVertex[i];
-		}
+	//	//remap vertex back
+	//	m_LightVertex.resize(vertexCnt);
+	//	for (int i = 0;i < 4;++i) {
+	//		m_LightVertex[vertexMap[i]] = tmpVertex[i];
+	//		m_BoundaryVertex[vertexMap[i]] = tmpVertex[i];
+	//	}
 
-		if (attrib.texcoords.size() == 2 * 4) {
-			std::vector<glm::vec2> tmpUV(vertexCnt);
-			std::memcpy(tmpUV.data(), attrib.texcoords.data(), attrib.texcoords.size() * sizeof(tinyobj::real_t));
-			for (int i = 0;i < 4;++i) {
-				m_BoundaryUV[uvMap[i]] = tmpUV[i];
-			}
-		}
-		else {
-			m_BoundaryUV = { glm::vec2(1.f,0.f),glm::vec2(0.f,0.f),glm::vec2(0.f,1.f),glm::vec2(1.f,1.f) };
-		}
+	//	if (attrib.texcoords.size() == 2 * 4) {
+	//		std::vector<glm::vec2> tmpUV(vertexCnt);
+	//		std::memcpy(tmpUV.data(), attrib.texcoords.data(), attrib.texcoords.size() * sizeof(tinyobj::real_t));
+	//		for (int i = 0;i < 4;++i) {
+	//			m_BoundaryUV[uvMap[i]] = tmpUV[i];
+	//		}
+	//	}
+	//	else {
+	//		m_BoundaryUV = { glm::vec2(1.f,0.f),glm::vec2(0.f,0.f),glm::vec2(0.f,1.f),glm::vec2(1.f,1.f) };
+	//	}
 
-		// load materials
-		auto& materials = reader.GetMaterials();
-		for (auto const& material : materials)
-		{
-			m_LightMaterial = MaterialInfo{
-				.texPath = { material.diffuse_texname }
-			};
-		}
-	}
+	//	// load materials
+	//	auto& materials = reader.GetMaterials();
+	//	for (auto const& material : materials)
+	//	{
+	//		m_LightMaterial = MaterialInfo{
+	//			.texPath = { material.diffuse_texname }
+	//		};
+	//	}
+	//}
 
 	LightInfo AreaLight::GetLightInfo() const
 	{
@@ -198,6 +198,84 @@ namespace VK_Renderer
 		m_AreaLights.emplace_back(lt);
 		m_MaterialInfos.emplace_back(lt.m_LightMaterial);
 	}
+
+	void SceneLight::AddQuadLightsFromFile(const std::string& objfile) {
+		tinyobj::ObjReaderConfig reader_config;
+		reader_config.triangulate = false;
+
+		tinyobj::ObjReader reader;
+
+		if (!reader.ParseFromFile(objfile.c_str(), reader_config)) {
+			if (!reader.Error().empty()) {
+				std::cerr << "TinyObjReader: " << reader.Error();
+			}
+			exit(1);
+		}
+
+		if (!reader.Warning().empty()) {
+			std::cout << "TinyObjReader: " << reader.Warning();
+		}
+
+		auto& shapes = reader.GetShapes();
+		auto& attrib = reader.GetAttrib();
+		auto& materials = reader.GetMaterials();
+
+		//copy data to tmp vector for easier access
+		int vertexCnt = attrib.vertices.size() / 3;
+		std::vector<glm::vec3> tmpVertex(vertexCnt);
+		std::memcpy(tmpVertex.data(), attrib.vertices.data(), attrib.vertices.size() * sizeof(tinyobj::real_t));
+		
+		std::vector<MaterialInfo> tmpMaterial;
+		for (auto& material : materials) {
+			tmpMaterial.push_back(MaterialInfo{
+				.texPath = {material.diffuse_texname}
+				});
+		}
+		//must load light texture
+		assert(tmpMaterial.size() > 0);
+
+		std::vector<glm::vec2> tmpUV;
+		bool hasUVInfo = attrib.texcoords.size() > 0;
+		if (hasUVInfo) {
+			tmpUV.resize(attrib.texcoords.size() / 2);
+			std::memcpy(tmpUV.data(), attrib.texcoords.data(), attrib.texcoords.size() * sizeof(tinyobj::real_t));
+		}
+
+		//copy data to add light		
+		for (auto& shape : shapes) {
+			int faceCnt = shape.mesh.num_face_vertices.size();
+			int faceVertOffset = 0;
+			for (int face_id = 0;face_id < faceCnt; ++face_id) {
+				int faceVertCnt = shape.mesh.num_face_vertices[face_id];
+				assert(faceVertCnt == 4);
+				std::vector<glm::vec3> curLightVertex(faceVertCnt);
+				//remap uv, idx
+				std::vector<glm::vec3> polygon_vert;
+				std::array<glm::vec3, 4> boundary_pos;
+				std::array<glm::vec2, 4> boundary_uv = { glm::vec2(1.f,0.f),glm::vec2(0.f,0.f),glm::vec2(0.f,1.f),glm::vec2(1.f,1.f) };
+				for (int face_vert_id = 0;face_vert_id < faceVertCnt;++face_vert_id) {
+					tinyobj::index_t idx = shape.mesh.indices[faceVertOffset + face_vert_id];
+					polygon_vert.push_back(tmpVertex[idx.vertex_index]);
+					boundary_pos[face_vert_id] = tmpVertex[idx.vertex_index];
+					if (hasUVInfo) {
+						boundary_uv[face_vert_id] = tmpUV[idx.texcoord_index];
+					}
+				}
+				AreaLight curLight(
+					AreaLightCreateInfo{
+						.type = LIGHT_TYPE::POLYGON,
+						.boundPositions = boundary_pos,
+						.boundUV = boundary_uv,
+						.lightVertex = polygon_vert,
+						.lightMaterial = tmpMaterial[shape.mesh.material_ids[face_id]]
+					}
+				);
+				AddLight(curLight);
+				faceVertOffset += faceVertCnt;
+			}
+		}
+	}
+
 	std::vector<LightInfo> SceneLight::GetPackedLightInfo()
 	{
 		auto n = m_AreaLights.size();

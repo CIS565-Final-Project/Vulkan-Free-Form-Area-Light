@@ -51,7 +51,7 @@ namespace VK_Renderer
 		Transformation m_Transform;
 		MaterialInfo m_LightMaterial;
 		AreaLight(AreaLightCreateInfo const & createInfo);
-		AreaLight(const std::string& objfile); //only for quad light
+		//AreaLight(const std::string& objfile); //only for quad light
 		LightInfo GetLightInfo()const;
 		friend class SceneLight;
 	};
@@ -63,6 +63,7 @@ namespace VK_Renderer
 	public:
 		AreaLight* GetLight(size_t idx);
 		void AddLight(const AreaLight& lt);
+		void AddQuadLightsFromFile(const std::string& objfile);
 		inline uint32_t GetLightCount()const { return m_AreaLights.size(); };
 		std::vector<LightInfo> GetPackedLightInfo();
 		AtlasTexture2D GetLightTexture();
