@@ -425,9 +425,10 @@ void RenderLayer::LoadScene()
 	//		.lightMaterial = polygon_mat
 	//	}
 	//);
-	AreaLight polygon_light("meshes/lightQuad.obj");
-	polygon_light.m_LightMaterial = polygon_mat;
-	m_SceneLight->AddLight(polygon_light);
+	//AreaLight polygon_light("meshes/lightQuad.obj");
+	//polygon_light.m_LightMaterial = polygon_mat;
+	//m_SceneLight->AddLight(polygon_light);
+	m_SceneLight->AddQuadLightsFromFile("meshes/twolights.obj");
 
 	std::vector<glm::vec3> bezier_verts = {
 		glm::vec3(-1.5, -0.5f, 5.0f),
