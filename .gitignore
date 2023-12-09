@@ -3,5 +3,6 @@
 /bin
 /Build
 */ignores
+/resouces/images/station/*
 
 CMakeSettings.json

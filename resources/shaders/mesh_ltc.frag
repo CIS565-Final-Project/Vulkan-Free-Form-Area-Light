@@ -583,9 +583,10 @@ void CoordinateSystem(in vec3 normal, out vec3 tangent, out vec3 bitangent)
 }
 
 vec3 GetNormal()
-{
+{	
 	vec3 normal = normalize(fragIn.normal);
 	vec3 nor = texture(compressedSampler, vec3(fragIn.uv, 1.0)).rgb;
+	nor = 2 * nor - vec3(1.0f);
 	
 	if(dot(nor, nor) > 0.f)
 	{
@@ -597,6 +598,7 @@ vec3 GetNormal()
 	}
 
 	return normal;
+	
 }
 
 void main(){
@@ -616,6 +618,7 @@ void main(){
 
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
+
 	float roughness = texture(compressedSampler, vec3(fragIn.uv, 2.0)).r;
 	//roughness += 
 	//roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
@@ -677,11 +680,13 @@ void main(){
 			fs_Color += vec4(mix(diffuse, spec, F0), 0.f);
 		}
 	}
-	//fs_Color.xyz =  fs_norm * 0.5f + 0.5f;
+	 // fs_Color.xyz = N;
+	// fs_Color.xyz = vec3(dot(V, N));
+	
 	fs_Color *= albedo;
 	fs_Color = (fs_Color) / (fs_Color + 1.f);
 
 	fs_Color.a = albedo.a;
 	//fs_Color * 1.1f;
-	//fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f));
+	// fs_Color = clamp(fs_Color, vec4(0.f), vec4(1.f));
 }

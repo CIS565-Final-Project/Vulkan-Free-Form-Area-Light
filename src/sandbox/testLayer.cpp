@@ -146,7 +146,7 @@ void RenderLayer::OnImGui(double const& deltaTime)
 
 		modified |= ImGui::DragFloat3("Position", &mesh.transform.position[0], 0.1f, -200.f, 200.f);
 		modified |= ImGui::DragFloat3("Rotation", &euler[0], 0.1f, -2.f * glm::pi<float>(), 2.f * glm::pi<float>());
-		modified |= ImGui::DragFloat3("Scale", &mesh.transform.scale[0], 0.01f, 0.01f, 1.f);
+		modified |= ImGui::DragFloat3("Scale", &mesh.transform.scale[0], 0.01f, 0.01f, 10.f);
 		
 		if (modified)
 		{
@@ -361,7 +361,7 @@ void RenderLayer::LoadScene()
 			.scale = {0.1f, 0.1f, 0.1f}
 	};
 	// Load Meshes
-	
+	//
 	//m_Scene->AddMesh("meshes/plane.obj", "Plane",
 	//	Transformation{
 	//		.position = {0, -1.5, 0}
