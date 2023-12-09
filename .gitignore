@@ -3,6 +3,7 @@
 /bin
 /Build
 */ignores
-/resouces/images/station/*
 
 CMakeSettings.json
+resources/images/station
+resources/meshes/ignores
