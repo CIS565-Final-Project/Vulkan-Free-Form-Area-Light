@@ -63,7 +63,7 @@ namespace VK_Renderer
 	public:
 		AreaLight* GetLight(size_t idx);
 		void AddLight(const AreaLight& lt);
-		void AddQuadLightsFromFile(const std::string& objfile);
+		void AddQuadLightsFromFile(const std::string& objfile, Transformation const& transform);
 		inline uint32_t GetLightCount()const { return m_AreaLights.size(); };
 		std::vector<LightInfo> GetPackedLightInfo();
 		AtlasTexture2D GetLightTexture();

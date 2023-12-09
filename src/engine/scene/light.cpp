@@ -199,7 +199,8 @@ namespace VK_Renderer
 		m_MaterialInfos.emplace_back(lt.m_LightMaterial);
 	}
 
-	void SceneLight::AddQuadLightsFromFile(const std::string& objfile) {
+	void SceneLight::AddQuadLightsFromFile(const std::string& objfile, Transformation const& transform) 
+	{
 		tinyobj::ObjReaderConfig reader_config;
 		reader_config.triangulate = false;
 
@@ -264,6 +265,8 @@ namespace VK_Renderer
 				AreaLight curLight(
 					AreaLightCreateInfo{
 						.type = LIGHT_TYPE::POLYGON,
+						.amplitude = 100.f,
+						.transform = transform,
 						.boundPositions = boundary_pos,
 						.boundUV = boundary_uv,
 						.lightVertex = polygon_vert,

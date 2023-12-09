@@ -71,12 +71,7 @@ mat3 LTCMatrix(vec3 V, vec3 N, float roughness){
 	//reproject uv to 64x64 texture eg. for roughness = 1, u should be 63.5/64;
 	uv = uv * (LUT_SIZE - 1)/LUT_SIZE  + 0.5 / LUT_SIZE;
 	vec4 ltcVal = texture(LTCSampler, uv);
-	
-	//mat3 res = mat3(
-	//	vec3(1,0,ltcVal.y),
-	//	vec3(0,ltcVal.z,0),
-	//	vec3(ltcVal.w,0,ltcVal.x)
-	//);
+
 	mat3 res = mat3(
 		vec3(ltcVal.x,0,ltcVal.z),
 		vec3(0,1,0),
@@ -91,7 +86,7 @@ mat3 BitMatrix(vec3 V, vec3 N){
 	return transpose(mat3(tangent,bitangent,N));
 }
 vec3 Fresnel(vec3 V, vec3 N, vec3 albedo, float metallic, float roughness){
-	vec3 R = mix(vec3(0.04f), albedo, metallic);
+	vec3 R = mix(vec3(0.04f), vec3(1.f), metallic);
     float cos = max(dot(V,N),0);
     return R + (max(vec3(1.0-roughness),R)-R)*pow(1-cos,5);
 }
@@ -612,7 +607,7 @@ void main(){
 	vec4 albedo = texture(compressedSampler, vec3(fragIn.uv, 0.0)).rgba;
 	fs_Color = vec4(0.f);
 
-	//if(albedo.a < 0.2f) discard;
+	//if(albedo.a < 0.01f) discard;
 	//fs_Color = albedo;
 	//return;
 
@@ -625,9 +620,10 @@ void main(){
 	vec3 V = normalize(cameraPos - pos);
 	vec3 N = normalize(fs_norm);
 	float roughness = texture(compressedSampler, vec3(fragIn.uv, 2.0)).r;
+	//roughness += 
 	//roughness = clamp(roughness , 0.1f, 0.99f);//fix visual artifact when roughness is 1.0
-	roughness = materialParam.x;
-	float metallic = materialParam.y;
+	//roughness = materialParam.x;
+	float metallic = texture(compressedSampler, vec3(fragIn.uv, 3.0)).r;
 
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	vec2 fresnelWeight = GetFrenselTerm(V,N,roughness);
@@ -637,6 +633,8 @@ void main(){
 		0,1,0,
 		0,0,1
 	);
+	
+	bool doubleSide = false;
 
 	// Multilight Integration
 	for(int i = 0;i< lightCount; ++i){
@@ -648,42 +646,43 @@ void main(){
 			float lod;
 		    vec2 ltuv;
 
-			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, true, ltuv, lod) * lightInfo.amplitude;
+			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, doubleSide, ltuv, lod) * lightInfo.amplitude;
 			float F = max(fresnelWeight.x, 0.001);
 			vec3 spec = vec3(d * (F + fresnelWeight.y/F - fresnelWeight.y));
 			//apply light texture
 			spec *= mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
-			spec = clamp(spec,vec3(0.f),vec3(1.f));
+			spec = max(spec, 0.f);
 
-			d = IntegrateD(I, V, N, pos, lightInfo, true, ltuv, lod) * lightInfo.amplitude;
+			d = IntegrateD(I, V, N, pos, lightInfo, doubleSide, ltuv, lod) * lightInfo.amplitude;
 			//apply light texture
 			vec3 diffuse = d * mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
-			diffuse = clamp(diffuse,vec3(0.f),vec3(1.f)) * (1-metallic);
+			diffuse = max(diffuse, vec3(0.f)) * (1.f - metallic);
 
 			fs_Color += vec4(mix(diffuse, spec, F0), 0.f);
 		}else{
 			float lod;
 		    vec2 ltuv;
 			
-			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, false, ltuv, lod) * lightInfo.amplitude;
+			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, doubleSide, ltuv, lod) * lightInfo.amplitude;
 			float F = max(fresnelWeight.x, 0.001);
 			vec3 spec = vec3(d * (F + fresnelWeight.y/F - fresnelWeight.y));
 			//apply texture
 			spec *= mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
-			spec = clamp(spec,vec3(0.f),vec3(1.f));
+			spec = max(spec, 0.f);
 
-			d = IntegrateBezierD(I, V, N, pos, roughness, lightInfo, false, ltuv, lod) * lightInfo.amplitude;
+			d = IntegrateBezierD(I, V, N, pos, roughness, lightInfo, doubleSide, ltuv, lod) * lightInfo.amplitude;
 			//apply light texture
 			vec3 diffuse = d * mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
-			diffuse = clamp(diffuse,vec3(0.f),vec3(1.f)) * (1-metallic);
+			diffuse = max(diffuse, vec3(0.f)) * (1.f - metallic);
 
 			fs_Color += vec4(mix(diffuse, spec, F0), 0.f);
 		}
 	}
 	//fs_Color =  fs_norm * 0.5f + 0.5f;
-	fs_Color.a = 1.f;
-	//fs_Color *= albedo;
-	//fs_Color = (fs_Color) / (fs_Color + 1.f);
+	fs_Color *= albedo;
+	fs_Color = (fs_Color) / (fs_Color + 1.f);
+
+	fs_Color.a = albedo.a;
 	//fs_Color * 1.1f;
 	//fs_Color = clamp(fs_Color, vec3(0.f), vec3(1.f));
 }

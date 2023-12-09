@@ -186,7 +186,7 @@ void RenderLayer::OnImGui(double const& deltaTime)
 		AreaLight& area_light = *m_SceneLight->GetLight(current_id);
 		glm::vec3 euler = glm::eulerAngles(area_light.m_Transform.rotation);
 		modified |= ImGui::DragFloat3("Position", &area_light.m_Transform.position[0], 0.1f, -200.f, 200.f);
-		modified |= ImGui::DragFloat("Amplitude", &area_light.m_Amplitude, 0.1f, 0.f, 20.f);
+		modified |= ImGui::DragFloat("Amplitude", &area_light.m_Amplitude, 0.1f, 1.f, 1000.f);
 		modified |= ImGui::DragFloat3("Rotation", &euler[0], 0.1f, -2.f * glm::pi<float>(), 2.f * glm::pi<float>());
 		modified |= ImGui::DragFloat3("Scale", &area_light.m_Transform.scale[0], 0.1f, 0.1f, 3.f);
 
@@ -356,27 +356,27 @@ void RenderLayer::RecordCmd()
 
 void RenderLayer::LoadScene()
 {
+	Transformation transformation{
+			.position = {0, -1.5, -10.f},
+			.scale = {0.1f, 0.1f, 0.1f}
+	};
 	// Load Meshes
 	
-	m_Scene->AddMesh("meshes/plane.obj", "Plane",
-		Transformation{
-			.position = {0, -1.5, 0}
-	});
-	m_Scene->AddMesh("meshes/wahoo.obj", "Wahoo",
-		Transformation{
-			.position = {0, -1.5, 0},
-			.scale = {1, 1, 1}
-	});
+	//m_Scene->AddMesh("meshes/plane.obj", "Plane",
+	//	Transformation{
+	//		.position = {0, -1.5, 0}
+	//});
+	//m_Scene->AddMesh("meshes/wahoo.obj", "Wahoo",
+	//	Transformation{
+	//		.position = {0, -1.5, 0},
+	//		.scale = {1, 1, 1}
+	//});
 	//m_Scene->AddMesh("meshes/Astartes.obj", "Astartes",
 	//	Transformation{
 	//		.position = {0, -2, 0},
 	//		.scale = {0.03f, 0.03f, 0.03f}
 	//});
-	//m_Scene->AddMesh("meshes/ignores/station.obj", "station",
-	//	Transformation{
-	//		.position = {0, -1.5, 0},
-	//		.scale = {0.1f, 0.1f, 0.1f}
-	//});
+	m_Scene->AddMesh("meshes/ignores/station.obj", "station", transformation);
 	//m_Scene->AddMesh("meshes/ignores/test_alpha.obj", "station",
 	//	Transformation{
 	//		.position = {0, -1.5, 0},
@@ -388,7 +388,7 @@ void RenderLayer::LoadScene()
 	});
 
 	// Load Lights
-	float halfWidth = 1.0f;
+	/*float halfWidth = 1.0f;
 	std::vector<glm::vec3> polygon_verts = {
 		glm::vec3(-halfWidth, -halfWidth + 1.0f, -5.0f),
 		glm::vec3(halfWidth, -halfWidth + 1.0f, -5.0f),
@@ -428,8 +428,9 @@ void RenderLayer::LoadScene()
 	//AreaLight polygon_light("meshes/lightQuad.obj");
 	//polygon_light.m_LightMaterial = polygon_mat;
 	//m_SceneLight->AddLight(polygon_light);
-	m_SceneLight->AddQuadLightsFromFile("meshes/twolights.obj");
-
+	*/
+	m_SceneLight->AddQuadLightsFromFile("meshes/lights.obj", transformation);
+	/*
 	std::vector<glm::vec3> bezier_verts = {
 		glm::vec3(-1.5, -0.5f, 5.0f),
 		glm::vec3(1.5f, -0.5f, 5.0f),
@@ -465,7 +466,7 @@ void RenderLayer::LoadScene()
 			.lightVertex = bezier_verts,
 			.lightMaterial = bezier_mat
 		}
-	});
+	});*/
 }
 
 void RenderLayer::GenBuffers()
