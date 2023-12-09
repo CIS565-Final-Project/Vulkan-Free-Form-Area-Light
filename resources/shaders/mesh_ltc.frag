@@ -85,10 +85,10 @@ mat3 BitMatrix(vec3 V, vec3 N){
 	vec3 bitangent = cross(N,tangent);
 	return transpose(mat3(tangent,bitangent,N));
 }
-vec3 Fresnel(vec3 V, vec3 N, vec3 albedo, float metallic, float roughness){
-	vec3 R = mix(vec3(0.04f), vec3(1.f), metallic);
+float Fresnel(vec3 V, vec3 N, float metallic, float roughness){
+	float R = mix((0.04f), (1.f), metallic);
     float cos = max(dot(V,N),0);
-    return R + (max(vec3(1.0-roughness),R)-R)*pow(1-cos,5);
+    return R + (max((1.0-roughness),R)-R)*pow(1-cos,5);
 }
 
 
@@ -352,10 +352,7 @@ float IntegrateD(mat3 LTCMat, vec3 V, vec3 N, vec3 shadePos,const in LightInfo l
 	vec3 lightVertex[MAX_LIGHT_VERTEX] = lightInfo.lightVertex;
 	int arrSize = lightInfo.arraySize;
 	//to tangent space
-	vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-	vec3 tangent = normalize(V - N * dot(V,N));
-	vec3 bitangent = cross(N,tangent);
-	mat3 worldToLTC = LTCMat * transpose(mat3(tangent,bitangent,N)); //inverse rotation matrix
+	mat3 worldToLTC = LTCMat * BitMatrix(V,N); //inverse rotation matrix
 	for(int i = 0;i<arrSize;++i){
 		lightVertex[i] = worldToLTC * (lightVertex[i] - shadePos);
 	}
@@ -627,7 +624,8 @@ void main(){
 
 	mat3 LTCMat = LTCMatrix(V, N, roughness);
 	vec2 fresnelWeight = GetFrenselTerm(V,N,roughness);
-	vec3 F0 = Fresnel(V,N,albedo.xyz,metallic,roughness);
+	float F0 = Fresnel(V,N,metallic,roughness);
+	F0 = 1;
 	mat3 I = mat3(
 		1,0,0,
 		0,1,0,
@@ -646,9 +644,10 @@ void main(){
 			float lod;
 		    vec2 ltuv;
 
-			float d = IntegrateD(LTCMat,V,N,pos,lightInfo, doubleSide, ltuv, lod) * lightInfo.amplitude;
-			float F = max(fresnelWeight.x, 0.001);
-			vec3 spec = vec3(d * (F + fresnelWeight.y/F - fresnelWeight.y));
+			float d = IntegrateD(LTCMat, V, N, pos,lightInfo, doubleSide, ltuv, lod) * lightInfo.amplitude;
+			//float F = max(fresnelWeight.x, 0.001);
+			//vec3 spec = vec3(d * (F + fresnelWeight.y/F - fresnelWeight.y));
+			vec3 spec = vec3(F0 * fresnelWeight.x + (1 - F0) * fresnelWeight.y) * d;
 			//apply light texture
 			spec *= mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 			spec = max(spec, 0.f);
@@ -659,13 +658,13 @@ void main(){
 			diffuse = max(diffuse, vec3(0.f)) * (1.f - metallic);
 
 			fs_Color += vec4(mix(diffuse, spec, F0), 0.f);
+			//fs_Color += vec4(spec,0.f);
 		}else{
 			float lod;
 		    vec2 ltuv;
 			
 			float d = IntegrateBezierD(LTCMat, V, N, pos, roughness, lightInfo, doubleSide, ltuv, lod) * lightInfo.amplitude;
-			float F = max(fresnelWeight.x, 0.001);
-			vec3 spec = vec3(d * (F + fresnelWeight.y/F - fresnelWeight.y));
+			vec3 spec = vec3(F0 * fresnelWeight.x + (1 - F0) * fresnelWeight.y) * d;
 			//apply texture
 			spec *= mix(texture(lightAtlasTexture,vec3(ltuv,ceil(lod))).xyz, texture(lightAtlasTexture,vec3(ltuv,floor(lod))).xyz, ceil(lod) - lod);
 			spec = max(spec, 0.f);
@@ -678,7 +677,7 @@ void main(){
 			fs_Color += vec4(mix(diffuse, spec, F0), 0.f);
 		}
 	}
-	//fs_Color =  fs_norm * 0.5f + 0.5f;
+	//fs_Color.xyz =  fs_norm * 0.5f + 0.5f;
 	fs_Color *= albedo;
 	fs_Color = (fs_Color) / (fs_Color + 1.f);
 
