@@ -682,7 +682,7 @@ void main(){
 	}
 	 // fs_Color.xyz = N;
 	// fs_Color.xyz = vec3(dot(V, N));
-	
+	fs_Color += 0.1;
 	fs_Color *= albedo;
 	fs_Color = (fs_Color) / (fs_Color + 1.f);
 

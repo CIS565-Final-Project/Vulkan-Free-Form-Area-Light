@@ -78,7 +78,7 @@ This selective approach to rendering not only streamlines GPU workload but also 
 
 Also, we implemented real time free-form area light shading, which is mainly calculated in fragment shader. It is inspired by [a JCGT paper](https://jcgt.org/published/0011/01/01/), which is based on a previous [siggraph paper](https://eheitzresearch.wordpress.com/415-2/). In the previous siggraph paper, it introduced a method to shade polygon area light using Linearly Transformed Cosines(LTC). With this method, we transform area light from original space to LTC distribution space, where the light integration on the glossy surface could be caulculated as on the diffuse surface.
 <p align="center">
-  <img src="./img/LTC.png" alt="LTC img">
+  <img src="./img/LTC.png" alt="LTC img" width="600">
 </p>
 <p align="center">(an image shows how LTC works, from original paper)</p>
 
@@ -93,7 +93,7 @@ To transform the area light into LTC distribution space, we need to multiply the
 After we transformed light vertices with LTC distribution, we cliped the area that is under the shading plane. Then we calculate the integration for polygon area lights edge by edge with the method mentioned in the [paper](https://eheitzresearch.wordpress.com/415-2/). For free-form area lights, we represented them with bezier curves. To calculate their integrations, the curves are subdivided recursively until the bounded region of current curve segment is smaller than a dynamic threhold decided by fragment roughness. For bezier curves, we need to pay attention to the case where the bezier curves are nearly linear and we handle the curves as straight lines. The result of the integration shows the direction of the average light direction in the LTC distribution space, we use this to find the intersection of the light ray and the area light to get the UV of the light's texture.
 
 <p align="center">
-  <img src="./img/bezier_light.png" alt="LTC img">
+  <img src="./img/bezier_light.png" alt="LTC img" width="600">
 </p>
 <p align="center">(an image shows how LTC works, from original paper)</p>
 
@@ -101,7 +101,7 @@ After we transformed light vertices with LTC distribution, we cliped the area th
 Besides, we draw the bezier-curved light with help of mesh shader in an additional pipeline only for light rendering. We implemented the tessellation of bezier-curved area in task and mesh shader. First, we calculate the center of the area light. Then, we cut the curve into segments. Lastly, we send each segment to one mesh shader, where each segment will form a triangle with the center point, and this triangle will be drawn.
 
 <p align="center">
-  <img src="./img/curve_light.PNG" alt="Free form light">
+  <img src="./img/curve_light.PNG" alt="Free form light" width="600">
 </p>
 <p align="center">(free-form light drawn by mesh shader)</p>
 
@@ -109,7 +109,7 @@ Besides, we draw the bezier-curved light with help of mesh shader in an addition
 For both polygon and bezier curved light, we could assign texture to them for better visual effect.
 
 <p align="center">
-  <img src="./img/texture.PNG" alt="Texture light">
+  <img src="./img/texture.png" alt="Texture light" width="600">
 </p>
 <p align="center">(textured area light)</p>
 
