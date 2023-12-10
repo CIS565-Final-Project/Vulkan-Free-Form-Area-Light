@@ -57,6 +57,14 @@ Besides, we draw the bezier-curved light with help of mesh shader. We implemente
 </p>
 <p align="center">(free-form light drawn by mesh shader)</p>
 
+### Textured Area Light
+For both polygon and bezier curved light, we could assign texture to them for better visual effect.
+
+<p align="center">
+  <img src="./img/texture.PNG" alt="Texture light">
+</p>
+<p align="center">(textured area light)</p>
+
 ## Third Party Credit
 - [Real-Time Shading of Free-Form Area Lights using Linearly Transformed Cosines](https://jcgt.org/published/0011/01/01/)
 
