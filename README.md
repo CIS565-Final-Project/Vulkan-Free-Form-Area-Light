@@ -4,6 +4,7 @@ Vulkan Mesh Shader with Free-Form Planar Area Lights
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Fianl Project**
 
 * Mengxuan Huang [[LinkedIn](https://www.linkedin.com/in/mengxuan-huang-52881624a/)]
+* Tianyi Xiao [[LinkedIn](https://www.linkedin.com/in/tianyi-xiao-20268524a/)]
 * Tested on: Windows 11, i9-13980HX @ 2.22GHz 64.0 GB, RTX4090-Laptop 16384MB
 
 ## Description
@@ -96,7 +97,8 @@ After we transformed light vertices with LTC distribution, we cliped the area th
 <p align="center">(an image shows how LTC works, from original paper)</p>
 
 ### Draw Free-Form Lights with Mesh Shader
-Besides, we draw the bezier-curved light with help of mesh shader. We implemented the tessellation of bezier-curved area in task shader. First, we calculate the center of the area light. Then, we cut the curve into segments and use the segments and the center we calculated to build triangles. Lastly, we send the triangles to mesh shader and draw the final result.
+Besides, we draw the bezier-curved light with help of mesh shader in an additional pipeline only for light rendering. We implemented the tessellation of bezier-curved area in task and mesh shader. First, we calculate the center of the area light. Then, we cut the curve into segments. Lastly, we send each segment to one mesh shader, where each segment will form a triangle with the center point, and this triangle will be drawn.
+
 <p align="center">
   <img src="./img/curve_light.PNG" alt="Free form light">
 </p>
@@ -109,6 +111,10 @@ For both polygon and bezier curved light, we could assign texture to them for be
   <img src="./img/texture.PNG" alt="Texture light">
 </p>
 <p align="center">(textured area light)</p>
+
+Same as the method introduced in the previous [paper](https://eheitzresearch.wordpress.com/415-2/), during integration stage, we calculate the average direction to each vertex of the light in LTC space and then interpolate with polygons to get the actual uv, and decide the blur level also according to the distance from fragment to the polygon plane and integration result.
+
+What's more, we use a bounding square to map and interpolate the uv of curved light, for both curved texture lighting and curved texture light drawing.
 
 ## Third Party Credit
 - [Real-Time Shading of Free-Form Area Lights using Linearly Transformed Cosines](https://jcgt.org/published/0011/01/01/)
