@@ -5,6 +5,7 @@ Vulkan Mesh Shader with Free-Form Planar Area Lights
 
 * Mengxuan Huang [[LinkedIn](https://www.linkedin.com/in/mengxuan-huang-52881624a/)]
 * Tianyi Xiao [[LinkedIn](https://www.linkedin.com/in/tianyi-xiao-20268524a/)]
+* Licheng Cao [[LinkedIn](https://www.linkedin.com/in/licheng-cao-6a523524b/)]
 * Tested on: Windows 11, i9-13980HX @ 2.22GHz 64.0 GB, RTX4090-Laptop 16384MB
 
 ## Description
