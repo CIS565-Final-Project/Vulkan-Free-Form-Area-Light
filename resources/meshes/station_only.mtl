@@ -1,0 +1,551 @@
+# Blender 3.6.2 MTL File: 'None'
+# www.blender.org
+
+newmtl Banco
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/Banco_baseColor.jpg
+map_Pr images/ignores/station/Banco_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/Banco_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/Banco_normal.jpg
+
+newmtl Barandilla
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/Barandilla_baseColor.jpg
+map_Pr images/ignores/station/Barandilla_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/Barandilla_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/Barandilla_normal.jpg
+
+newmtl CableTexturePack
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/CableTexturePack_baseColor.jpg
+map_Pr images/ignores/station/CableTexturePack_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CableTexturePack_metallicRoughness_metal_scale1.jpg
+
+newmtl CajaExtintor
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd images/ignores/station/CajaExtintor_baseColor.png
+map_Pr images/ignores/station/CajaExtintor_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CajaExtintor_metallicRoughness_metal.jpg
+map_d images/ignores/station/CajaExtintor_baseColor.png
+map_Bump -bm 1.000000 images/ignores/station/CajaExtintor_normal.jpg
+
+newmtl CajaMetalica
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/CajaMetalica_baseColor.jpg
+map_Pr images/ignores/station/CajaMetalica_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CajaMetalica_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/CajaMetalica_normal.jpg
+
+newmtl CajaT
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/CajaT_baseColor.jpg
+map_Pr images/ignores/station/CajaT_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CajaT_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/CajaT_normal.jpg
+
+newmtl CajaVias
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/CajaVias_baseColor.jpg
+map_Pr images/ignores/station/CajaVias_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CajaVias_metallicRoughness_metal_scale1.jpg
+map_Bump -bm 1.000000 images/ignores/station/CajaVias_normal.jpg
+
+newmtl CamaraColgante
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/CamaraColgante_baseColor.jpg
+map_Pr images/ignores/station/CamaraColgante_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CamaraColgante_metallicRoughness_metal_scale1.jpg
+map_Bump -bm 1.000000 images/ignores/station/CamaraColgante_normal.jpg
+
+newmtl CamaraSeguridad
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/CamaraSeguridad_baseColor.jpg
+map_Pr images/ignores/station/CamaraSeguridad_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CamaraSeguridad_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/CamaraSeguridad_normal.jpg
+
+newmtl CanTrash
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd images/ignores/station/CanTrash_baseColor.png
+map_Pr images/ignores/station/CanTrash_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CanTrash_metallicRoughness_metal.jpg
+map_d images/ignores/station/CanTrash_baseColor.png
+map_Bump -bm 1.000000 images/ignores/station/CanTrash_normal.jpg
+
+newmtl CartelInformativoV1
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/CartelInformativoV1_baseColor.jpg
+map_Pr images/ignores/station/CartelInformativoV1_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CartelInformativoV1_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/CartelInformativoV1_normal.jpg
+
+newmtl CartelInformativoV2
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/CartelInformativoV2_baseColor.jpg
+map_Pr images/ignores/station/CartelInformativoV1_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CartelInformativoV1_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/CartelInformativoV1_normal.jpg
+
+newmtl CartelInformativoV3
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/CartelInformativoV3_baseColor.jpg
+map_Pr images/ignores/station/CartelInformativoV1_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CartelInformativoV1_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/CartelInformativoV1_normal.jpg
+
+newmtl CartelPilar
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/CartelPilar_baseColor.jpg
+map_Pr images/ignores/station/CartelPilar_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CartelPilar_metallicRoughness_metal_scale1.jpg
+map_Bump -bm 1.000000 images/ignores/station/CartelPilar_normal.jpg
+
+newmtl CartelSalida_Izquierda
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/CartelSalida_Izquierda_baseColor.jpg
+map_Pr images/ignores/station/CartelSalida_Izquierda_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CartelSalida_Izquierda_metallicRoughness_metal.jpg
+map_Ke images/ignores/station/CartelSalida_Izquierda_emissive.jpg
+map_Bump -bm 1.000000 images/ignores/station/CartelSalida_Izquierda_normal.jpg
+
+newmtl EscaleraV1
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/EscaleraV1_baseColor.jpg
+map_Pr images/ignores/station/EscaleraV1_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/EscaleraV1_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/EscaleraV1_normal.jpg
+
+newmtl EscaleraV2
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/EscaleraV2_baseColor.jpg
+map_Pr images/ignores/station/EscaleraV2_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/EscaleraV2_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/EscaleraV2_normal.jpg
+
+newmtl EscaleraV3
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/EscaleraV3_baseColor.jpg
+map_Pr images/ignores/station/EscaleraV3_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/EscaleraV3_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/EscaleraV3_normal.jpg
+
+newmtl Extintor
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/Extintor_baseColor.jpg
+map_Pr images/ignores/station/Extintor_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/Extintor_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/Extintor_normal.jpg
+
+newmtl Fluorescente
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/Fluorescente_baseColor.jpg
+map_Pr images/ignores/station/Fluorescente_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/Fluorescente_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/Fluorescente_normal.jpg
+
+newmtl FluorescenteLuz
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/FluorescenteLuz_baseColor.jpg
+map_Pr images/ignores/station/FluorescenteLuz_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/FluorescenteLuz_metallicRoughness_metal.jpg
+map_Ke images/ignores/station/FluorescenteLuz_emissive_scale0.jpg
+map_Bump -bm 1.000000 images/ignores/station/FluorescenteLuz_normal.jpg
+
+newmtl JoinedDecals
+Ns 270.957611
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd images/ignores/station/JoinedDecals_baseColor.png
+map_d images/ignores/station/JoinedDecals_baseColor.png
+
+newmtl LuzTunelCorta
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/LuzTunelCorta_baseColor.jpg
+map_Pr images/ignores/station/LuzTunelCorta_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/LuzTunelCorta_metallicRoughness_metal.jpg
+map_Ke images/ignores/station/LuzTunelCorta_emissive.jpg
+map_Bump -bm 1.000000 images/ignores/station/LuzTunelCorta_normal.jpg
+
+newmtl LuzTunelLarga
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/LuzTunelLarga_baseColor.jpg
+map_Pr images/ignores/station/LuzTunelLarga_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/LuzTunelLarga_metallicRoughness_metal.jpg
+map_Ke images/ignores/station/LuzTunelLarga_emissive.jpg
+map_Bump -bm 1.000000 images/ignores/station/LuzTunelLarga_normal.jpg
+
+newmtl Maleta
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/Maleta_baseColor.jpg
+map_Pr images/ignores/station/Maleta_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/Maleta_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/Maleta_normal.jpg
+
+newmtl Megafono
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/Megafono_baseColor.jpg
+map_Pr images/ignores/station/Megafono_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/Megafono_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/Megafono_normal.jpg
+
+newmtl NumeroVias
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/NumeroVias_baseColor.jpg
+map_Pr images/ignores/station/NumeroVias_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/NumeroVias_metallicRoughness_metal_scale1.jpg
+map_Bump -bm 1.000000 images/ignores/station/NumeroVias_normal.jpg
+
+newmtl PackCajas
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/PackCajas_baseColor.jpg
+map_Pr images/ignores/station/PackCajas_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/PackCajas_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/PackCajas_normal.jpg
+
+newmtl Papelera
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.011387 0.011387 0.011387
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/Papelera_baseColor.jpg
+map_Pr images/ignores/station/Papelera_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/Papelera_metallicRoughness_metal_scale1.jpg
+map_Bump -bm 1.000000 images/ignores/station/Papelera_normal.jpg
+
+newmtl ParedTunel
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/ParedTunel_baseColor.jpg
+map_Pr images/ignores/station/ParedTunel_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/ParedTunel_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/ParedTunel_normal.jpg
+
+newmtl ParedesModulares
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/ParedesModulares_baseColor.jpg
+map_Pr images/ignores/station/ParedesModulares_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/ParedesModulares_metallicRoughness_metal_scale1.jpg
+map_Bump -bm 1.000000 images/ignores/station/ParedesModulares_normal.jpg
+
+newmtl PiezaViasCables
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/PiezaViasCables_baseColor.jpg
+map_Pr images/ignores/station/PiezaViasCables_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/PiezaViasCables_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/PiezaViasCables_normal.jpg
+
+newmtl Pilar
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/Pilar_baseColor.jpg
+map_Pr images/ignores/station/Pilar_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/Pilar_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/Pilar_normal.jpg
+
+newmtl Poste
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/Poste_baseColor.jpg
+map_Pr images/ignores/station/Poste_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/Poste_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/Poste_normal.jpg
+
+newmtl Semaforo
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/Semaforo_baseColor.jpg
+map_Pr images/ignores/station/Semaforo_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/Semaforo_metallicRoughness_metal.jpg
+map_Ke images/ignores/station/Semaforo_emissive.jpg
+map_Bump -bm 1.000000 images/ignores/station/Semaforo_normal.jpg
+
+newmtl SeparadorAndanas
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/SeparadorAndanas_baseColor.jpg
+map_Pr images/ignores/station/SeparadorAndanas_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/SeparadorAndanas_metallicRoughness_metal_scale1.jpg
+map_Bump -bm 1.000000 images/ignores/station/SeparadorAndanas_normal.jpg
+
+newmtl SeparadorEscalera
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/SeparadorEscalera_baseColor.jpg
+map_Pr images/ignores/station/SeparadorEscalera_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/SeparadorEscalera_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/SeparadorEscalera_normal.jpg
+
+newmtl SueloModular
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/SueloModular_baseColor.jpg
+map_Pr images/ignores/station/SueloModular_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/SueloModular_metallicRoughness_metal_scale1.jpg
+map_Bump -bm 1.000000 images/ignores/station/SueloModular_normal.jpg
+
+newmtl SueloVias
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/SueloVias_baseColor.jpg
+map_Pr images/ignores/station/SueloVias_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/SueloVias_metallicRoughness_metal_scale3.jpg
+map_Bump -bm 1.000000 images/ignores/station/SueloVias_normal.jpg
+
+newmtl SujeccionesCables
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/SujeccionesCables_baseColor.jpg
+map_Pr images/ignores/station/SujeccionesCables_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/SujeccionesCables_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/SujeccionesCables_normal.jpg
+
+newmtl TechoEscalera
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/TechoEscalera_baseColor.jpg
+map_Pr images/ignores/station/TechoEscalera_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/TechoEscalera_metallicRoughness_metal_scale1.jpg
+map_Bump -bm 1.000000 images/ignores/station/TechoEscalera_normal.jpg
+
+newmtl Techos_Modulares
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/Techos_Modulares_baseColor.jpg
+map_Pr images/ignores/station/Techos_Modulares_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/Techos_Modulares_metallicRoughness_metal_scale1.jpg
+map_Bump -bm 1.000000 images/ignores/station/Techos_Modulares_normal.jpg
+
+newmtl TuberiaViaDetallada
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/TuberiaViaDetallada_baseColor.jpg
+map_Pr images/ignores/station/TuberiaViaDetallada_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/TuberiaViaDetallada_metallicRoughness_metal_scale1.jpg
+map_Bump -bm 1.000000 images/ignores/station/TuberiaViaDetallada_normal.jpg
+
+newmtl TubosTecho
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/TubosTecho_baseColor.jpg
+map_Pr images/ignores/station/TubosTecho_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/TubosTecho_metallicRoughness_metal_scale2.jpg
+map_Bump -bm 1.000000 images/ignores/station/TubosTecho_normal.jpg
+
+newmtl Vias
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/Vias_baseColor.jpg
+map_Pr images/ignores/station/Vias_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/Vias_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/Vias_normal.jpg
+
+newmtl WetFloorCartel
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/WetFloorCartel_baseColor.jpg
+map_Pr images/ignores/station/WetFloorCartel_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/WetFloorCartel_metallicRoughness_metal_scale1.jpg
+map_Bump -bm 1.000000 images/ignores/station/WetFloorCartel_normal.jpg

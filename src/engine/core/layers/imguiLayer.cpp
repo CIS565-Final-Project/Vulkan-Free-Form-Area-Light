@@ -111,7 +111,7 @@ namespace MyCore
 	}
 	void ImGuiLayer::OnImGui(double const& deltaTime)
 	{
-		ImGui::ShowDemoWindow();
+		//ImGui::ShowDemoWindow();
 	}
 	bool ImGuiLayer::HandleEvents(SDL_Event const& e)
 	{

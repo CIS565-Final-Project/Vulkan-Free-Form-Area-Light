@@ -23,9 +23,9 @@ RenderLayer::RenderLayer(std::string const& name)
 void RenderLayer::OnAttach()
 {
 	m_Camera = mkU<PerspectiveCamera>();
-	//m_Camera->far = 500.f;
+	m_Camera->far = 300.f;
 	m_Camera->m_Transform = Transformation{
-		.position = {0, 0, 15},
+		.position = {0, 2, 4},
 	};
 	m_Camera->m_Transform.Rotate(glm::pi<float>(), { 0, 1, 0 });
 	m_Camera->resolution = { 680, 680 };
@@ -62,6 +62,8 @@ void RenderLayer::OnAttach()
 	m_LightCountBuffer = mkU<VK_StagingBuffer>(*m_Device);
 	GenBuffers();
 
+	m_Scene->FreeRenderData();
+
 	// Create Descriptors
 	m_MaterialParamDescriptor = mkU<VK_Descriptor>(*m_Device);
 	m_LightDescriptor = mkU<VK_Descriptor>(*m_Device);
@@ -76,6 +78,7 @@ void RenderLayer::OnAttach()
 
 	RecordCmd();
 	m_Engine->PushSecondaryCommandAll((*m_Cmd)[0]);
+
 }
 
 void RenderLayer::OnDetech()
@@ -96,6 +99,48 @@ void RenderLayer::OnUpdate(double const& deltaTime)
 		LightInfo updatedInfo = area_light.GetLightInfo();
 		m_LightBuffer->Update(&updatedInfo, sizeof(LightInfo) * id, sizeof(LightInfo));
 	}
+	if (b_Play)
+	{
+		{
+			int idx = 0;
+			MeshProxy& mesh = m_Scene->GetMeshProxies()[idx];
+
+			if (mesh.transform.position[0] > 300.f)
+			{
+				mesh.transform.position[0] = -417.5f;
+			}
+			mesh.transform.position[0] += m_PlaySpeed * deltaTime;
+
+			m_Scene->UpdateModelMatrix(idx);
+			m_ModelMatrixBuffer->Update(&m_Scene->GetModelMatries()[mesh.id], sizeof(ModelMatrix) * mesh.id, sizeof(ModelMatrix));
+		}
+		{
+			int idx = 1;
+			MeshProxy& mesh = m_Scene->GetMeshProxies()[idx];
+
+			if (mesh.transform.position[0] > 300.f)
+			{
+				mesh.transform.position[0] = -400.f;
+			}
+			mesh.transform.position[0] += m_PlaySpeed * deltaTime;
+
+			m_Scene->UpdateModelMatrix(idx);
+			m_ModelMatrixBuffer->Update(&m_Scene->GetModelMatries()[mesh.id], sizeof(ModelMatrix) * mesh.id, sizeof(ModelMatrix));
+		}
+		{
+			int idx = 2;
+			MeshProxy& mesh = m_Scene->GetMeshProxies()[idx];
+
+			if (mesh.transform.position[0] < -600.f)
+			{
+				mesh.transform.position[0] = 100.f;
+			}
+			mesh.transform.position[0] -= m_PlaySpeed * deltaTime;
+
+			m_Scene->UpdateModelMatrix(idx);
+			m_ModelMatrixBuffer->Update(&m_Scene->GetModelMatries()[mesh.id], sizeof(ModelMatrix) * mesh.id, sizeof(ModelMatrix));
+		}
+	}
 }
 
 void RenderLayer::OnRender(double const& deltaTime)
@@ -104,6 +149,8 @@ void RenderLayer::OnRender(double const& deltaTime)
 
 void RenderLayer::OnImGui(double const& deltaTime)
 {
+	if (!b_ShowImGui) return;
+
 	static glm::vec4 v(1.f);
 	ImGui::Begin("Test Window");
 	if (ImGui::DragFloat4("MaterialParam", &v[0], 0.02f, 0.f, 1.f))
@@ -117,6 +164,25 @@ void RenderLayer::OnImGui(double const& deltaTime)
 		camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
 		camera_ubo.planes = m_Camera->GetPlanes();
 		m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
+	}
+	ImGui::Checkbox("Play", &b_Play);
+	ImGui::DragFloat("Play Speed", &m_PlaySpeed);
+	ImGui::End();
+
+	ImGui::Begin("Camera Window");
+	{
+		bool changed = false;
+		changed |= ImGui::DragFloat3("Camera position", &m_Camera->m_Transform.position[0]);
+		if (changed)
+		{
+			m_Camera->RecomputeProjView();
+
+			CameraUBO camera_ubo;
+			camera_ubo.pos = glm::vec4(m_Camera.get()->GetTransform().position, 1);
+			camera_ubo.viewProjMat = m_Camera->GetProjViewMatrix();
+			camera_ubo.planes = m_Camera->GetPlanes();
+			m_CamBuffer->Update(&camera_ubo, 0, sizeof(CameraUBO));
+		}
 	}
 	ImGui::End();
 
@@ -224,7 +290,10 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 		if (mouseState & SDL_BUTTON(SDL_BUTTON_MIDDLE))
 		{
 			glm::vec2 offset = 0.01f * glm::vec2(mouse_cur - mouse_pre);
-			m_Camera->m_Transform.RotateAround(glm::vec3(0.f), { -offset.y, -offset.x, 0 });
+			glm::mat3 R = glm::toMat3(m_Camera->m_Transform.rotation);
+			glm::vec3 const& forward = R[2];
+			glm::vec3 pivot = m_Camera->m_Transform.position + forward * 10.f;
+			m_Camera->m_Transform.RotateAround(pivot, { -offset.y, -offset.x, 0 });
 			m_Camera->RecomputeProjView();
 			
 			CameraUBO camera_ubo;
@@ -235,7 +304,15 @@ bool RenderLayer::OnEvent(SDL_Event const& e)
 		}
 		mouse_pre = mouse_cur;
 	}
-	if (e.type == SDL_WINDOWEVENT)
+	else if (e.type == SDL_KEYDOWN)
+	{
+		if (e.key.repeat == 0 &&
+			e.key.keysym.scancode == SDL_SCANCODE_SPACE)
+		{
+			b_ShowImGui = !b_ShowImGui;
+		}
+	}
+	else if (e.type == SDL_WINDOWEVENT)
 	{
 		if (e.window.event == SDL_WINDOWEVENT_RESIZED)
 		{
@@ -306,7 +383,7 @@ void RenderLayer::RecordCmd()
 			cmd[0].bindPipeline(vk::PipelineBindPoint::eGraphics, m_MeshShaderLTCPipeline->GetPipeline());
 
 			// Draw call
-			uint32_t num_workgroups_x = m_Scene->GetMeshlets()->GetMeshletInfos().size();
+			uint32_t num_workgroups_x = m_Scene->GetMeshlets()->GetMeshletsCount();
 			uint32_t num_workgroups_y = 1;
 			uint32_t num_workgroups_z = 1;
 
@@ -371,12 +448,25 @@ void RenderLayer::LoadScene()
 	//		.position = {0, -1.5, 0},
 	//		.scale = {1, 1, 1}
 	//});
-	//m_Scene->AddMesh("meshes/Astartes.obj", "Astartes",
+	
+	//m_Scene->AddMesh("meshes/ignores/Astartes.obj", "Astartes1",
 	//	Transformation{
-	//		.position = {0, -2, 0},
-	//		.scale = {0.03f, 0.03f, 0.03f}
+	//		.position = {-417.5f, -1.4, -7.8},
+	//		.scale = {0.02f, 0.02f, 0.02f}
 	//});
-	m_Scene->AddMesh("meshes/ignores/station.obj", "station", transformation);
+
+	m_Scene->AddMesh("meshes/train.obj", "train1", Transformation{
+			.position = {400.f, -1.5, -10.f},
+			.scale = {0.1f, 0.1f, 0.1f}
+	});
+	
+	m_Scene->AddMesh("meshes/train.obj", "train2", Transformation{
+			.position = {100.f, -1.5, -25.f},
+			.scale = {0.1f, 0.1f, 0.1f}
+	});
+
+	m_Scene->AddMesh("meshes/station_only.obj", "station only", transformation);
+	
 	//m_Scene->AddMesh("meshes/ignores/test_alpha.obj", "station",
 	//	Transformation{
 	//		.position = {0, -1.5, 0},
@@ -429,36 +519,150 @@ void RenderLayer::LoadScene()
 	//polygon_light.m_LightMaterial = polygon_mat;
 	//m_SceneLight->AddLight(polygon_light);
 	*/
+
+	
 	m_SceneLight->AddQuadLightsFromFile("meshes/lights.obj", transformation);
+
+	float radius = 2.5f;
+	float radius_r2 = 1.41421356237f * radius;
+	std::vector<glm::vec3> circle_verts = {
+		glm::vec3(-radius, 0.0f, 0.0f),
+		glm::vec3(-radius, -radius_r2, 0.0f),
+		glm::vec3(radius, -radius_r2, 0.0f),
+		glm::vec3(radius, 0.0f, 0.0f),
+		
+		glm::vec3(radius, 0.0f, 0.0f),
+		glm::vec3(radius, radius_r2, 0.0f),
+		glm::vec3(-radius, radius_r2, 0.0f),
+		glm::vec3(-radius, 0.0f, 0.0f),
+	};
+
+	std::array<glm::vec3, 4> circle_bound_verts = {
+		glm::vec3(-radius, -radius, 0.0f),
+		glm::vec3(radius, -radius, 0.0f),
+		glm::vec3(radius, radius, 0.0f),
+		glm::vec3(-radius, radius, 0.0f),
+	};
+	
+	Transformation circle_trans{
+			.position = {-5.0f, 3.0f, 3.5f},
+			.scale = {1.f, 1.f, 1.f}
+	};
+
+	glm::vec4 circle_bound_sphere;
+	for (int i = 0; i < 4; ++i) {
+		circle_bound_sphere += glm::vec4(circle_bound_verts[i], 0);
+	}
+	circle_bound_sphere /= 4.f;
+	circle_bound_sphere.w = 0.f;
+	MaterialInfo circle_mat = MaterialInfo{
+		.texPath = {
+			"images/test_image.jpg",
+		}
+	};
+
+	m_SceneLight->AddLight(AreaLight{
+		AreaLightCreateInfo{
+			.type = LIGHT_TYPE::BEZIER,
+			.boundSphere = circle_bound_sphere,
+			.transform = circle_trans,
+			.boundPositions = circle_bound_verts,
+			.lightVertex = circle_verts,
+			.lightMaterial = circle_mat,
+		}
+	});
+
+
+
+	std::vector<glm::vec3> drop_verts = {
+		glm::vec3(0.0f, 3.0f, 0.0f),
+		glm::vec3(-2.0f, -1.0f, 0.0f),
+		glm::vec3(-2.5f, -2.0f, 0.0f),
+		glm::vec3(0.0f, -3.0f, 0.0f),
+
+		glm::vec3(0.0f, -3.0f, 0.0f),
+		glm::vec3(2.5f, -2.0f, 0.0f),
+		glm::vec3(2.0f, -1.0f, 0.0f),
+		glm::vec3(0.0f, 3.0f, 0.0f),
+	};
+
+	std::array<glm::vec3, 4> drop_bound_verts = {
+		glm::vec3(-3.0f, -3.0f, 0.0f),
+		glm::vec3(3.0f, -3.0f, 0.0f),
+		glm::vec3(3.0f, 3.0f, 0.0f),
+		glm::vec3(-3.0f, 3.0f, 0.0f),
+	};
+
+	Transformation drop_trans{
+			.position = {5.0f, 3.0f, 3.5f},
+			.scale = {1.f, 1.f, 1.f}
+	};
+
+	glm::vec4 drop_bound_sphere;
+	for (int i = 0; i < 4; ++i) {
+		drop_bound_sphere += glm::vec4(drop_bound_verts[i], 0);
+	}
+	drop_bound_sphere /= 4.f;
+	drop_bound_sphere.w = 0.f;
+	MaterialInfo drop_mat = MaterialInfo{
+		.texPath = {
+			"images/test_image.jpg",
+		}
+	};
+
+	m_SceneLight->AddLight(AreaLight{
+		AreaLightCreateInfo{
+			.type = LIGHT_TYPE::BEZIER,
+			.boundSphere = drop_bound_sphere,
+			.transform = drop_trans,
+			.boundPositions = drop_bound_verts,
+			.lightVertex = drop_verts,
+			.lightMaterial = drop_mat,
+		}
+		});
+
+	
 	/*
 	std::vector<glm::vec3> bezier_verts = {
-		glm::vec3(-1.5, -0.5f, 5.0f),
-		glm::vec3(1.5f, -0.5f, 5.0f),
-		glm::vec3(10.5f, -0.5f, 5.0f),
-		glm::vec3(1.5f, 2.5f, 5.0f),
-		glm::vec3(1.5f, 2.5f, 5.0f),
-		glm::vec3(-1.5f, 3.5f, 5.0f),
-		glm::vec3(-2.5f, 2.5f, 5.0f),
-		glm::vec3(-1.5f, -0.5f, 5.0f)
+		glm::vec3(-2.7f, 0.0f, 0.0f),
+		glm::vec3(-4.0f, 3.0f, 0.0f),
+		glm::vec3(-2.7f, 3.5f, 0.0f),
+		glm::vec3(0.0f, 2.5f, 0.0f),
+		
+		glm::vec3(0.0f, 2.5f, 0.0f),
+		glm::vec3(1.5f, 1.5f, 0.0f),
+		glm::vec3(3.0f, 1.0f, 0.0f),
+		glm::vec3(3.5f, 0.0f, 0.0f),		
+		
+		glm::vec3(3.5f, 0.0f, 0.0f),
+		glm::vec3(3.0f, -1.0f, 0.0f),
+		glm::vec3(1.5f, -1.5f, 0.0f),
+		glm::vec3(0.0f, -2.5f, 0.0f),
+
+		glm::vec3(0.0f, -2.5f, 0.0f),
+		glm::vec3(-2.7f, -3.5f, 0.0f),
+		glm::vec3(-4.0f, -3.0f, 0.0f),
+		glm::vec3(-2.7f, 0.0f, 0.0f)
 	};
+	
 	std::array<glm::vec3, 4> bezier_bound_verts = {
-		glm::vec3(-5.0f, -1.f, 5.0f),
-		glm::vec3(4.0f, -1.f, 5.0f),
-		glm::vec3(4.0f, 8.f, 5.0f),
-		glm::vec3(-5.0f, 8.f, 5.0f),
+		glm::vec3(-10.0f, -5.f, 5.0f),
+		glm::vec3(10.0f, -5.f, 5.0f),
+		glm::vec3(10.0f, 5.f, 5.0f),
+		glm::vec3(-10.0f, 5.f, 5.0f),
 	};
 	glm::vec4 bezier_bound_sphere;
 	for (int i = 0;i < 4;++i) {
 		bezier_bound_sphere += glm::vec4(bezier_bound_verts[i],0);
 	}
 	bezier_bound_sphere /= 4.f;
-	bezier_bound_sphere.w = 20.f;
+	bezier_bound_sphere.w = 0.f;
 	MaterialInfo bezier_mat = MaterialInfo{
 		.texPath = {
 			"images/test_image.jpg",
 		}
 	};
-	m_SceneLight->AddLight(AreaLight{ 
+	m_SceneLight->AddLight(AreaLight{
 		AreaLightCreateInfo{
 			.type = LIGHT_TYPE::BEZIER,
 			.boundSphere = bezier_bound_sphere,
@@ -466,7 +670,8 @@ void RenderLayer::LoadScene()
 			.lightVertex = bezier_verts,
 			.lightMaterial = bezier_mat
 		}
-	});*/
+	});
+	*/
 }
 
 void RenderLayer::GenBuffers()

@@ -41,7 +41,8 @@ namespace VK_Renderer
 					Transformation const& trans = {});
 
 		void ComputeRenderData(ComputeRenderDataInfo const& info);
-		
+		void FreeRenderData();
+
 		void UpdateModelMatrix(uint32_t const& id);
 
 	protected:

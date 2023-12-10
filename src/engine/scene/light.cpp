@@ -265,7 +265,7 @@ namespace VK_Renderer
 				AreaLight curLight(
 					AreaLightCreateInfo{
 						.type = LIGHT_TYPE::POLYGON,
-						.amplitude = 100.f,
+						.amplitude = 50.f,
 						.transform = transform,
 						.boundPositions = boundary_pos,
 						.boundUV = boundary_uv,

@@ -1,0 +1,191 @@
+# Blender 3.6.2 MTL File: 'None'
+# www.blender.org
+
+newmtl AsientosInteriores
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd images/ignores/station/AsientosInteriores_baseColor.png
+map_Pr images/ignores/station/AsientosInteriores_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/AsientosInteriores_metallicRoughness_metal.jpg
+map_d images/ignores/station/AsientosInteriores_baseColor.png
+map_Bump -bm 1.000000 images/ignores/station/AsientosInteriores_normal.jpg
+
+newmtl BajosExterioresTren
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/BajosExterioresTren_baseColor.jpg
+map_Pr images/ignores/station/BajosExterioresTren_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/BajosExterioresTren_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/BajosExterioresTren_normal.jpg
+
+newmtl Black
+Ns 17.387928
+Ka 1.000000 1.000000 1.000000
+Kd 0.056146 0.056146 0.056146
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl CabezaTren
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/CabezaTren_baseColor.jpg
+map_Pr images/ignores/station/CabezaTren_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CabezaTren_metallicRoughness_metal.jpg
+map_Ke images/ignores/station/CabezaTren_emissive.jpg
+map_Bump -bm 1.000000 images/ignores/station/CabezaTren_normal.jpg
+
+newmtl CanTrash
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd images/ignores/station/CanTrash_baseColor.png
+map_Pr images/ignores/station/CanTrash_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/CanTrash_metallicRoughness_metal.jpg
+map_d images/ignores/station/CanTrash_baseColor.png
+map_Bump -bm 1.000000 images/ignores/station/CanTrash_normal.jpg
+
+newmtl DriverCabin
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ni 1.450000
+illum 2
+map_Kd images/ignores/station/DriverCabin_baseColor.png
+map_Pr images/ignores/station/DriverCabin_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/DriverCabin_metallicRoughness_metal.jpg
+map_Ke images/ignores/station/DriverCabin_emissive.jpg
+map_d images/ignores/station/DriverCabin_baseColor.png
+map_Bump -bm 1.000000 images/ignores/station/DriverCabin_normal.jpg
+
+newmtl JoinedDecals
+Ns 270.957611
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd images/ignores/station/JoinedDecals_baseColor.png
+map_d images/ignores/station/JoinedDecals_baseColor.png
+map_Pr images/ignores/station/JoinedDecals_roughness.png
+
+newmtl LateralTren
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ni 1.450000
+illum 2
+map_Kd images/ignores/station/LateralTren_baseColor.png
+map_Pr images/ignores/station/LateralTren_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/LateralTren_metallicRoughness_metal.jpg
+map_Ke images/ignores/station/LateralTren_emissive_scale5.jpg
+map_d images/ignores/station/LateralTren_baseColor.png
+map_Bump -bm 1.000000 images/ignores/station/LateralTren_normal.jpg
+
+newmtl LateralesInteriores
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/LateralesInteriores_baseColor.jpg
+map_Pr images/ignores/station/LateralesInteriores_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/LateralesInteriores_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/LateralesInteriores_normal.jpg
+
+newmtl Maleta
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/Maleta_baseColor.jpg
+map_Pr images/ignores/station/Maleta_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/Maleta_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/Maleta_normal.jpg
+
+newmtl PuertaDelantera
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd images/ignores/station/PuertaDelantera_baseColor.png
+map_Pr images/ignores/station/PuertaDelantera_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/PuertaDelantera_metallicRoughness_metal.jpg
+map_d images/ignores/station/PuertaDelantera_baseColor.png
+map_Bump -bm 1.000000 images/ignores/station/PuertaDelantera_normal.jpg
+
+newmtl PuertasLaterales
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd images/ignores/station/PuertasLaterales_baseColor.png
+map_Pr images/ignores/station/PuertasLaterales_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/PuertasLaterales_metallicRoughness_metal.jpg
+map_d images/ignores/station/PuertasLaterales_baseColor.png
+map_Bump -bm 1.000000 images/ignores/station/PuertasLaterales_normal.jpg
+
+newmtl SueloInterior
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/SueloInterior_baseColor.jpg
+map_Pr images/ignores/station/SueloInterior_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/SueloInterior_metallicRoughness_metal.jpg
+map_Bump -bm 1.000000 images/ignores/station/SueloInterior_normal.jpg
+
+newmtl TechoInterior
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd images/ignores/station/TechoInterior_baseColor.jpg
+map_Pr images/ignores/station/TechoInterior_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/TechoInterior_metallicRoughness_metal.jpg
+map_Ke images/ignores/station/TechoInterior_emissive.jpg
+map_Bump -bm 1.000000 images/ignores/station/TechoInterior_normal.jpg
+
+newmtl TechoTren
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd images/ignores/station/TechoTren_baseColor.png
+map_Pr images/ignores/station/TechoTren_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/TechoTren_metallicRoughness_metal.jpg
+map_d images/ignores/station/TechoTren_baseColor.png
+map_Bump -bm 1.000000 images/ignores/station/TechoTren_normal.jpg
+
+newmtl material
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd images/ignores/station/material_baseColor.png
+map_Pr images/ignores/station/material_metallicRoughness_rough.jpg
+map_Pm images/ignores/station/material_metallicRoughness_metal_scale1.jpg
+map_d images/ignores/station/material_baseColor.png
+map_Bump -bm 1.000000 images/ignores/station/material_normal.jpg
