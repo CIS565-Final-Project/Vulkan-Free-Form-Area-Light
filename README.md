@@ -40,7 +40,7 @@ To transform the area light into LTC distribution space, we need to multiply the
 
 |normalized by m33| normalized by m22|
 |:---:|:---:|
-|![](img/div_m33.png)|![](img/div_m22.png)|
+|![](img/div_m33.PNG)|![](img/div_m22.PNG)|
 
 ### Light Integration
 After we transformed light vertices with LTC distribution, we cliped the area that is under the shading plane. Then we calculate the integration for polygon area lights edge by edge with the method mentioned in the [paper](https://eheitzresearch.wordpress.com/415-2/). For free-form area lights, we represented them with bezier curves. To calculate their integrations, the curves are subdivided recursively until the bounded region of current curve segment is smaller than a dynamic threhold decided by fragment roughness. For bezier curves, we need to pay attention to the case where the bezier curves are nearly linear and we handle the curves as straight lines. The result of the integration shows the direction of the average light direction in the LTC distribution space, we use this to find the intersection of the light ray and the area light to get the UV of the light's texture.
