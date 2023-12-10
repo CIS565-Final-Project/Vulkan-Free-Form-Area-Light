@@ -17,7 +17,10 @@ namespace VK_Renderer
 {
 	Meshlets::Meshlets(uint16_t const& maxPrimitiveCount, uint16_t const& maxVertexCount)
 		: m_MaxPrimitiveCount(maxPrimitiveCount), 
-		  m_MaxVertexCount(maxVertexCount)
+		  m_MaxVertexCount(maxVertexCount),
+		  m_MaterialOffset(0),
+		  m_TriangleCount(0),
+		  m_MeshletsCount(0)
 	{}
 
 	void Meshlets::Append(Mesh const& mesh, uint32_t const& modelId)
@@ -75,6 +78,10 @@ namespace VK_Renderer
 			}
 		}
 		m_MaterialOffset += mesh.GetMaterialCounts();
+		for (auto const& tri : mesh.m_Triangles)
+		{
+			m_TriangleCount += tri.size();
+		}
 		// TODO: Step 1.2 - Clustering Vertices and Triangles
 
 		// Step 2 - Assemble meshlets
@@ -141,6 +148,8 @@ namespace VK_Renderer
 			m_MeshletInfos.push_back(meshlet);
 		}
 
+		m_MeshletsCount = m_MeshletInfos.size();
+
 		// Load textures
 		//m_Materials.reserve(m_Materials.size() + mesh.GetMaterialCounts());
 		//for (auto const& mat_info : mesh.m_MaterialInfos)
@@ -150,7 +159,7 @@ namespace VK_Renderer
 		//	glm::ivec3 const& dim = m_Materials.back().GetAlbedoTex().GetResolution();
 		//}
 
-		/*
+/*
 		std::vector<glm::ivec3> out_triangles;
 		for (auto const& meshlet : m_MeshletInfos)
 		{
@@ -176,7 +185,15 @@ namespace VK_Renderer
 		printf("meshlets: %d\n", sizeof(MeshletDescription)* m_MeshletInfos.size() + 
 								 sizeof(uint8_t) * m_PrimitiveIndices.size() + 
 								 sizeof(uint32_t) * m_VertexIndices.size());
-		*/
+*/
+	}
+
+	void Meshlets::FreeData()
+	{
+		m_Vertices.clear();
+		m_MeshletInfos.clear();
+		m_PrimitiveIndices.clear();
+		m_VertexIndices.clear();
 	}
 
 	void Meshlets::ComputeBoundingSphere(MeshletDescription& meshletDesc,

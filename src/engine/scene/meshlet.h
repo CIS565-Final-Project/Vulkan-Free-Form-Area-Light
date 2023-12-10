@@ -48,6 +48,7 @@ namespace VK_Renderer
 				  uint16_t const& maxVertexCount);
 
 		void Append(Mesh const& mesh, uint32_t const& modelId);
+		void FreeData();
 
 		inline std::vector<Vertex>& GetVertices() { return m_Vertices; }
 
@@ -59,8 +60,9 @@ namespace VK_Renderer
 		uint16_t m_MaxPrimitiveCount;
 		uint16_t m_MaxVertexCount;
 
-		uint16_t m_MaterialOffset{ 0 };
-
+		DeclareWithGetFunc(protected, uint32_t, m, MeshletsCount, const);
+		DeclareWithGetFunc(protected, uint32_t, m, TriangleCount, const);
+		DeclareWithGetFunc(protected, uint32_t, m, MaterialOffset, const);
 		DeclareWithGetFunc(protected, std::vector<Vertex>, m, Vertices, const);
 		DeclareWithGetFunc(protected, std::vector<MeshletDescription>, m, MeshletInfos, const);
 		DeclareWithGetFunc(protected, std::vector<uint8_t>, m, PrimitiveIndices, const);

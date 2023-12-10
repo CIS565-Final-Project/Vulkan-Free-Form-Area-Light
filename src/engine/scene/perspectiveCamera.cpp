@@ -57,18 +57,11 @@ namespace VK_Renderer
 		std::array<std::array<glm::vec3, 4>, 2> frustum_p;
 		for (int i = 0; i < 4; ++i)
 		{
-			glm::vec3 p_camera = NDCtoCamera(alpha *  ndcs[i]);
+			glm::vec3 p_camera = NDCtoCamera(ndcs[i]);
 
 			frustum_p[0][i] = m_Transform.position + near * (p_camera.x * right + p_camera.y * up - forward);
 			frustum_p[1][i] = m_Transform.position +  far * (p_camera.x * right + p_camera.y * up - forward);
 		}
-		//for (int i = 0; i < 2; ++i)
-		//{
-		//	for (int j = 0; j < 4; ++j)
-		//	{
-		//		printf("%f, %f, %f\n", frustum_p[i][j].x, frustum_p[i][j].y, frustum_p[i][j].z);
-		//	}
-		//}
 		std::array<glm::vec3, 6> normals{
 			GetNormal(frustum_p[0][0], frustum_p[0][1], frustum_p[0][2]), // near
 			GetNormal(frustum_p[1][2], frustum_p[1][1], frustum_p[1][0]), // far

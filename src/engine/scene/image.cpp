@@ -48,7 +48,7 @@ namespace VK_Renderer
 
 		size_t postfix_start = file.find_last_of(".");
 		std::string file_postfix = file.substr(postfix_start + 1, file.size() - postfix_start);
-		std::cout << "load a " << file_postfix << " image" << std::endl;
+		//std::cout << "load a " << file_postfix << " image" << std::endl;
         if (file_postfix == "dds") {
             DDSImage dds_image = LoadDDS(file.c_str());
             m_Resolution.x = dds_image.width;

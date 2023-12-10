@@ -57,6 +57,10 @@ private:
 	void CreateGraphicsPipeline();
 
 protected:
+	bool b_Play = false;
+	bool b_ShowImGui = true;
+	float m_PlaySpeed = 20.f;
+
 	VK_Renderer::VK_RenderEngine* m_Engine;
 	VK_Renderer::VK_Device const* m_Device;
 	VK_Renderer::VK_Swapchain const* m_Swapchain;
