@@ -3,7 +3,8 @@ Vulkan Mesh Shader with Free-Form Planar Area Lights
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Fianl Project**
 
-* Licheng Cao, Tianyi Xiao, Mengxuan Huang
+* Mengxuan Huang [[LinkedIn](https://www.linkedin.com/in/mengxuan-huang-52881624a/)]
+* Tested on: Windows 11, i9-13980HX @ 2.22GHz 64.0 GB, RTX4090-Laptop 16384MB
 
 ## Description
 
@@ -13,19 +14,63 @@ In this project, we use Vulkan to build mesh shader render pipelines, which rend
   <img src="./img/result.png">
 </p>
 
-## Mesh Shader
+## Flow Chart
+<p align="center">
+  <img src="./img/workflow.png">
+</p>
 
-Different from traditional render pipeline, we used task shaders (optional) and mesh shader instead of vertex shaders, tessellation shaders and geometry shaders. Both task shaders and mesh shaders operate in workgroups, which are like compute shaders. Task shaders emit mesh shader workgroups and mesh shaders generate primitives for rasterization and fragment shaders.
+## Mesh Shader
+### Introduction
+In this project, our exploration of the mesh shader pipeline extends beyond traditional graphics rendering approaches. This advanced pipeline introduces two novel shading stages:
+- **Task shaders:** Functioning optionally within the pipeline, serve to emit mesh shader workgroups. These workgroups, similar in nature to compute shaders, work cohesively within this advanced framework. 
+- **Mesh shaders:** Core of this pipeline, are pivotal in generating primitives, which are subsequently processed by rasterization and fragment shaders. 
+
+This approach not only streamlines the rendering process but also enhances the efficiency and flexibility of generating complex geometries in real-time graphics.
 
 ![](/img/mesh_shader.png)
 
-What's more, we generate meshlets and pass them to mesh shader on CPU. We will have two index buffers to be passed, one for only vertex indices using uint, with their indices in original complete model data, and another one for triangle primitive indices with local indices per meshlet. The second index buffers use uint8_t since there won't be too many indices in each meshlet. Therefore we save the much memory bandwith.
+### Meshlets generation
+In the mesh shader pipeline, we retained the original *Vertex Buffer* but introduced **3 New Buffers** for enhanced efficiency and detail:
 
+1. **Meshlet Description Buffer**: This buffer contains essential data for each meshlet, including the *vertex count*, *primitive count*, starting indices for vertices and primitives in their respective buffers, and an optional *bounding sphere* for spatial optimization.
+
+2. **Primitive Index Buffer**: Stores compact data (typically *uint8_t*) representing the local primitive indices within each meshlet.
+
+3. **Vertex Index Buffer**: Contains more extensive data (usually *uint16_t* or *uint32_t*), representing the global vertex indices for the entire scene.
+
+Compared to the original indices buffer, these buffers collectively enhance the pipeline's ability to handle complex geometries with less GPU memory requirement and efficiency.
+
+The accompanying figures provide a detailed visual representation of various meshes(different color represent different meshlets), highlighting their respective statistical data. These visuals effectively illustrate the significant enhancements achieved through the implementation of meshlet, demonstrating both qualitative and quantitative improvements in GPU memory requirement.
+
+|Astartes|Train|Station scene (with 2 Train and 1 Astartes)|
+|:--------:|:--------:|:--------:|
+|![](img/Astartes_meshlet.png)|![](img/train_meshlet.png)|![](img/station_meshlet.png)|
+|338869 triangles|397622 triangles|1840394 triangles|
+|![](img/Astartes_meshlet_info.png)|![](img/train_meshlet_info.png)|![](img/station_scene_meshlet_info.png)|
+
+### View-Frustum Meshlet Culling
+In addition to significantly optimizing GPU memory consumption, the Mesh Shader architecture offers a robust framework for more efficient view-frustum culling. This flexibility is a key advantage, enabling the rendering pipeline to intelligently determine which meshlets are within the viewing frustum and, thus, need to be processed.
+
+#### Basic Algorithm
 <p align="center">
-  <img src="./img/meshlet.png">
+  <img src="./img/view_frustum_culling.png">
 </p>
 
-As shown above, when rendering this robot model, we got 37.4% improvement in memory with meshlet.
+When assembling meshlets for meshes, it is also convenient and effective to compute a bounding sphere for each meshlet. Within the **task shader**, the bounding sphere is transformed and assessed to determine if it falls within the view-frustum. If the bounding sphere is indeed inside the view-frustum, the **mesh shaders** are launched for that specific meshlet, effectively processing it for rendering. Conversely, if the bounding sphere is outside the view-frustum, the **entire meshlet** is discarded promptly.
+
+This selective approach to rendering not only streamlines GPU workload but also ensures that only relevant geometric data is processed and rendered, leading to considerable performance improvements as shown below.
+
+#### Performance Analysis
+**Test on the Station scene [12346170 triangles (12.34 millions)]**
+
+||Without view-frustum culling| With view-frustum culling|
+|:--------:|:--------:|:--------:|
+|frame time:| 0.023s|0.006s|
+|frame rate:| 43fps|166fps|
+
+<p align="center">
+  <img src="./img/astartes_groups.png">
+</p>
 
 ## Free-Form Area Light
 
@@ -66,3 +111,8 @@ Besides, we draw the bezier-curved light with help of mesh shader. We implemente
 
 ### Third party Resources
 - [Subway Station & R46 Subway](https://sketchfab.com/3d-models/free-subway-station-r46-subway-ae5aadde1c6f48a19b32b309417a669b)
+- [Astartes of Steppe Hawks chapter Free 3D model](https://www.cgtrader.com/free-3d-models/character/sci-fi-character/astartes-of-steppe-hawks-chapter)
+- [Keanu-reeves-cyberpunk-poster](https://aiartshop.com/products/keanu-reeves-cyberpunk-poster)
+- [Cyberpunk-anime-girl-by-karpuz](https://www.redbubble.com/i/poster/blue-cyberpunk-anime-girl-by-karpuz-design/147463559.LVTDI)
+- [cyberpunk-anime-girl-by-karpuz](https://www.redbubble.com/i/poster/blue-cyberpunk-anime-girl-by-karpuz-design/147461666.LVTDI)
+- [GTA6 - Logo](https://www.rockstargames.com/newswire/article/8978kok9385a82/grand-theft-auto-vi-watch-trailer-1-now)
