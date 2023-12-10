@@ -449,11 +449,11 @@ void RenderLayer::LoadScene()
 	//		.scale = {1, 1, 1}
 	//});
 	
-	m_Scene->AddMesh("meshes/ignores/Astartes.obj", "Astartes1",
-		Transformation{
-			.position = {-417.5f, -1.4, -7.8},
-			.scale = {0.02f, 0.02f, 0.02f}
-	});
+	//m_Scene->AddMesh("meshes/ignores/Astartes.obj", "Astartes1",
+	//	Transformation{
+	//		.position = {-417.5f, -1.4, -7.8},
+	//		.scale = {0.02f, 0.02f, 0.02f}
+	//});
 
 	m_Scene->AddMesh("meshes/train.obj", "train1", Transformation{
 			.position = {400.f, -1.5, -10.f},
@@ -519,36 +519,150 @@ void RenderLayer::LoadScene()
 	//polygon_light.m_LightMaterial = polygon_mat;
 	//m_SceneLight->AddLight(polygon_light);
 	*/
+
+	
 	m_SceneLight->AddQuadLightsFromFile("meshes/lights.obj", transformation);
+
+	float radius = 2.5f;
+	float radius_r2 = 1.41421356237f * radius;
+	std::vector<glm::vec3> circle_verts = {
+		glm::vec3(-radius, 0.0f, 0.0f),
+		glm::vec3(-radius, -radius_r2, 0.0f),
+		glm::vec3(radius, -radius_r2, 0.0f),
+		glm::vec3(radius, 0.0f, 0.0f),
+		
+		glm::vec3(radius, 0.0f, 0.0f),
+		glm::vec3(radius, radius_r2, 0.0f),
+		glm::vec3(-radius, radius_r2, 0.0f),
+		glm::vec3(-radius, 0.0f, 0.0f),
+	};
+
+	std::array<glm::vec3, 4> circle_bound_verts = {
+		glm::vec3(-radius, -radius, 0.0f),
+		glm::vec3(radius, -radius, 0.0f),
+		glm::vec3(radius, radius, 0.0f),
+		glm::vec3(-radius, radius, 0.0f),
+	};
+	
+	Transformation circle_trans{
+			.position = {-5.0f, 3.0f, 3.5f},
+			.scale = {1.f, 1.f, 1.f}
+	};
+
+	glm::vec4 circle_bound_sphere;
+	for (int i = 0; i < 4; ++i) {
+		circle_bound_sphere += glm::vec4(circle_bound_verts[i], 0);
+	}
+	circle_bound_sphere /= 4.f;
+	circle_bound_sphere.w = 0.f;
+	MaterialInfo circle_mat = MaterialInfo{
+		.texPath = {
+			"images/test_image.jpg",
+		}
+	};
+
+	m_SceneLight->AddLight(AreaLight{
+		AreaLightCreateInfo{
+			.type = LIGHT_TYPE::BEZIER,
+			.boundSphere = circle_bound_sphere,
+			.transform = circle_trans,
+			.boundPositions = circle_bound_verts,
+			.lightVertex = circle_verts,
+			.lightMaterial = circle_mat,
+		}
+	});
+
+
+
+	std::vector<glm::vec3> drop_verts = {
+		glm::vec3(0.0f, 3.0f, 0.0f),
+		glm::vec3(-2.0f, -1.0f, 0.0f),
+		glm::vec3(-2.5f, -2.0f, 0.0f),
+		glm::vec3(0.0f, -3.0f, 0.0f),
+
+		glm::vec3(0.0f, -3.0f, 0.0f),
+		glm::vec3(2.5f, -2.0f, 0.0f),
+		glm::vec3(2.0f, -1.0f, 0.0f),
+		glm::vec3(0.0f, 3.0f, 0.0f),
+	};
+
+	std::array<glm::vec3, 4> drop_bound_verts = {
+		glm::vec3(-3.0f, -3.0f, 0.0f),
+		glm::vec3(3.0f, -3.0f, 0.0f),
+		glm::vec3(3.0f, 3.0f, 0.0f),
+		glm::vec3(-3.0f, 3.0f, 0.0f),
+	};
+
+	Transformation drop_trans{
+			.position = {5.0f, 3.0f, 3.5f},
+			.scale = {1.f, 1.f, 1.f}
+	};
+
+	glm::vec4 drop_bound_sphere;
+	for (int i = 0; i < 4; ++i) {
+		drop_bound_sphere += glm::vec4(drop_bound_verts[i], 0);
+	}
+	drop_bound_sphere /= 4.f;
+	drop_bound_sphere.w = 0.f;
+	MaterialInfo drop_mat = MaterialInfo{
+		.texPath = {
+			"images/test_image.jpg",
+		}
+	};
+
+	m_SceneLight->AddLight(AreaLight{
+		AreaLightCreateInfo{
+			.type = LIGHT_TYPE::BEZIER,
+			.boundSphere = drop_bound_sphere,
+			.transform = drop_trans,
+			.boundPositions = drop_bound_verts,
+			.lightVertex = drop_verts,
+			.lightMaterial = drop_mat,
+		}
+		});
+
+	
 	/*
 	std::vector<glm::vec3> bezier_verts = {
-		glm::vec3(-1.5, -0.5f, 5.0f),
-		glm::vec3(1.5f, -0.5f, 5.0f),
-		glm::vec3(10.5f, -0.5f, 5.0f),
-		glm::vec3(1.5f, 2.5f, 5.0f),
-		glm::vec3(1.5f, 2.5f, 5.0f),
-		glm::vec3(-1.5f, 3.5f, 5.0f),
-		glm::vec3(-2.5f, 2.5f, 5.0f),
-		glm::vec3(-1.5f, -0.5f, 5.0f)
+		glm::vec3(-2.7f, 0.0f, 0.0f),
+		glm::vec3(-4.0f, 3.0f, 0.0f),
+		glm::vec3(-2.7f, 3.5f, 0.0f),
+		glm::vec3(0.0f, 2.5f, 0.0f),
+		
+		glm::vec3(0.0f, 2.5f, 0.0f),
+		glm::vec3(1.5f, 1.5f, 0.0f),
+		glm::vec3(3.0f, 1.0f, 0.0f),
+		glm::vec3(3.5f, 0.0f, 0.0f),		
+		
+		glm::vec3(3.5f, 0.0f, 0.0f),
+		glm::vec3(3.0f, -1.0f, 0.0f),
+		glm::vec3(1.5f, -1.5f, 0.0f),
+		glm::vec3(0.0f, -2.5f, 0.0f),
+
+		glm::vec3(0.0f, -2.5f, 0.0f),
+		glm::vec3(-2.7f, -3.5f, 0.0f),
+		glm::vec3(-4.0f, -3.0f, 0.0f),
+		glm::vec3(-2.7f, 0.0f, 0.0f)
 	};
+	
 	std::array<glm::vec3, 4> bezier_bound_verts = {
-		glm::vec3(-5.0f, -1.f, 5.0f),
-		glm::vec3(4.0f, -1.f, 5.0f),
-		glm::vec3(4.0f, 8.f, 5.0f),
-		glm::vec3(-5.0f, 8.f, 5.0f),
+		glm::vec3(-10.0f, -5.f, 5.0f),
+		glm::vec3(10.0f, -5.f, 5.0f),
+		glm::vec3(10.0f, 5.f, 5.0f),
+		glm::vec3(-10.0f, 5.f, 5.0f),
 	};
 	glm::vec4 bezier_bound_sphere;
 	for (int i = 0;i < 4;++i) {
 		bezier_bound_sphere += glm::vec4(bezier_bound_verts[i],0);
 	}
 	bezier_bound_sphere /= 4.f;
-	bezier_bound_sphere.w = 20.f;
+	bezier_bound_sphere.w = 0.f;
 	MaterialInfo bezier_mat = MaterialInfo{
 		.texPath = {
 			"images/test_image.jpg",
 		}
 	};
-	m_SceneLight->AddLight(AreaLight{ 
+	m_SceneLight->AddLight(AreaLight{
 		AreaLightCreateInfo{
 			.type = LIGHT_TYPE::BEZIER,
 			.boundSphere = bezier_bound_sphere,
@@ -556,7 +670,8 @@ void RenderLayer::LoadScene()
 			.lightVertex = bezier_verts,
 			.lightMaterial = bezier_mat
 		}
-	});*/
+	});
+	*/
 }
 
 void RenderLayer::GenBuffers()
