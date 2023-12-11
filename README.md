@@ -1,7 +1,9 @@
-Vulkan Mesh Shader with Free-Form Planar Area Lights
-==================================
+# V-MShader PL
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Fianl Project**
+
+*Vulkan Mesh Shader with Planar Light*
+
 #### Group Members
 * Mengxuan Huang [[LinkedIn](https://www.linkedin.com/in/mengxuan-huang-52881624a/)]
 * Tianyi Xiao [[LinkedIn](https://www.linkedin.com/in/tianyi-xiao-20268524a/)]
@@ -14,7 +16,7 @@ Vulkan Mesh Shader with Free-Form Planar Area Lights
 In our project, we have engineered a cutting-edge, real-time Vulkan renderer. This advanced system utilizes the mesh shader pipeline, a key feature that enables the efficient rendering of scenes illuminated by Free-Form Planar lights. This integration not only enhances the lighting realism but also optimizes performance, making it a powerful solution for dynamic and visually rich scenes.
 
 <p align="center">
-  <img src="./img/result.png">
+  <img src="./img/Main.png">
 </p>
 
 ## Flow Chart
