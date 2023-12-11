@@ -19,6 +19,8 @@ In our project, we have engineered a cutting-edge, real-time Vulkan renderer. Th
   <img src="./img/Main.png">
 </p>
 
+[Presentation Link](https://drive.google.com/file/d/1zQROzpvOhfo4KFGmmGYBoYl7tX90tc4e/view)
+
 ## Flow Chart
 <p align="center">
   <img src="./img/workflow.png">
