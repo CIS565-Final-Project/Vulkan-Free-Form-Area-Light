@@ -157,6 +157,7 @@ What's more, we use a bounding square to map and interpolate the uv of curved li
 
 ### Third party Resources
 - [Subway Station & R46 Subway](https://sketchfab.com/3d-models/free-subway-station-r46-subway-ae5aadde1c6f48a19b32b309417a669b)
+- [Steampunk House](https://sketchfab.com/3d-models/make-your-own-steampunk-house-0bceb4f2d7444809b022ba864ac03df3)
 - [Astartes of Steppe Hawks chapter Free 3D model](https://www.cgtrader.com/free-3d-models/character/sci-fi-character/astartes-of-steppe-hawks-chapter)
 - [Keanu-reeves-cyberpunk-poster](https://aiartshop.com/products/keanu-reeves-cyberpunk-poster)
 - [Cyberpunk-anime-girl-by-karpuz](https://www.redbubble.com/i/poster/blue-cyberpunk-anime-girl-by-karpuz-design/147463559.LVTDI)
