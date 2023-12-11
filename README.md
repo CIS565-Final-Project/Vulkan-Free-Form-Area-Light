@@ -2,15 +2,16 @@ Vulkan Mesh Shader with Free-Form Planar Area Lights
 ==================================
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Fianl Project**
-
+#### Group Members
 * Mengxuan Huang [[LinkedIn](https://www.linkedin.com/in/mengxuan-huang-52881624a/)]
 * Tianyi Xiao [[LinkedIn](https://www.linkedin.com/in/tianyi-xiao-20268524a/)]
 * Licheng Cao [[LinkedIn](https://www.linkedin.com/in/licheng-cao-6a523524b/)]
-* Tested on: Windows 11, i9-13980HX @ 2.22GHz 64.0 GB, RTX4090-Laptop 16384MB
+#### Platform
+* Windows 11, i9-13980HX @ 2.22GHz 64.0 GB, RTX4090-Laptop 16384MB
 
 ## Description
 
-In this project, we use Vulkan to build mesh shader render pipelines, which render scenes illuminated by free-form planar area lights.
+In our project, we have engineered a cutting-edge, real-time Vulkan renderer. This advanced system utilizes the mesh shader pipeline, a key feature that enables the efficient rendering of scenes illuminated by Free-Form Planar lights. This integration not only enhances the lighting realism but also optimizes performance, making it a powerful solution for dynamic and visually rich scenes.
 
 <p align="center">
   <img src="./img/result.png">
@@ -21,6 +22,8 @@ In this project, we use Vulkan to build mesh shader render pipelines, which rend
   <img src="./img/workflow.png">
 </p>
 
+This flowchart demonstrates the core rendering workflow of our project, which encompasses several key stages. It starts with meshlet computation, where the task shader may cull any meshlet falling outside the view-frustum based on its bounding sphere. The remaining meshlets will be processed by the mesh shader and the subsequent stages. Finally, The planar light shading will be performed in the fragment shader to produce high quality rendered image.
+
 ## Mesh Shader
 ### Introduction
 In this project, our exploration of the mesh shader pipeline extends beyond traditional graphics rendering approaches. This advanced pipeline introduces two novel shading stages:
@@ -29,12 +32,17 @@ In this project, our exploration of the mesh shader pipeline extends beyond trad
 
 This approach not only streamlines the rendering process but also enhances the efficiency and flexibility of generating complex geometries in real-time graphics.
 
-![](/img/mesh_shader.png)
+<p align="center">
+  <img src="./img/mesh_shader.png" alt="Mesh shader pipeline">
+</p>
+<p align="center"> Image from
+<a href="https://developer.nvidia.com/blog/introduction-turing-mesh-shaders/">Introduction to Turing Mesh Shaders</a>
+</p>
 
 ### Meshlets generation
 In the mesh shader pipeline, we retained the original *Vertex Buffer* but introduced **3 New Buffers** for enhanced efficiency and detail:
 
-1. **Meshlet Description Buffer**: This buffer contains essential data for each meshlet, including the *vertex count*, *primitive count*, starting indices for vertices and primitives in their respective buffers, and an optional *bounding sphere* for spatial optimization.
+1. **Meshlet Description Buffer**: This buffer contains essential data for each meshlet, including the **vertex count**, **primitive count**, **vertex begin index** (point to the **vertex index buffer**) and **primitive begin index** (point to the **primitive indices buffer**), and **bounding sphere** for view-frustum culling.
 
 2. **Primitive Index Buffer**: Stores compact data (typically *uint8_t*) representing the local primitive indices within each meshlet.
 
@@ -50,6 +58,18 @@ The accompanying figures provide a detailed visual representation of various mes
 |338869 triangles|397622 triangles|1840394 triangles|
 |![](img/Astartes_meshlet_info.png)|![](img/train_meshlet_info.png)|![](img/station_scene_meshlet_info.png)|
 
+### How it works ?
+
+<p align="center">
+  <img src="./img/meshlet_compute.png">
+</p>
+<p align="center"> Image from
+<a href="https://developer.nvidia.com/blog/introduction-turing-mesh-shaders/">Introduction to Turing Mesh Shaders</a>
+</p>
+
+Each mesh shader initiates the process by utilizing the **task Id** provided by the task shader, coupling it with its own **WorkGroupID** and the **primitive begin index** to retrieve the **local primitive index** from the Primitive Index Buffer. Subsequently, it calculates the **global vertex index** by adding the **local primitive index** to the **primitive begin index**. The process concludes with the mesh shader accessing the requisite vertex data from the **vertex buffer**.
+
+## Renderer Features
 ### View-Frustum Meshlet Culling
 In addition to significantly optimizing GPU memory consumption, the Mesh Shader architecture offers a robust framework for more efficient view-frustum culling. This flexibility is a key advantage, enabling the rendering pipeline to intelligently determine which meshlets are within the viewing frustum and, thus, need to be processed.
 
@@ -73,6 +93,15 @@ This selective approach to rendering not only streamlines GPU workload but also 
 <p align="center">
   <img src="./img/astartes_groups.png">
 </p>
+
+### Atlas Textures
+To enhance the rendering of complex scenes with multiple textures, our approach involved the implementation of a texture atlas. This technique efficiently compresses multiple images into a single, large texture, thus utilizing only **one shader texture slot**. Additionally, we optimized our texture management by storing various texture types — including base color, normal, roughness, and metallic — within an Image Array. This strategy significantly conserves texture slots, enabling more efficient use of graphics resources and streamlined rendering performance.
+
+<p align="center">
+  <img src="./img/atlasTexture.png">
+</p>
+
+The image depicted above illustrates a compressed Image Array, where each layer is strategically organized into two sections: the upper portion encompasses **20 large textures** for the Astartes model, whereas the lower part ingeniously compresses **232 smaller textures** for the intricate detailing of the train station and the train.
 
 ## Free-Form Area Light
 
