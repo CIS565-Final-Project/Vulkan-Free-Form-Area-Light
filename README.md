@@ -20,7 +20,8 @@ In our project, we have engineered a cutting-edge, real-time Vulkan renderer. Th
 </p>
 
 [Presentation Link](https://drive.google.com/file/d/1zQROzpvOhfo4KFGmmGYBoYl7tX90tc4e/view)
-[Video Link]([https://drive.google.com/file/d/1zQROzpvOhfo4KFGmmGYBoYl7tX90tc4e/view](https://drive.google.com/file/d/1fgx2Hr64jGYjApcgLmwUwszJmZxvb7Yv/view?usp=drive_link))
+
+[Video Link](https://drive.google.com/file/d/1fgx2Hr64jGYjApcgLmwUwszJmZxvb7Yv/view?usp=drive_link)
 ## Flow Chart
 <p align="center">
   <img src="./img/workflow.png">
